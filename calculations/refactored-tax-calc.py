@@ -1,0 +1,308 @@
+import project.djangofiles.tax.calculations.tax_brackets as tax_brackets
+import json
+
+class TaxYearData:
+    def __init__(self, year, filing_status, taxable_income, qualified_income):
+        self.year = year
+        self.filing_status = filing_status
+        self.taxable_income = taxable_income
+        self.qualified_income = qualified_income
+
+        self.taxable_ordinary = taxable_income - qualified_income
+        self.ordinary_rate = None
+        self.lower_ordinary_bound = None
+        self.upper_ordinary_bound = None
+        self.prior_ordinary_bracket_tax = None
+        self.ordinary_tax = None
+        self.qualified_tax = None
+        self.total_tax = None
+
+    def __repr__(self):
+        return '{}  {}  {}  {}'.format(self.year, self.filing_status, self.taxable_income, self.qualified_income)
+
+    def to_dict(self):
+        return {
+            "year": self.year,
+            "filing_status": self.filing_status,
+            "taxable_income": self.taxable_income,
+            "qualified_income": self.qualified_income,
+            "taxable_ordinary": self.taxable_ordinary,
+            # "ordinary_rate": self.ordinary_rate,
+            # "lower_ordinary_bound": self.lower_ordinary_bound,
+            # "upper_ordinary_bound": self.upper_ordinary_bound,
+            # "prior_ordinary_bracket_tax": self.prior_ordinary_bracket_tax,
+            "ordinary_tax": self.ordinary_tax,
+            "qualified_tax": self.qualified_tax,
+            "total_tax": self.total_tax,
+        }
+        
+
+class AdjustedTaxData:
+    def __init__(self, base_data: TaxYearData):
+        self.base_data = base_data
+
+    def __getattr__(self, name):
+        # Called if the attribute is not found in AdjustedTaxData
+        return getattr(self.base_data, name)
+    
+    def to_dict(self):
+        return self.base_data.to_dict()
+
+
+class TaxCalculation:
+    def __init__(self, tax_data: TaxYearData):
+        self.tax_data = tax_data
+
+    def find_ordinary_bracket(self):
+        for rate, (lower, upper, prior_tax) in tax_brackets.ORDINARY_TAX_TABLES[self.tax_data.year][self.tax_data.filing_status].items():
+            self.tax_data.taxable_ordinary = max(self.tax_data.taxable_income - self.tax_data.qualified_income, 0)
+
+            if lower <= self.tax_data.taxable_ordinary <= upper:             
+                self.tax_data.ordinary_rate = rate 
+                self.tax_data.lower_ordinary_bound = lower 
+                self.tax_data.upper_ordinary_bound = upper
+                self.tax_data.prior_ordinary_bracket_tax = prior_tax
+                return
+            
+        print("Income too large or negative") 
+        return 1
+
+    def find_ordinary_tax(self):
+        self.tax_data.ordinary_tax = ((self.tax_data.taxable_ordinary - self.tax_data.lower_ordinary_bound) * self.tax_data.ordinary_rate) + self.tax_data.prior_ordinary_bracket_tax     
+        return
+        
+    def find_qualified_tax(self):
+        #intialize some variables for ease of use
+        year = self.tax_data.year
+        filing_status = self.tax_data.filing_status
+        taxable_income = self.tax_data.taxable_income
+        taxable_ordinary = self.tax_data.taxable_ordinary
+        qualified_income = self.tax_data.qualified_income
+
+        # if taxable income than 0% bracket, all at 0%
+        if taxable_income <= tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][0][1]:            
+            qualified_tax = tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][0][1] * 0
+
+        # see if taxable exceeds 15% bracket                                  
+        elif taxable_income < tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][.15][1]:
+            
+            # Edge case where more qualified income than ordinary income. Taxable income falls within 15% bracket.
+            if taxable_ordinary >= taxable_income:
+                qualified_tax = (taxable_income - tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][0][1]) * .15
+                
+            else:
+            # tax at 0% = 0% bracket - ordinary          
+                zero_bracket = max((tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][0][1] - taxable_ordinary),0)
+                #tax at 15% = qualified - 0% tax        
+                fifteen_bracket = qualified_income - zero_bracket
+                qualified_tax = (zero_bracket * 0) + (fifteen_bracket * .15)
+
+        # taxable above 15% bracket, should be minimum 15%
+        elif taxable_ordinary >= taxable_income:
+            #0% bracket - ordinary: cases where high taxable and high qualified
+            zero_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][0][1] - taxable_ordinary, 0)
+
+            #15% bracket - tax at zero (if any) - ordinary  
+            fifteen_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][.15][1] - zero_bracket - taxable_ordinary, 0)
+
+            #find amount at 20%
+            twenty_bracket = qualified_income - fifteen_bracket - zero_bracket                                          
+            qualified_tax = (zero_bracket * 0) + (fifteen_bracket * .15) + (twenty_bracket * .20)
+
+        # Edge case where more qualified income than ordinary income. Taxable Income falls beyond 20%.
+        else:
+            qualified_tax = (taxable_income - tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][.20][0]) * .20
+
+        
+        self.tax_data.qualified_tax = max(qualified_tax, 0)
+
+        
+    def find_total_tax(self):
+        self.tax_data.total_tax = max(self.tax_data.ordinary_tax + self.tax_data.qualified_tax, 0) 
+
+    def calculate(self):
+        self.find_ordinary_bracket()
+        self.find_ordinary_tax()
+        self.find_qualified_tax()
+        self.find_total_tax()
+
+class ScheduleJForm:
+    def __init__(self):
+        self.lines = {f'Line {n}': None for n in range(1, 24)}
+        self.lines.update({f'Line 2{ch}': None for ch in 'abc'})
+    
+    
+class ScheduleJResultContainer:
+    def __init__(self, schedule_j_form: ScheduleJForm,
+                 adjusted_current_year: AdjustedTaxData,
+                 adjusted_base1: AdjustedTaxData,
+                 adjusted_base2: AdjustedTaxData,
+                 adjusted_base3: AdjustedTaxData,
+                 elected_farm_income: float,
+                 elected_farm_qualified: float):
+        self.schedule_j_form = schedule_j_form
+        self.adjusted_current = adjusted_current_year
+        self.adjusted_base1 = adjusted_base1
+        self.adjusted_base2 = adjusted_base2
+        self.adjusted_base3 = adjusted_base3
+        self.elected_farm_income = elected_farm_income
+        self.elected_farm_qualified = elected_farm_qualified
+
+    def to_dict(self):
+        return {
+            "schedule_j_form": self.schedule_j_form.lines,
+            "adjusted_current": self.adjusted_current.to_dict(),
+            "adjusted_base1": self.adjusted_base1.to_dict(),
+            "adjusted_base2": self.adjusted_base2.to_dict(),
+            "adjusted_base3": self.adjusted_base3.to_dict(),
+            "elected_farm_income": self.elected_farm_income,
+            "elected_farm_qualified": self.elected_farm_qualified, }
+
+
+class ScheduleJCalculation:
+    def __init__(self, current_year: TaxYearData, base_year_1: TaxYearData, base_year_2: TaxYearData, 
+                 base_year_3: TaxYearData):
+        self.current_year = current_year
+        self.base_years = {2021: base_year_1, 2022: base_year_2, 2023: base_year_3}
+
+    def schedule_j_calculation(self, elected_farm_income: float, elected_cap_gains: float) -> ScheduleJResultContainer:
+        output = ScheduleJForm()
+        adjusted_current_year = AdjustedTaxData(self.current_year)
+
+        # Create new instances for adjusted base years
+        adjusted_bases = {year: AdjustedTaxData(base) for year, base in self.base_years.items()}
+
+        output.lines['Line 1'] = self.current_year.taxable_income
+        output.lines['Line 2a'] = elected_farm_income
+        output.lines['Line 2b'] = elected_cap_gains
+        output.lines['Line 3'] = output.lines['Line 1'] - output.lines['Line 2a']
+
+        # Intitialize elected farm income amounts and find 1/3 of each
+        total_elected =  output.lines['Line 2a']
+        elected_qualified = output.lines['Line 2b']
+        elected_ordinary =  total_elected - elected_qualified
+        distribute_total_elected = total_elected / 3
+        distribute_farm_ordinary = elected_ordinary / 3
+        distribute_farm_qualified = elected_qualified / 3
+        for line in ['Line 6', 'Line 10', 'Line 14']:
+            output.lines[line] = distribute_total_elected
+        
+        # Copy 2024 numbers from baseline and decrease incomes by elected amounts
+        adjusted_current_year.taxable_income = self.current_year.taxable_income - total_elected
+        adjusted_current_year.qualified_income = self.current_year.qualified_income - elected_qualified
+        adjusted_current_year.taxable_ordinary = self.current_year.taxable_ordinary - elected_ordinary
+
+        # Find tax on 2024 taxable less elected farm income
+        TaxCalculation(adjusted_current_year).calculate()
+        output.lines['Line 4'] = adjusted_current_year.total_tax
+
+        # Distribute elected farm income to each year, calculate tax
+        update_lines = {
+                2021: ['Line 5', 'Line 7', 'Line 8'],
+                2022: ['Line 9', 'Line 11', 'Line 12'],
+                2023: ['Line 13', 'Line 15', 'Line 16']
+            }
+        
+
+        for year, (base_income, adjusted_income, calculate_tax) in update_lines.items():
+                
+                # Pull base income from given tax info
+                base_ordinary_income = self.base_years[year].taxable_ordinary
+                base_qualified_income = self.base_years[year].qualified_income
+                base_taxable_income = self.base_years[year].taxable_income
+                output.lines[base_income] = base_taxable_income
+
+                # Increase income by 1/3
+                adjusted_ordinary_income = base_ordinary_income + distribute_farm_ordinary
+                adjusted_qualified_income = base_qualified_income + distribute_farm_qualified
+                adjusted_taxable_income = base_taxable_income + distribute_total_elected
+
+                # Place increased income total taxable income into Sch J
+                output.lines[adjusted_income] = adjusted_taxable_income 
+
+                # Increase ordinary, qualified, taxable income with respective elected farm incomes
+                adjusted_bases[year].taxable_ordinary = adjusted_ordinary_income
+                adjusted_bases[year].qualified_income = adjusted_qualified_income
+                adjusted_bases[year].taxable_income= adjusted_taxable_income 
+
+                TaxCalculation(adjusted_bases[year]).calculate()
+                output.lines[calculate_tax] = adjusted_bases[year].total_tax
+
+        output.lines['Line 17'] = output.lines['Line 4'] + output.lines['Line 8'] + output.lines['Line 12'] + output.lines['Line 16']
+        output.lines['Line 18'] = output.lines['Line 17']
+
+         # Get baseline tax from each year
+        base_tax = {
+                2021: 'Line 19',
+                2022: 'Line 20',
+                2023: 'Line 21',
+            }
+
+        for year, (tax_amount) in base_tax.items():
+            output.lines[tax_amount] = self.base_years[year].total_tax
+
+        # Total base tax from prior years
+        output.lines['Line 22'] = output.lines['Line 19'] + output.lines['Line 20'] + output.lines['Line 21']
+
+        # Schedule J tax for 2024
+        output.lines['Line 23'] = output.lines['Line 18'] - output.lines['Line 22']
+
+        return ScheduleJResultContainer(
+            schedule_j_form=output,
+            adjusted_current_year=adjusted_current_year,
+            adjusted_base1=adjusted_bases[2021],
+            adjusted_base2=adjusted_bases[2022],
+            adjusted_base3=adjusted_bases[2023],
+            elected_farm_income=elected_farm_income,
+            elected_farm_qualified=elected_qualified)
+
+
+class ScheduleJOptimization:
+    def __init__(self, current_year: TaxYearData, base_year_1: TaxYearData, base_year_2: TaxYearData, 
+                 base_year_3: TaxYearData, elected_farm_income: float, elected_farm_qualified: float):
+        self.current_year = current_year
+        self.base_year_1 = base_year_1
+        self.base_year_2 = base_year_2
+        self.base_year_3 = base_year_3
+        self.elected_farm_income = elected_farm_income
+        self.elected_farm_qualified = elected_farm_qualified
+
+
+    def optimize_sch_j(self, elected_farm_income, elected_farm_qualified):
+        results = []
+        current_total_elected = elected_farm_income
+        current_qualified_elected = elected_farm_qualified
+        current_ordinary_elected = elected_farm_income - elected_farm_qualified
+
+        # Find percentage so we can decrease proportionally
+        ordinary_percentage = current_ordinary_elected / current_total_elected
+        qualified_percentage = current_qualified_elected / current_total_elected
+
+        while current_total_elected >= 0:
+            instance = (ScheduleJCalculation(self.current_year, self.base_year_1, self.base_year_2, self.base_year_3)
+                        .schedule_j_calculation(current_total_elected, current_qualified_elected))
+            results.append(instance.to_dict())
+
+            current_total_elected -= 500
+            current_ordinary_elected -= 500 * ordinary_percentage
+            current_qualified_elected -= 500 * qualified_percentage
+
+        return results
+
+
+
+year_2021 = TaxYearData(2021, 'Married Filing Jointly', 50000, 175000)
+TaxCalculation(year_2021).calculate()
+year_2022 = TaxYearData(2022, 'Married Filing Jointly', 84100, 10000)
+TaxCalculation(year_2022).calculate()
+year_2023 = TaxYearData(2023, 'Married Filing Jointly', 75000, 0)
+TaxCalculation(year_2023).calculate()
+year_2024 = TaxYearData(2024, 'Married Filing Jointly', 100000, 20000)
+TaxCalculation(year_2024).calculate()
+
+optimize = ScheduleJOptimization(year_2024, year_2021, year_2022, year_2023, 50000, 10000)
+optimize.optimize_sch_j(50000, 10000)
+# print(jsonpickle.encode(optimize))
+
+with open("output.json", "w") as f:
+    json.dump(optimize, f, indent=4)
