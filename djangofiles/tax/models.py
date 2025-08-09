@@ -36,9 +36,9 @@ class TaxDataSet(models.Model):
         return '{} - {}'.format(self.name, self.pk)
     
     def return_optimal_amount(self):
-        return self.iterations.filter(
-            form__isnull=False
-        ).order_by('-form__line_23').first()
+        return ScheduleJForm.objects.filter(
+            iteration__dataset=self
+        ).order_by('line_23').first()
     
     def save(self, *args, **kwargs):
         self.ordinary_farm_income = max(self.max_elected_farm_income - self.qualified_farm_income, Decimal('0'))

@@ -117,7 +117,6 @@ class OutputView(LoginRequiredMixin, View):
         
         i = CalculationIteration.objects.filter(dataset__pk=dataset.pk, dataset__user=user).count()
         if not i:
-
             years = TaxYearData.objects.filter(dataset__pk=dataset.pk, dataset__user=user).order_by("pk")
             for year in years:
                 # Calculations
