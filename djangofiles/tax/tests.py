@@ -162,10 +162,6 @@ class TaxDataSetModelTest(TestCase):
         self.assertEqual(TaxYearData.objects.filter(dataset__user=self.test_user).count(), 8, "All TaxYearDatas not saved to DB")
 
 
-       
-
-
-
 class BaseTaxCalculationsTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
@@ -188,7 +184,7 @@ class BaseTaxCalculationsTest(TestCase):
                     print(f"❌ Test {i}, Year {j}: Got {result}, expected {expected}")
 
 
-class ScheduleJCaclulationsTest(TestCase):
+class ScheduleJCalculationsTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
@@ -203,23 +199,31 @@ class ScheduleJCaclulationsTest(TestCase):
                 # Base Calculations
                 for tax_year in TaxYearData.objects.filter(dataset=dataset):
                     TaxCalculation(tax_year).calculate()
-                    sch_j_results.append(round(tax_year.total_tax))
 
 
                 #Schedule J calculation
                 tax_years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
                 i = CalculationIteration.objects.create(dataset=dataset)
-
-
                 ScheduleJCalculation(*tax_years, i).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
-
-                adjusted = AdjustedTaxData.objects.all()
                 
-                print(adjusted)
+
+                for adjusted in AdjustedTaxData.objects.filter(iteration=i).order_by("-year"):
+                    sch_j_results.append(adjusted)
+
+                for j, (result, expected) in enumerate(zip(sch_j_results, test['outputs'])):
+                    if round(result.total_tax) != expected:
+                        print(f"❌ Test {i}, Year {j}: Got {result.total_tax}, expected {expected}")
+                        print(f"ordinary: {result.ordinary_tax}, qualified: {result.qualified_tax}")
 
 
+class ScheduleJOptimizationTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_optimization(self):
+        pass
         
-
 
            
 CREDENTIALS = [
@@ -262,24 +266,22 @@ TEST_CASES = [
 SCHEDULE_J_TEST_CASES = [
     {
         'inputs': [
-            [2024, "MFJ", 95000, 101000],
-            [2023, "MFJ", 93333, 71333],
-            [2022, "single", 63333, 41333],
-            [2021, "MFJ", 104333, 46333],
+            [2024, "MFJ", 120000, 105000],
+            [2023, "MFJ", 85000, 70000],
+            [2022, "single", 55000, 40000],
+            [2021, "MFJ", 96000, 45000],
         ],
-        'outputs': [[143, 2812, 5683, 0]],
+        'outputs': [143, 2812, 5683, 10092],
         'elected': [25000, 4000],
     },
     {
         'inputs': [
-            [2024, "single", 203000, 198000],
-            [2023, "single", 349000, 40666],
-            [2022, "MFJ", 451000, 280666],
-            [2021, "MFJ", 324000, 2666],
+            [2024, "single", 230000, 200000],
+            [2023, "single", 340000, 40000],
+            [2022, "MFJ", 460000, 280000],
+            [2021, "MFJ", 315000, 2000],
         ],
-        'outputs': [
-            [16843, 66900, 76838, 87411],
-        ],
-        'elected': [27000, 9000]
+        'outputs': [23896, 85911, 74971, 65562],
+        'elected': [27000, 2000]
     },
 ]
