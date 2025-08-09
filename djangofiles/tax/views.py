@@ -99,7 +99,7 @@ class InputsCreateView(LoginRequiredMixin, View):
                 instance.save()
 
             # REROUTE TO RESULTS ONCE THAT IS FINISHED
-            return redirect("tax:output", kwargs={"dataset_pk": dataset.pk})
+            return redirect("tax:output", dataset_pk=dataset.pk)
 
         return render(request, self.template_name, {
             "formset": formset,

@@ -10,6 +10,7 @@ class TaxCalculation:
         self.tax_data = tax_data
 
     def find_ordinary_bracket(self):
+        
         for rate, (lower, upper, prior_tax) in tax_brackets.ORDINARY_TAX_TABLES[self.tax_data.year][self.tax_data.filing_status].items():
             self.tax_data.taxable_ordinary = max(self.tax_data.taxable_income - self.tax_data.qualified_income, 0)
 
@@ -43,7 +44,7 @@ class TaxCalculation:
         elif taxable_income < tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][".15"][1]:
             
             # Edge case where more qualified income than ordinary income. Taxable income falls within 15% bracket.
-            if taxable_ordinary >= taxable_income:
+            if qualified_income >= taxable_income:
                 qualified_tax = (taxable_income - tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status]["0"][1]) * Decimal(.15)
                 
             else:
@@ -65,10 +66,17 @@ class TaxCalculation:
             twenty_bracket = qualified_income - fifteen_bracket - zero_bracket                                          
             qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15)) + (twenty_bracket * Decimal(.20))
 
-        # Edge case where more qualified income than ordinary income. Taxable Income falls beyond 20%.
+        # Edge case where more qualified income than ordinary income and Taxable Income falls beyond 20%.
         else:
-            qualified_tax = (taxable_income - tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][".20"][0]) * Decimal(.20)
+            # Fill 0 bracket
+            zero_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status]["0"][1], 0)
 
+            # Fill 15 bracket
+            fifteen_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[year][filing_status][".15"][1] - zero_bracket, 0)
+
+            # taxable income - prior brackets
+            twenty_bracket = taxable_income - fifteen_bracket - zero_bracket                                          
+            qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15)) + (twenty_bracket * Decimal(.20))
         
         self.tax_data.qualified_tax = max(qualified_tax, 0)
 
@@ -132,7 +140,6 @@ class ScheduleJCalculation:
         output.line_1 = self.current_year.taxable_income
         output.line_2a = elected_farm_income
         output.line_2b = elected_cap_gains
-        print(type(output.line_2b))
         output.line_3 = output.line_1 - output.line_2a
 
         # Intitialize elected farm income amounts and find 1/3 of each
