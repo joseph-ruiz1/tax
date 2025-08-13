@@ -1,22 +1,15 @@
-<script setup>
-import { ref, computed } from 'vue'
-
-const count = ref(0)
-
-function increment() {
-  count.value++
-}
-
-const counting = computed(() => {
-  return count.value > 1 ? 'positive' : 'negative'
-})
-</script>
-
+<!-- App.vue -->
 <template>
-  <button @click="increment">
-    {{ count }}
-  </button>
+  <div id="app">
+    <!-- Optional site-wide stuff like navbars -->
+  </div>
+  
+<main>
+  <router-view />
+</main>
 
-  <p>count?</p>
-  <span>{{ counting }}</span>
 </template>
+
+<script setup>
+// No need for anything here unless App.vue has logic
+</script>
