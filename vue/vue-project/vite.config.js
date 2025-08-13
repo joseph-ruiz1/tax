@@ -17,7 +17,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: path.resolve(__dirname, '../djangofiles/static/frontend'), // where files go after build
+    outDir: path.resolve(__dirname, '../../djangofiles/static/frontend'), // where files go after build
     emptyOutDir: true, // clean it before each build
     manifest: true     // useful if Django templates want to use hashed file names
   }
