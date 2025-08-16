@@ -1,18 +1,55 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.parsers import JSONParser
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, FormView, DetailView, UpdateView, View, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from rest_framework import permissions, viewsets, status, generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from .services import TaxCalculation, ScheduleJOptimization, ScheduleJCalculation, CalculationIteration
 from .forms import TaxYearDataFormSet, TaxDataSetForm
 from .models import TaxYearData, TaxDataSet, ScheduleJForm
+from .permissions import IsOwner
+from .serializers import UserSerializer, TaxDataSetSerializer
 
 
 class IndexView(TemplateView):
     template_name = "tax/index.html"
+
+
+class UserList(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    
+class UserDetail(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    
+class DataSetList(generics.ListCreateAPIView):
+    serializer_class = TaxDataSetSerializer
+
+    def get_queryset(self):
+        return TaxDataSet.objects.filter(user=self.request.user)
+    
+    def perform_create(self, serializer):
+        # Automatically set the owner
+        serializer.save()
+
+class DataSetDetail(generics.RetrieveDestroyAPIView):
+    serializer_class = TaxDataSetSerializer
+    permission_classes = [IsOwner]
+
+    def get_queryset(self):
+        # Confirm only owner can access
+        return TaxDataSet.objects.filter(user=self.request.user)
 
 
 class LoginView(LoginView):
