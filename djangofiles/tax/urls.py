@@ -1,19 +1,17 @@
 from django.urls import include, path
 from django.contrib.auth.views import LogoutView
+from rest_framework.routers import DefaultRouter
 
-from .views import InputsCreateView, IndexView, RegisterView, DashboardView, LoginView, StartNewDataSetView, OutputView, UserList, UserDetail, DataSetList, DataSetDetail
-
-from rest_framework import routers
-from rest_framework.urlpatterns import format_suffix_patterns
-
-
+from .views import InputsCreateView, IndexView, RegisterView, DashboardView, LoginView, StartNewDataSetView, OutputView, UserViewSet, DataSetViewSet
 
 app_name = "tax"
+
+router = DefaultRouter()
+router.register(r'datasets', DataSetViewSet, basename="dataset")
+router.register(r'users', UserViewSet, basename="user")
+
 urlpatterns = [
-    path('users/', UserList.as_view()),
-    path('users/<int:pk>/', UserDetail.as_view()),
-    path('view/', DataSetList.as_view(), name="dataset-list"),
-    path('view/<int:pk>/', DataSetDetail.as_view(), name="dataset-detail"),
+    path('', include(router.urls)),
 
     path("login/", LoginView.as_view(), name='login'),
     path("logout/", LogoutView.as_view(next_page='login'), name='logout'),
@@ -23,5 +21,3 @@ urlpatterns = [
     path("users/datasets/<int:dataset_pk>/inputs/", InputsCreateView.as_view(), name="inputs"),
     path("users/datasets/<int:dataset_pk>/output/", OutputView.as_view(), name="output"),
 ]
-
-urlpatterns = format_suffix_patterns(urlpatterns)

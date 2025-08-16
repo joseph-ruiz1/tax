@@ -23,33 +23,24 @@ class IndexView(TemplateView):
     template_name = "tax/index.html"
 
 
-class UserList(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    This viewset automatically provides `list` and `retrieve` actions.
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    
-class UserDetail(generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    
-class DataSetList(generics.ListCreateAPIView):
-    serializer_class = TaxDataSetSerializer
 
-    def get_queryset(self):
-        return TaxDataSet.objects.filter(user=self.request.user)
-    
+class DataSetViewSet(viewsets.ModelViewSet):
+    """
+    This ViewSet automatically provides `list`, `create`, `retrieve`,
+    `update` and `destroy` actions.
+    """
+    queryset = TaxDataSet.objects.all()
+    serializer_class = TaxDataSetSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
     def perform_create(self, serializer):
-        # Automatically set the owner
-        serializer.save()
-
-class DataSetDetail(generics.RetrieveDestroyAPIView):
-    serializer_class = TaxDataSetSerializer
-    permission_classes = [IsOwner]
-
-    def get_queryset(self):
-        # Confirm only owner can access
-        return TaxDataSet.objects.filter(user=self.request.user)
+        serializer.save(user=self.request.user)
 
 
 class LoginView(LoginView):
