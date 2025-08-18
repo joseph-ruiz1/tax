@@ -3,32 +3,99 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, FormView, DetailView, UpdateView, View, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from rest_framework import permissions, viewsets, status, generics
+from django.contrib.auth import login, logout
+from rest_framework import viewsets, status, generics
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.parsers import JSONParser
+from rest_framework.decorators import action
 
 from .services import TaxCalculation, ScheduleJOptimization, ScheduleJCalculation, CalculationIteration
 from .forms import TaxYearDataFormSet, TaxDataSetForm
 from .models import TaxYearData, TaxDataSet, ScheduleJForm
-from .permissions import IsOwner
-from .serializers import UserSerializer, TaxDataSetSerializer
+from .permissions import isOwner
+from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer
 
 
 class IndexView(TemplateView):
     template_name = "tax/index.html"
 
+class AuthViewSet(viewsets.ViewSet):
+    """
+    Handles authentication
+    """
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def login(self, request):
+        """
+        Login endpoint, creates session
+        """
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            login(request, user) # Create cookie
+            return Response({
+                'success': True,
+                'user': UserSerializer(user).data,
+                'message': 'Login successful'
+            })
+        return Response({
+            'success': False,
+            'errors': serializer.errors,
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def logout(self, request):
+        """
+        Logout endpoint, ends session
+        """
+        logout(request)
+        return Response({
+            'success': True,
+            'message': 'Logout successful',
+        })
+    
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def check(self, request):
+        """
+        Check auth status
+        """
+        if request.user.is_authenticated:
+            return Response({
+                'authenticated': True,
+                'user': UserSerializer(request.user).data
+            })
+        return Response({
+            'authenticated': False
+        })
+    
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """
+        Get current user's info
+        """
+        return Response(UserSerializer(request.user).data)
 
 class UserViewSet(viewsets.ModelViewSet):
     """
-    This viewset automatically provides `list` and `retrieve` actions.
+    View for CRUD operations
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, isOwner]
+
+    @action(detail=False, methods=['get'])
+    def current_user(self, request):
+        """
+        Get current logged in user
+        """
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
 
 class DataSetViewSet(viewsets.ModelViewSet):
     """
@@ -37,7 +104,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
     """
     queryset = TaxDataSet.objects.all()
     serializer_class = TaxDataSetSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

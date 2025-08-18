@@ -2,16 +2,19 @@ from django.urls import include, path
 from django.contrib.auth.views import LogoutView
 from rest_framework.routers import DefaultRouter
 
-from .views import InputsCreateView, IndexView, RegisterView, DashboardView, LoginView, StartNewDataSetView, OutputView, UserViewSet, DataSetViewSet
+from .views import InputsCreateView, IndexView, RegisterView, DashboardView, LoginView, StartNewDataSetView, OutputView, UserViewSet, DataSetViewSet, AuthViewSet
 
 app_name = "tax"
 
 router = DefaultRouter()
+router.register(r'auth', AuthViewSet, basename='auth')
+router.register(r'users', UserViewSet)
+
 router.register(r'datasets', DataSetViewSet, basename="dataset")
-router.register(r'users', UserViewSet, basename="user")
+
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('api/', include(router.urls)),
 
     path("login/", LoginView.as_view(), name='login'),
     path("logout/", LogoutView.as_view(next_page='login'), name='logout'),

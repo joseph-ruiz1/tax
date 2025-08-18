@@ -1,66 +1,139 @@
 <!-- src/views/LoginView.vue -->
 <template>
-  <div class="login">
-    <h1>Login</h1>
-    <form @submit.prevent="handleLogin">
-      <input v-model="username" placeholder="Username" required />
-      <input type="password" v-model="password" placeholder="Password" required />
-      <button type="submit">Login</button>
-      <p v-if="error" class="error">{{ error }}</p>
-    </form>
+  <div class="login-container">
+    <h2>Login</h2>
+
+    <div v-if="isAuthenticated">
+      <h3>Welcome, {{ user.username }}</h3>
+      <p>You're logged in</p>
+      <button @click="handleLogout" class="logout-btn">Logout</button>
+    </div>
+
+    <div v-else>
+      <div @submit.prevent="handleLogin">
+        <div class="form-group">
+         <label>username:</label>
+         <input
+         v-model="username"
+         type="text"
+         required
+         :disabled="loading"
+         />
+        </div>
+        
+        <div class="form-group">
+          <label>password:</label>
+          <input
+          v-model="password"
+          type="text"
+          required
+          :disabled="loading"
+          />
+        </div>
+
+        <button
+        type="submit"
+        :disabled="loading"
+        @click="handleLogin"
+        class="login-btn"
+        >
+      {{ loading ? 'Logging in...' : 'Login' }}
+      </button>
+
+        <div v-if="error" class="error">
+          {{ error }}
+        </div>
+    </div>
+   </div>
+
+   <div class="api-info">
+    <h3>DRF ViewSet Endponits:</h3>
+    <ul>
+      <li><code>POST /api/auth/login/</code> - Login with session</li>
+      <li><code>POST /api/auth/logout/</code> - Logout</li>
+      <li><code>GET /api/auth/check/</code> - Check auth status</li>
+      <li><code>GET /api/users/</code> - List users (authenticated)</li>
+    </ul>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth.js'
+
+const router = useRouter()
+const { user, isAuthenticated, loading, error, login, logout, checkAuth } = useAuth()
 
 const username = ref('')
 const password = ref('')
-const error = ref('')
 
-async function handleLogin() {
-  error.value = ''
-  try {
-    const res = await fetch('/login/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-CSRFToken': getCookie('csrftoken')
-      },
-      body: new URLSearchParams({
-        username: username.value,
-        password: password.value
-      })
-    })
+onMounted(() => {
+  checkAuth()
+})
 
-    if (res.redirected) {
-      // Django redirect → go to new page
-      window.location.href = res.url
-    } else {
-      error.value = 'Invalid credentials'
-    }
-  } catch (err) {
-    error.value = 'Error logging in'
+const handleLogin = async () => {
+  const success = await login(username.value, password.value)
+  if (success) {
+    // redirect
+    // router.push('/page')
   }
 }
 
-// Helper to get CSRF token from cookie
-function getCookie(name) {
-  let cookieValue = null
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';')
-    for (let cookie of cookies) {
-      cookie = cookie.trim()
-      if (cookie.startsWith(name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1))
-        break
-      }
-    }
-  }
-  return cookieValue
+const handleLogout = async () => {
+  await logout(),
+  username.value = ''
+  password.value = ''
 }
 </script>
 
 <style scoped>
-.error { color: red; }
+.login-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.login-container div {
+  margin-bottom: 1rem;
+}
+
+.login-container label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.login-container input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.login-container button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.login-container button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #dc3545;
+  background-color: #f8d7da;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+}
 </style>
