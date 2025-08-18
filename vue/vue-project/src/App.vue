@@ -1,12 +1,9 @@
 <!-- App.vue -->
 <template>
-  <div id="app">
-    <!-- Optional site-wide stuff like navbars -->
-  </div>
-  
-<main>
-  <router-view />
-</main>
+  <main id="app">
+     <!-- Optional site-wide stuff like navbars -->
+    <router-view />
+  </main>
 
 </template>
 

@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 
 INSTALLED_APPS = [
+    'corsheaders',
     'rest_framework',
     'tax.apps.TaxConfig',
     'django.contrib.admin',
@@ -47,6 +48,7 @@ LOGOUT_REDIRECT_URL = 'tax:login'
 LOGIN_URL = 'tax:login'
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -58,11 +60,11 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
    ],
    'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAdminUser',
+        'rest_framework.permissions.IsAuthenticated',
    ),
 }
 
@@ -84,6 +86,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mysite.wsgi.application'
+
+CORS_ALLOWED_ORIGINS = [
+"http://localhost:8080",
+"http://127.0.0.1:9000",
+"http://localhost:5173",
+"http://127.0.0.1:5173",
+]
+
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+CORS_ALLOW_CREDENTIALS = True
 
 
 # Database
