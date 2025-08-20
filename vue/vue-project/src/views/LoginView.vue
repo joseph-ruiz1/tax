@@ -76,8 +76,7 @@ onMounted(() => {
 const handleLogin = async () => {
   const success = await login(username.value, password.value)
   if (success) {
-    // redirect
-    // router.push('/page')
+    router.push('/users/me')
   }
 }
 

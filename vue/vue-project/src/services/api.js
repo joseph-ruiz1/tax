@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = 'http://127.0.0.1:8000'
+
 
 export const apiService = {
   async login(username, password) {
@@ -29,9 +29,9 @@ export const apiService = {
     }
   },
 
-  // User endpoints
+  // User endpoints, needs updating
   async getUsers() {
-    const response = await axios.get('/tax/users/')
+    const response = await axios.get('/users/me')
     return response.data
   },
 
