@@ -8,7 +8,7 @@ app_name = "tax"
 
 router = DefaultRouter()
 router.register(r'auth', AuthViewSet, basename='auth')
-router.register(r'users', UserViewSet)
+router.register(r'users', UserViewSet, basename='user')
 
 router.register(r'datasets', DataSetViewSet, basename="dataset")
 

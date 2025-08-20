@@ -81,18 +81,17 @@ class AuthViewSet(viewsets.ViewSet):
         """
         return Response(UserSerializer(request.user).data)
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(viewsets.GenericViewSet):
     """
     View for CRUD operations
     """
-    queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, isOwner]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'])
-    def current_user(self, request):
+    def me(self, request):
         """
-        Get current logged in user
+        Get current user
         """
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
