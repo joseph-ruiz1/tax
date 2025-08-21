@@ -19,7 +19,7 @@ from .services import TaxCalculation, ScheduleJOptimization, ScheduleJCalculatio
 from .forms import TaxYearDataFormSet, TaxDataSetForm
 from .models import TaxYearData, TaxDataSet, ScheduleJForm
 from .permissions import isOwner
-from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer
+from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer
 
 
 class IndexView(TemplateView):
@@ -98,20 +98,28 @@ class UserViewSet(viewsets.GenericViewSet):
 
 class DataSetViewSet(viewsets.ModelViewSet):
     """
-    This ViewSet automatically provides `list`, `create`, `retrieve`,
-    `update` and `destroy` actions.
+    
     """
     queryset = TaxDataSet.objects.all()
-    serializer_class = TaxDataSetSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    def get_queryset(self):
+        return TaxDataSet.objects.filter(user=self.request.user)
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return TaxDataSetSerializer
+        elif self.action in ['retrieve', 'update', 'partial_update']:
+            return TaxDataSetDetailSerializer
+        elif self.action == 'create':
+            return CalculationEntrySerializer
+        return TaxDataSetSerializer
 
-class LoginView(LoginView):
-    template_name = 'tax/login.html'
-
+class CalculationEntryView(viewsets.ModelViewSet):
+    pass
 
 class RegisterView(FormView):
     template_name = "tax/register.html"

@@ -20,7 +20,6 @@
     const user = ref([])
     const loading = ref(true)
     const error = ref('')
-    const authenticated = ref(false)
         
    onMounted(async () => {
     await fetchUsers()
