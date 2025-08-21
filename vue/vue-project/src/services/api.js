@@ -37,6 +37,7 @@ export const apiService = {
 
   async getCurrentUser() {
     const response = await axios.get('/auth/me/')
+    return response.data
   },
 
   async getUser(id) {
@@ -55,9 +56,23 @@ export const apiService = {
   },
 
   async deleteUser(id) {
-    const reponse = await axios.delete(`/users/${id}/`)
+    const response = await axios.delete(`/users/${id}/`)
     return response.data
   },
 
+  async getDatasetList() {
+    const response = await axios.get('/datasets/')
+    return response.data
+  },
+
+  async getDatasetDetail(id) {
+    const response = await axios.get(`/datasets/${id}/`)
+    return response.data
+  },
+
+  async createDataset(data) {
+    const response = await axios.post('/datasets/', data)
+    return response.data
+  },
 }
 
