@@ -4,6 +4,7 @@ import LoginView from '../views/LoginView.vue'
 import UsersView from '../views/UsersView.vue'
 import DatasetView from '../views/DatasetView.vue'
 import DatasetDetail from '../views/DatasetDetail.vue'
+import DataEntryView from '@/views/DataEntryView.vue'
 
 
 const router = createRouter({
@@ -14,6 +15,7 @@ const router = createRouter({
     {path: '/users/me', component: UsersView},
     {path: '/datasets', component: DatasetView},
     {path: '/datasets/:id', name: 'Dataset Detail', component: DatasetDetail},
+    {path: '/datasets/:id/new', name:'New dataset', component: DataEntryView},
   ],
 })
 

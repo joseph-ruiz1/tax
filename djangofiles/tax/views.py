@@ -1,8 +1,5 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.views import LoginView
-from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, FormView, DetailView, UpdateView, View, TemplateView
@@ -19,7 +16,7 @@ from .services import TaxCalculation, ScheduleJOptimization, ScheduleJCalculatio
 from .forms import TaxYearDataFormSet, TaxDataSetForm
 from .models import TaxYearData, TaxDataSet, ScheduleJForm
 from .permissions import isOwner
-from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer
+from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer
 
 
 class IndexView(TemplateView):
@@ -98,7 +95,7 @@ class UserViewSet(viewsets.GenericViewSet):
 
 class DataSetViewSet(viewsets.ModelViewSet):
     """
-    
+    Dataset dashboard page. Allows for viewing and deleting. Creates are handled in CalculationEntryView
     """
     queryset = TaxDataSet.objects.all()
     permission_classes = [IsAuthenticated]
@@ -112,14 +109,47 @@ class DataSetViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return TaxDataSetSerializer
-        elif self.action in ['retrieve', 'update', 'partial_update']:
+        elif self.action in ['retrieve']:
             return TaxDataSetDetailSerializer
         elif self.action == 'create':
+            return CreateCalculationSerializer
+        elif self.action == 'new_entry':
             return CalculationEntrySerializer
-        return TaxDataSetSerializer
+    
+    @action(detail=True, methods=['get'], url_path='create')
+    def create_step(self, request, pk=None):
+        dataset = self.get_object()
+        return Response()
+    
+    @action(detail=True, methods=['patch'], url_path='new')
+    def new_entry(self, request, pk=None):
+        dataset = self.get_object()
+        serializer = self.get_serializer(dataset, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                    'success': True,
+                    'message': 'Patched Successfully',
+                    'data': serializer.data
+                })
+        return Response({
+            'success': False,
+            'errors': serializer.errors,
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['get'], url_path='output')
+    def output(self, request, pk=None):
+        dataset = self.get_object()
+        # Serialize processed results
+        return Response()
 
-class CalculationEntryView(viewsets.ModelViewSet):
-    pass
+
+class CalculationEntryView(generics.CreateAPIView):
+    """
+    Inputs TaxDataSet and four TaxYearData instances
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = CalculationEntrySerializer
 
 class RegisterView(FormView):
     template_name = "tax/register.html"
