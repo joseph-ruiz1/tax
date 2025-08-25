@@ -17,23 +17,7 @@
 
         
         <div>
-            <button @click="showForm = !showForm">
-                {{ showForm ? 'Cancel' : 'Create New Dataset' }}
-            </button>
-
-            <form v-if="showForm" @submit.prevent="createDataset">
-                <div>
-                    <label>Name:</label>
-                    <input v-model="form.name" type="text" required>
-                </div>
-                <div>
-                    <label>Max Elected Farm Income:</label>
-                    <input v-model="form.max_elected_farm_income" type="number" step="0.01" required>
-                </div>
-                <div>
-                    <label>Qualified Farm Income:</label>
-                    <input v-model="form.qualified_farm_income" type="number" step="0.01" required>
-                </div>
+            <form @submit.prevent="createDataset">
                 <button type="submit">Create</button>
             </form>
         </div>  
@@ -43,16 +27,13 @@
 <script setup>
 import {ref, onMounted} from 'vue'
 import { apiService } from '@/services/api.js'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const datasets = ref([])
-const showForm = ref(false)
-const form = ref({
-    name: '',
-    max_elected_farm_income: '',
-    qualified_farm_income: '',
-})
+const form = ref({})
 
 onMounted(async () => {
     await fetchDatasets ()
@@ -71,9 +52,8 @@ const fetchDatasets = async () => {
 
 const createDataset = async () => {
     try {
-        await apiService.createDataset(form.value)
-        showForm.value = false
-        form.value = { name: '', max_elected_farm_income: '', qualified_farm_income: ''}
+        const response = await apiService.createDataset(form.value)
+        router.push(`/datasets/${response.id}/new`)
     } catch (err) {
         error.value = 'Failed to create dataset'
     }

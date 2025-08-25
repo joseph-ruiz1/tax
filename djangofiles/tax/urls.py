@@ -2,7 +2,7 @@ from django.urls import include, path
 from django.contrib.auth.views import LogoutView
 from rest_framework.routers import DefaultRouter
 
-from .views import InputsCreateView, IndexView, RegisterView, DashboardView, LoginView, StartNewDataSetView, OutputView, UserViewSet, DataSetViewSet, AuthViewSet
+from .views import InputsCreateView, IndexView, RegisterView, DashboardView, StartNewDataSetView, OutputView, UserViewSet, DataSetViewSet, AuthViewSet
 
 app_name = "tax"
 
@@ -16,7 +16,6 @@ router.register(r'datasets', DataSetViewSet, basename="dataset")
 urlpatterns = [
     path('api/', include(router.urls)),
 
-    path("login/", LoginView.as_view(), name='login'),
     path("logout/", LogoutView.as_view(next_page='login'), name='logout'),
     path("register/", RegisterView.as_view(), name='register'),
     path("users/dashboard", DashboardView.as_view(), name="dashboard"),

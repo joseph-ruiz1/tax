@@ -28,8 +28,8 @@ class TaxDataSet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='datasets')
     created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=50, default="Created Set")
-    max_elected_farm_income = models.DecimalField(max_digits=12, decimal_places=2)
-    qualified_farm_income = models.DecimalField(max_digits=12, decimal_places=2)
+    max_elected_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    qualified_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ordinary_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
@@ -48,8 +48,8 @@ class TaxDataSet(models.Model):
 class TaxYearStructure(models.Model):
     year = models.CharField(max_length=4, choices=YEAR)
     filing_status = models.CharField(max_length=6, choices=FILING_STATUS)
-    taxable_income = models.DecimalField(decimal_places=2, max_digits=11)
-    qualified_income = models.DecimalField(decimal_places=2, max_digits=11)
+    taxable_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
+    qualified_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
     taxable_ordinary = models.DecimalField(decimal_places=2, max_digits=11, editable=False)
 
     ordinary_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)

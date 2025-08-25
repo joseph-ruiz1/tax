@@ -70,9 +70,14 @@ export const apiService = {
     return response.data
   },
 
-  async createDataset(data) {
-    const response = await axios.post('/datasets/', data)
+  async createDataset(formData) {
+    const response = await axios.post('/datasets/', formData)
     return response.data
   },
+
+  async patchDataset(id, formData) {
+    const response = await axios.patch(`/datasets/${id}/new/`, formData)
+    return response.data
+  }
 }
 
