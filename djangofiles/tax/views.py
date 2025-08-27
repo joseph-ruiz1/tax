@@ -126,12 +126,32 @@ class DataSetViewSet(viewsets.ModelViewSet):
         dataset = self.get_object()
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            updated_dataset = serializer.save()
+            years = updated_dataset.tax_years.all().order_by('-year')
+
+            # Base Calculations
+            for tax_year in years:    
+                TaxCalculation(tax_year).calculate()
+                tax_year.save()
+
+            optimize = ScheduleJOptimization(*years, 
+                                             elected_farm_income=updated_dataset.max_elected_farm_income, 
+                                             elected_farm_qualified=updated_dataset.qualified_farm_income, 
+                                             dataset=updated_dataset)
+            optimize.optimize_sch_j(updated_dataset.max_elected_farm_income, updated_dataset.qualified_farm_income)
+
+             
+            results = ScheduleJForm.objects.filter(iteration__dataset=updated_dataset)
+            best = dataset.return_optimal_amount
+            print(results)
+
+
             return Response({
                     'success': True,
                     'message': 'Patched Successfully',
                     'data': serializer.data
                 })
+                
         return Response({
             'success': False,
             'errors': serializer.errors,

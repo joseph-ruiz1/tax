@@ -87,7 +87,6 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
         for i, year_data in enumerate(years_data):
             year = year_data['year']
             tax_year = instance.tax_years.get(year=str(year))
-            print(f"===>{tax_year}")
             year_serializer = TaxYearDataDetailSerializer(tax_year, data=year_data, partial=True)
             if year_serializer.is_valid(raise_exception=True):
                 year_serializer.save()
