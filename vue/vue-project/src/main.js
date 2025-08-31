@@ -10,6 +10,8 @@ axios.defaults.withCredentials = true
 axios.defaults.withXSRFToken = true
 axios.defaults.xsrfCookieName = 'csrftoken'
 axios.defaults.xsrfHeaderName = 'X-CSRFTOKEN'
+import VueApexCharts from "vue3-apexcharts";
 
-createApp(App).use(router).mount('#app')
+
+createApp(App).use(router).use(VueApexCharts).mount('#app')
 

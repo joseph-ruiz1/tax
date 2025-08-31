@@ -16,7 +16,7 @@ from .services import TaxCalculation, ScheduleJOptimization, ScheduleJCalculatio
 from .forms import TaxYearDataFormSet, TaxDataSetForm
 from .models import TaxYearData, TaxDataSet, ScheduleJForm
 from .permissions import isOwner
-from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer
+from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer
 
 
 class IndexView(TemplateView):
@@ -115,16 +115,34 @@ class DataSetViewSet(viewsets.ModelViewSet):
             return CreateCalculationSerializer
         elif self.action == 'new_entry':
             return CalculationEntrySerializer
+        elif self.action == 'results_get':
+            return OutputSerializer
+        elif self.action == 'results_patch':
+            return
+        
+    @action(detail=False, methods=['post'], url_path='create')
+    def create_step(self, request):
+        serializer = self.get_serializer(data={})
+        # Consider making this structure flow into the FE form for validation purposes
+        
+        if serializer.is_valid():    
+            dataset = serializer.save(user=request.user)
+            return Response({
+                'success': True,
+                'dataset_id': dataset.id
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            'success': False,
+            'message': 'Dataset Creation failed',
+            'errors': serializer.errors,
+            }, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['get'], url_path='create')
-    def create_step(self, request, pk=None):
-        dataset = self.get_object()
-        return Response()
     
     @action(detail=True, methods=['patch'], url_path='new')
     def new_entry(self, request, pk=None):
         dataset = self.get_object()
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
+
         if serializer.is_valid():
             updated_dataset = serializer.save()
             years = updated_dataset.tax_years.all().order_by('-year')
@@ -140,16 +158,13 @@ class DataSetViewSet(viewsets.ModelViewSet):
                                              dataset=updated_dataset)
             optimize.optimize_sch_j(updated_dataset.max_elected_farm_income, updated_dataset.qualified_farm_income)
 
-             
             results = ScheduleJForm.objects.filter(iteration__dataset=updated_dataset)
             best = dataset.return_optimal_amount
-            print(results)
-
 
             return Response({
                     'success': True,
                     'message': 'Patched Successfully',
-                    'data': serializer.data
+                    'dataset': serializer.data,
                 })
                 
         return Response({
@@ -157,12 +172,23 @@ class DataSetViewSet(viewsets.ModelViewSet):
             'errors': serializer.errors,
             }, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['get'], url_path='output')
-    def output(self, request, pk=None):
-        dataset = self.get_object()
-        # Serialize processed results
-        return Response()
-
+    @action(detail=True, methods=['get'], url_path='results')
+    def results_get(self, request, pk=None):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'message': 'Get Successful',
+            'form': serializer.data['inputs'],
+            'outputs': serializer.data['outputs']
+        })
+    
+    @action(detail=True, methods=['patch'], url_path='results')
+    def results_patch(self, request, pk=None):
+        # De-serialize form
+        # Update Calculations
+        # Return results
+        pass
 
 class CalculationEntryView(generics.CreateAPIView):
     """

@@ -71,13 +71,23 @@ export const apiService = {
   },
 
   async createDataset(formData) {
-    const response = await axios.post('/datasets/', formData)
+    const response = await axios.post('/datasets/create/', formData)
     return response.data
   },
 
   async patchDataset(id, formData) {
     const response = await axios.patch(`/datasets/${id}/new/`, formData)
     return response.data
-  }
+  },
+
+  async getResults(id) {
+    const response = await axios.get(`/datasets/${id}/results/`)
+    return response.data
+  },
+
+  async updateDataset(id, formData) {
+    const response = await axios.patch(`/datasets/${id}/results/`, formData)
+    return response.data
+  },
 }
 

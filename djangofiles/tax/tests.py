@@ -1,10 +1,12 @@
 from django.test import TestCase
-from django.urls import reverse, resolve
+from django.urls import reverse
 from django.contrib.auth import get_user_model
+from rest_framework.test import APITestCase
 
 
 from .models import TaxYearData, TaxDataSet, User, CalculationIteration, AdjustedTaxData, ScheduleJForm
 from .utils import build_taxyear_formset_data, chunker
+from .serializers import TaxDataSetDetailSerializer, TaxYearDataDetailSerializer, OutputSerializer
 from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization
 
 def create_taxdataset(user, elected, elected_qualified):
@@ -132,7 +134,6 @@ class TaxDataSetModelTest(TestCase):
         # POST that formset
         response = self.client.post(input_url, formset_data, follow=True)
         self.assertEqual(response.status_code, 200)
-        
 
         # Create Second Set
         response = self.client.get(reverse("tax:start-dataset"))
@@ -214,7 +215,6 @@ class ScheduleJCalculationsTest(TestCase):
                         print(f"❌ Test {i}, Year {j}: Got {result.total_tax}, expected {expected}")
                         print(f"ordinary: {result.ordinary_tax}, qualified: {result.qualified_tax}")
 
-
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
@@ -238,7 +238,29 @@ class ScheduleJOptimizationTest(TestCase):
         results = ScheduleJForm.objects.filter(iteration__dataset=dataset).values_list("line_23", flat=True)
         print(dataset.return_optimal_amount())
         
+class TaxDataSetSerializerTests(APITestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+        
+    def test_serializer_outputs(self):
+        for i, test in enumerate(SCHEDULE_J_OPT_TEST):
+                max_elected, max_qualified_elected = test["elected"]
+                dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, max_qualified_elected)
+                dataset.refresh_from_db()
 
+                years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
+
+                # Base Calculations
+                for year in years:
+                    TaxCalculation(year).calculate()
+
+        optimize = ScheduleJOptimization(*years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, dataset=dataset)
+        optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+
+        data = OutputSerializer(dataset).data
+        print(data)
+        
            
 CREDENTIALS = [
             ('test1', 'testing123'), 
