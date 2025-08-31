@@ -9,7 +9,7 @@
 
         <div v-else>
             <li v-for="dataset in datasets" :key="dataset.id">
-                <router-link :to="`/datasets/${dataset.id}`">
+                <router-link :to="`/datasets/${dataset.id}/results`">
                     {{ dataset.id }}
                  </router-link>
             </li>

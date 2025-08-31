@@ -1,7 +1,6 @@
 from .calculations import tax_brackets
 from .models import TaxYearData, AdjustedTaxData, CalculationIteration, ScheduleJForm
 
-import json
 from decimal import Decimal
 
 
