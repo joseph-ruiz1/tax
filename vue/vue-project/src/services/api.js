@@ -86,7 +86,7 @@ export const apiService = {
   },
 
   async updateDataset(id, formData) {
-    const response = await axios.patch(`/datasets/${id}/results/`, formData)
+    const response = await axios.patch(`/datasets/${id}/results-update/`, formData)
     return response.data
   },
 }

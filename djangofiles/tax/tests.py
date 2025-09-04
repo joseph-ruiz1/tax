@@ -259,7 +259,6 @@ class TaxDataSetSerializerTests(APITestCase):
         optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
 
         data = OutputSerializer(dataset).data
-        print(data)
         
            
 CREDENTIALS = [

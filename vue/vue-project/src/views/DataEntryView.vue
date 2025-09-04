@@ -104,7 +104,7 @@ const submitForm = async () => {
             }
         })
         const response = await apiService.patchDataset(id, form.value)
-        router.push(`/datasets/${id}`)
+        router.push(`/datasets/${id}/results`)
     } catch (err) {
         console.error('Failed to update dataset:', err)
     }
