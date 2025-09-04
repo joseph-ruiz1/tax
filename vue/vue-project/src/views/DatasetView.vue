@@ -14,8 +14,6 @@
                  </router-link>
             </li>
         </div>
-
-        
         <div>
             <form @submit.prevent="createDataset">
                 <button type="submit">Create</button>
@@ -53,7 +51,7 @@ const fetchDatasets = async () => {
 const createDataset = async () => {
     try {
         const response = await apiService.createDataset(form.value)
-        router.push(`/datasets/${response.id}/new`)
+        router.push(`/datasets/${response.dataset_id}/new`)
     } catch (err) {
         error.value = 'Failed to create dataset'
     }

@@ -7,11 +7,11 @@
                 <h1>General info</h1>
                 <form class="dataset-form">
                     <p class="title">Title</p>
-                    <input v-model="form.name" placeholder="Enter Calculation Name">
+                    <input v-model="form.name" placeholder="Enter Calculation Name" required>
                     <p class="title">Max Elected Farm Income</p>
-                    <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income">
+                    <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income" required>
                     <p class="title">Qualified Farm Income</p>
-                    <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains">
+                    <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required>
                 </form>
             </div>
 
@@ -32,20 +32,23 @@
                 <h3>Tax Year {{ form.tax_years[currentYearIndex].year }}</h3>
                 <form>
                     <p class="title">Filing Status</p>
-                    <select v-model="form.tax_years[currentYearIndex].filing_status">
+                    <select v-model="form.tax_years[currentYearIndex].filing_status" required>
                         <option disabled value="">Filing Status</option>
-                        <option>Single</option>
-                        <option>Married Filing Jointly</option>
+                        <option v-for="opt in filingStatusOptions" :key="opt.value" :value="opt.value">
+                          {{ opt.label }}
+                        </option>
                     </select>
                     <p class="title">Taxable Income</p>
                     <input
                     v-model.number="form.tax_years[currentYearIndex].taxable_income"
                     placeholder="Taxable income"
+                    required
                     >
                     <p class="title">Qualified Income</p>
                     <input
                     v-model.number="form.tax_years[currentYearIndex].qualified_income"
                     placeholder="Qualified income"
+                    required
                     >
                 </form>
             </div>
@@ -55,14 +58,6 @@
 
         <!-- Right Panel - Results -->
         <div class="results-panel">
-            <div class="results-header">
-                <h1>Results</h1>
-                <div class="last-updated">
-                    Last updated: {{ lastUpdated }}
-                </div>
-            </div>
-
-           
             <!-- Chart Area -->
             <div class="chart-section">
                 <div class="section-header">
@@ -91,10 +86,11 @@
 </template>
 
 <script setup>
-import {ref, onMounted, computed} from 'vue'
+import {ref, onMounted, computed, reactive} from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
+import { filingStatusOptions } from '@/composables/filingstatusOptions'
 import VueApexCharts from 'vue3-apexcharts'
 
 const route = useRoute()
@@ -105,30 +101,43 @@ const inputs = ref(null)
 const outputs = ref(null)
 
 const currentYearIndex = ref(0)
-const lastUpdated = ref(new Date().toLocaleString())
 
-const form = ref({
+const form = reactive({
     name: '',
     max_elected_farm_income: 0,
     qualified_farm_income: 0,
     tax_years: [],
 })
 
+const fetchResults = async () => {
+    try {
+        const id = route.params.id
+        const data = await apiService.getResults(id)
+        inputs.value = data.form
+        outputs.value = data.outputs
+
+        const taxYears = inputs.value?.tax_years?.map(year => ({
+          ...year
+        }))
+
+        // Initilize form with API data
+        Object.assign(form, {
+          name: inputs.value?.name,
+          max_elected_farm_income: inputs.value?.max_elected_farm_income,
+          qualified_farm_income: inputs.value?.qualified_farm_income,
+          tax_years: taxYears
+        })
+    } catch (err) {
+        error.value = 'Failed to fetch results'
+    } finally {
+        loading.value = false
+    }
+}
+
 const submitForm = async () => {
     try {
         const id = route.params.id
-        const filingstatusMapping = {
-            'Single': 'single',
-            'Married Filing Jointly': 'MFJ'
-        }
-        form.value.tax_years?.forEach(year => {
-            if (filingstatusMapping[year.filing_status]) {
-                year.filing_status = filingstatusMapping[year.filing_status]
-            }
-        })
-        const response = await apiService.patchDataset(id, form.value)
-        // Update results after successful save
-        updateResults()
+        const response = await apiService.updateDataset(id, form)
     } catch (err) {
         console.error('Failed to update dataset:', err)
     }
@@ -153,41 +162,8 @@ const chartOptions = ref({
   }
 })
 
-const fetchResults = async () => {
-    try {
-        const id = route.params.id
-        const data = await apiService.getResults(id)
-        inputs.value = data.form
-        outputs.value = data.outputs
-
-        // Reverse mapping for filing status
-        const reverseFilingStatusMapping = {
-            'single': 'Single',
-            'MFJ': 'Married Filing Jointly'
-        }
-
-        const taxYears = inputs.value?.tax_years?.map(year => ({
-          ...year,
-          filing_status: reverseFilingStatusMapping[year.filing_status] || year.filing_status
-        })) || []
-
-        // Initilize form with API data
-        form.value = {
-          name: inputs.value?.name || '',
-          max_elected_farm_income: inputs.value?.max_elected_farm_income || 0,
-          qualified_farm_income: inputs.value?.qualified_farm_income || 0,
-          tax_years: taxYears
-        }
-    } catch (err) {
-        error.value = 'Failed to fetch results'
-    } finally {
-        loading.value = false
-    }
-}
-
-
 onMounted(async () => {
-    await fetchResults()
+    await fetchResults()  
 })
 </script>
 
@@ -195,7 +171,7 @@ onMounted(async () => {
 /* Main Layout */
 .results-container {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 2fr; /* Left: 1/3, Right: 2/3 */
   gap: 2rem;
   max-width: 1800px;
   margin: 0 auto;
@@ -203,11 +179,15 @@ onMounted(async () => {
   background: linear-gradient(135deg, #434b6f 0%, #2e2735 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  box-sizing: border-box;
 }
 
-/* Left Panel - Form (copied from your original) */
+/* Left Panel - Form */
 .form-panel {
-  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
 }
 
 .dataset-header {
@@ -215,7 +195,6 @@ onMounted(async () => {
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  margin-bottom: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -224,28 +203,27 @@ onMounted(async () => {
   color: #1a202c;
   font-size: 1.5rem;
   font-weight: 700;
-  margin: 0 0 .5rem 0;
+  margin: 0 0 1rem 0;
   text-align: center;
 }
 
 .dataset-form {
   display: grid;
-  gap: .5rem;
+  gap: 1rem;
 }
 
 .title {
-    color: #1a202c;
-    font-size: 1rem;
-    font-weight: 700;
-    text-align: left;
-    margin: 0.5rem 0 0.25rem 0;
+  color: #1a202c;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: left;
+  margin: 0.5rem 0 0.25rem 0;
 }
 
 .year-tabs {
   display: flex;
   justify-content: center;
   gap: 0.5rem;
-  margin-bottom: 2rem;
   flex-wrap: wrap;
 }
 
@@ -280,7 +258,6 @@ onMounted(async () => {
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  margin-bottom: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -289,17 +266,17 @@ onMounted(async () => {
   color: #1a202c;
   font-size: 1.25rem;
   font-weight: 700;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.5rem 0;
   text-align: center;
 }
 
 .year-form form {
   display: grid;
-  gap: .5rem;
+  gap: 1rem;
 }
 
 input, select {
-  padding: .5rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
   font-size: 1rem;
@@ -308,6 +285,7 @@ input, select {
   transition: all 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   width: 100%;
+  box-sizing: border-box;
 }
 
 input:focus, select:focus {
@@ -329,6 +307,7 @@ input:focus, select:focus {
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
   width: 100%;
+  box-sizing: border-box;
 }
 
 .submit-btn:hover {
@@ -341,6 +320,8 @@ input:focus, select:focus {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  width: 100%;
+  min-height: 100%;
 }
 
 .results-header {
@@ -366,61 +347,6 @@ input:focus, select:focus {
   font-style: italic;
 }
 
-/* Summary Cards */
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.summary-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: transform 0.3s ease;
-}
-
-.summary-card:hover {
-  transform: translateY(-4px);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.card-header h3 {
-  color: #4a5568;
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.card-icon {
-  font-size: 1.5rem;
-}
-
-.card-value {
-  color: #1a202c;
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.card-change {
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.card-change.positive { color: #48bb78; }
-.card-change.negative { color: #f56565; }
-.card-change.neutral { color: #718096; }
-
 /* Chart Section */
 .chart-section {
   background: rgba(255, 255, 255, 0.95);
@@ -429,6 +355,7 @@ input:focus, select:focus {
   padding: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  flex: 1; /* This makes the chart section take up remaining space */
 }
 
 .section-header {
@@ -471,9 +398,14 @@ input:focus, select:focus {
   background: #f7fafc;
   border: 2px dashed #e2e8f0;
   border-radius: 12px;
-  padding: 4rem 2rem;
+  padding: 2rem;
   text-align: center;
   color: #718096;
+  min-height: 400px; /* Ensures minimum height for the chart area */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .chart-icon {
@@ -500,6 +432,7 @@ input:focus, select:focus {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
+  width: 100%;
 }
 
 .table-header, .table-row {
@@ -548,7 +481,7 @@ input:focus, select:focus {
 @media (max-width: 1200px) {
   .results-container {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 1.5rem;
   }
   
   .form-panel {
@@ -557,6 +490,10 @@ input:focus, select:focus {
 }
 
 @media (max-width: 768px) {
+  .results-container {
+    padding: 1rem;
+  }
+  
   .summary-cards {
     grid-template-columns: 1fr;
   }
@@ -568,6 +505,15 @@ input:focus, select:focus {
   
   .table-cell {
     padding: 0.75rem;
+  }
+  
+  .year-tabs {
+    gap: 0.25rem;
+  }
+  
+  .year-tabs button {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
   }
 }
 </style>

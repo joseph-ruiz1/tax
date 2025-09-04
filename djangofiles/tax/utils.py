@@ -1,6 +1,7 @@
 from itertools import islice
 from django.urls import reverse
 from django.db import models
+from rest_framework import serializers
 
 
 def build_taxyear_formset_data(data_list, prefix="form", initial_forms=0):
@@ -62,3 +63,37 @@ def create_schedulej_fields():
     for ch in 'abc':
         fields[f'line_2{ch}'] = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     return fields
+
+
+def validate_tax_years(dataset: object):
+    """
+    Take in dataset object. Validates there are only 4 years
+    """
+    from .models import TaxYearData
+
+    years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
+
+    if years.count() != 4:
+        raise serializers.ValidationError("Number of tax year instances not equal to 4")
+    return dataset
+
+
+
+def update_calculations(dataset, serializer):
+    from .services import TaxCalculation, ScheduleJOptimization
+
+    updated_dataset = serializer.save()
+    years = updated_dataset.tax_years.all().order_by('-year')
+
+    # Base Calculations
+    for tax_year in years:    
+        TaxCalculation(tax_year).calculate()
+        tax_year.save()
+
+    optimize = ScheduleJOptimization(*years, 
+                                        elected_farm_income=updated_dataset.max_elected_farm_income, 
+                                        elected_farm_qualified=updated_dataset.qualified_farm_income, 
+                                        dataset=updated_dataset)
+    optimize.optimize_sch_j(updated_dataset.max_elected_farm_income, updated_dataset.qualified_farm_income)
+
+    return dataset, serializer, optimize

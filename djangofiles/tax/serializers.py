@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 
 from .models import FILING_STATUS, YEAR, TaxDataSet, TaxYearData, CalculationIteration, ScheduleJForm
+from .utils import validate_tax_years
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -47,7 +48,6 @@ class CalculationIterationSerializer(serializers.ModelSerializer):
         model = CalculationIteration
         fields = ["id", "form"]
 
-
 class TaxDataSetSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
     tax_years = TaxYearDataDetailSerializer(many=True, read_only=True)
@@ -62,13 +62,21 @@ class TaxDataSetDetailSerializer(serializers.ModelSerializer):
     """
     user = serializers.ReadOnlyField(source='user.username')
     tax_years = TaxYearDataDetailSerializer(many=True)
-    iteration = CalculationIterationSerializer(many=True)
 
     class Meta:
         model = TaxDataSet
         fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "tax_years"]
 
-
+    def validate(self, data):
+        """
+        Validate there are only 4 year instances for data entered before other serializations.
+        """
+        current_year = 2024
+        for i, year in enumerate(data['tax_years']):
+            if str(year['year']) != str(current_year):
+                # TYPE ERROR WITH YEAR
+                raise serializers.ValidationError(f"Year error. {year['year']} not valid.")
+            year += 1
 
 class CreateCalculationSerializer(serializers.ModelSerializer):
     """
@@ -100,22 +108,21 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
         fields = ["name", "max_elected_farm_income", "qualified_farm_income", "tax_years"]
     
     def validate(self, data):
-            """
-            Validate that tax years are 2024 - 2021, filing status in options. 
-            """
-            if data['max_elected_farm_income'] < 0 or data['qualified_farm_income'] < 0:
-                raise serializers.ValidationError("Cannot have negative farm income")
-            current_year = 2024
-            for i, year in enumerate(data['tax_years']):
-                if str(year['year']) != str(current_year):
-                    # TYPE ERROR WITH YEAR
-                    raise serializers.ValidationError(f"Year error. {year['year']} not valid.")
-                if year['filing_status'] not in FILING_STATUS:
-                    raise serializers.ValidationError(f"Incorrect filing status. {year['filing_status']} not valid.")
-                if year['taxable_income'] < 0 or year['qualified_income'] < 0:
-                    raise serializers.ValidationError("Income must be positive")
-                current_year -= 1
-            return data
+        """
+        Validate that tax years are 2024 - 2021, filing status in options. 
+        """
+        if data['max_elected_farm_income'] < 0 or data['qualified_farm_income'] < 0:
+            raise serializers.ValidationError("Cannot have negative farm income")
+        current_year = 2024
+        for i, year in enumerate(data['tax_years']):
+            if str(year['year']) != str(current_year):
+                raise serializers.ValidationError(f"Year error. {year['year']} not valid.")
+            if year['filing_status'] not in FILING_STATUS.keys():
+                raise serializers.ValidationError(f"Incorrect filing status. {year['filing_status']} not valid.")
+            if year['taxable_income'] < 0 or year['qualified_income'] < 0:
+                raise serializers.ValidationError("Income must be positive")
+            current_year -= 1
+        return data
 
     def update(self, instance, validated_data):
         years_data = validated_data.pop('tax_years', [])
@@ -150,6 +157,7 @@ class OutputSerializer(serializers.ModelSerializer):
         """
         Form for front end to patch
         """
+        validate_tax_years(instance)
         return {
             "name": instance.name,
             "max_elected_farm_income": instance.max_elected_farm_income,
@@ -169,3 +177,4 @@ class OutputSerializer(serializers.ModelSerializer):
             'results': iterations,
             'best': best
         }
+    
