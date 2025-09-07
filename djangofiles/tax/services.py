@@ -1,5 +1,6 @@
 from .calculations import tax_brackets
 from .models import TaxYearData, AdjustedTaxData, CalculationIteration, ScheduleJForm
+from .utils import chunker
 
 from decimal import Decimal
 
@@ -78,18 +79,18 @@ class TaxCalculation:
             qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15)) + (twenty_bracket * Decimal(.20))
         
         self.tax_data.qualified_tax = max(qualified_tax, 0)
-
-        
+ 
     def find_total_tax(self):
         self.tax_data.total_tax = max(self.tax_data.ordinary_tax + self.tax_data.qualified_tax, 0) 
 
-    def calculate(self):
+    def calculate(self, save=False): 
         self.find_ordinary_bracket()
         self.find_ordinary_tax()
         self.find_qualified_tax()
         self.find_total_tax()
-        self.tax_data.save()
-    
+        if save:
+            self.tax_data.save()
+        
 class ScheduleJResultContainer:
     def __init__(self, schedule_j_form: ScheduleJForm,
                  adjusted_current_year: AdjustedTaxData,
@@ -125,16 +126,22 @@ class ScheduleJCalculation:
         self.iteration = iteration
 
     def schedule_j_calculation(self, elected_farm_income: Decimal, elected_cap_gains: Decimal) -> ScheduleJResultContainer:
+        """
+        Runs calculation and returns ResultContainer object, does not directly save to DB
+        """
         if not isinstance(elected_farm_income, Decimal):
             raise TypeError("Not a Decimal")
         if not isinstance(elected_cap_gains, Decimal):
             raise TypeError("Not a Decimal")
 
-        output = ScheduleJForm.objects.create(iteration=self.iteration)
-        adjusted_current_year = AdjustedTaxData.from_base(self.current_year, self.iteration)
+        # Create ScheduleJForm and AdjustedTaxData but do not save to DB yet, will be done in bulk create
+        output = ScheduleJForm(iteration=self.iteration)
+        adjusted_current_year = AdjustedTaxData.from_base(self.current_year, self.iteration, save=False)
 
         # Create new instances for adjusted base years
-        adjusted_bases = {year: AdjustedTaxData.from_base(base, self.iteration) for year, base in self.base_years.items()}
+        adjusted_bases = {year: AdjustedTaxData.from_base(base, self.iteration, save=False) for year, base in self.base_years.items()}
+
+      
 
         output.line_1 = self.current_year.taxable_income
         output.line_2a = elected_farm_income
@@ -152,7 +159,6 @@ class ScheduleJCalculation:
         output.line_6 = distribute_total_elected
         output.line_10 = distribute_total_elected
         output.line_14 = distribute_total_elected
-
         # Copy 2024 numbers from baseline and decrease incomes by elected amounts
         adjusted_current_year.taxable_income = self.current_year.taxable_income - total_elected
         adjusted_current_year.qualified_income = self.current_year.qualified_income - elected_qualified
@@ -168,10 +174,8 @@ class ScheduleJCalculation:
                 2022: ['line_9', 'line_11', 'line_12'],
                 2023: ['line_13', 'line_15', 'line_16']
             }
-        
 
         for year, (base_income, adjusted_income, calculate_tax) in update_lines.items():
-                
                 base = self.base_years[year]
                 adjusted = adjusted_bases[year]
 
@@ -195,7 +199,7 @@ class ScheduleJCalculation:
                 adjusted.qualified_income = adjusted_qualified_income
                 adjusted.taxable_income = adjusted_taxable_income
 
-                TaxCalculation(adjusted).calculate()
+                TaxCalculation(adjusted).calculate(save=False)
                 setattr(output, calculate_tax, adjusted.total_tax)
 
         output.line_17 = output.line_4 + output.line_8 + output.line_12 + output.line_16
@@ -216,13 +220,6 @@ class ScheduleJCalculation:
 
         # Schedule J tax for 2024
         output.line_23 = output.line_18 - output.line_22
-
-        output.save()
-        self.base_years[2021].save()
-        self.base_years[2022].save()
-        self.base_years[2023].save()
-        self.current_year.save()
-
 
         return ScheduleJResultContainer(
             schedule_j_form=output,
@@ -247,27 +244,47 @@ class ScheduleJOptimization:
 
 
     def optimize_sch_j(self, elected_farm_income, elected_farm_qualified):
-        results = []
+        """
+        Create lists we can temporarily store objects in, then bulk create
+        """
+        iterations = []
+        forms = []
+        all_adjusted_years = []
+
         current_total_elected = elected_farm_income
         current_qualified_elected = elected_farm_qualified
         current_ordinary_elected = elected_farm_income - elected_farm_qualified
 
         # Find percentage so we can decrease proportionally
         ordinary_percentage = current_ordinary_elected / current_total_elected
-        qualified_percentage = current_qualified_elected / current_total_elected
+        qualified_percentage = current_qualified_elected / current_total_elected        
 
-        while current_total_elected >= 0:
-            iteration = CalculationIteration.objects.create(dataset=self.dataset)
+        while current_total_elected >= 500:
+            # Initialize CalculationIteration
+            iteration = CalculationIteration(dataset=self.dataset)
+            
+            iterations.append(iteration)
 
             instance = (ScheduleJCalculation(self.current_year, self.base_year_1, self.base_year_2, self.base_year_3, iteration)
                         .schedule_j_calculation(current_total_elected, current_qualified_elected))
-           
-            results.append(instance.to_dict())
+            forms.append(instance.schedule_j_form)
 
             current_total_elected -= 500
             current_ordinary_elected -= 500 * ordinary_percentage
             current_qualified_elected -= 500 * qualified_percentage
 
-        return results
-
-    
+        created_iterations = CalculationIteration.objects.bulk_create(iterations)
+        # Ensure SQLite populates IDs
+        if not all(iter.id for iter in created_iterations):
+            # fallback: reload from DB
+            created_iterations = list(
+                CalculationIteration.objects.filter(dataset=self.dataset).order_by("id")
+            )[-len(iterations):]
+        for form, iteration in zip(forms, created_iterations):
+            form.iteration = iteration
+        ScheduleJForm.objects.bulk_create(forms)
+        
+        for adjusted, iteration in zip(chunker(all_adjusted_years, 4), created_iterations):
+            for i in adjusted:
+                i.iteraion = iteration
+        return

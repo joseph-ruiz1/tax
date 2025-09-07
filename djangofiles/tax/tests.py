@@ -38,7 +38,6 @@ def create_several_test_users(username, password):
     return User.objects.create_user(username=username, password=password)
 
 
-
 class TestUserModel(TestCase):
     def test_create_single_user(self):
         """
@@ -259,6 +258,7 @@ class TaxDataSetSerializerTests(APITestCase):
         optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
 
         data = OutputSerializer(dataset).data
+        print(data)
         
            
 CREDENTIALS = [

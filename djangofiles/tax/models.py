@@ -98,8 +98,11 @@ class AdjustedTaxData(TaxYearStructure):
     iteration = models.ForeignKey(CalculationIteration, on_delete=models.CASCADE, related_name="adjusted_years")
 
     @classmethod
-    def from_base(cls, base: TaxYearStructure, iteration: "CalculationIteration"):
-        return cls.objects.create(
+    def from_base(cls, base: TaxYearStructure, iteration: "CalculationIteration", save=False):
+        """
+        Does not save to DB by default
+        """
+        instance = cls(
             year=base.year,
             filing_status=base.filing_status,
             taxable_income=base.taxable_income,
@@ -113,6 +116,9 @@ class AdjustedTaxData(TaxYearStructure):
             total_tax=base.total_tax,
             iteration=iteration,
         )
+        if save:
+            instance.save()
+        return instance
     
     def to_dict(self):
         return self.total_tax

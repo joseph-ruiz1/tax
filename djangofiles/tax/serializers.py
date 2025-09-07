@@ -139,7 +139,7 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-
+        
 
 class OutputSerializer(serializers.ModelSerializer):
     """
@@ -177,4 +177,3 @@ class OutputSerializer(serializers.ModelSerializer):
             'results': iterations,
             'best': best
         }
-    
