@@ -10,7 +10,6 @@ class TaxCalculation:
         self.tax_data = tax_data
 
     def find_ordinary_bracket(self):
-        
         for rate, (lower, upper, prior_tax) in tax_brackets.ORDINARY_TAX_TABLES[self.tax_data.year][self.tax_data.filing_status].items():
             self.tax_data.taxable_ordinary = max(self.tax_data.taxable_income - self.tax_data.qualified_income, 0)
 
@@ -21,8 +20,7 @@ class TaxCalculation:
                 self.tax_data.prior_ordinary_bracket_tax = prior_tax
                 return
             
-        print("Income too large or negative") 
-        return 1
+        raise ValueError("Income too large or negative")
 
     def find_ordinary_tax(self):
         self.tax_data.ordinary_tax = ((self.tax_data.taxable_ordinary - self.tax_data.lower_ordinary_bound) * self.tax_data.ordinary_rate) + self.tax_data.prior_ordinary_bracket_tax     
@@ -140,8 +138,6 @@ class ScheduleJCalculation:
 
         # Create new instances for adjusted base years
         adjusted_bases = {year: AdjustedTaxData.from_base(base, self.iteration, save=False) for year, base in self.base_years.items()}
-
-      
 
         output.line_1 = self.current_year.taxable_income
         output.line_2a = elected_farm_income
@@ -268,6 +264,10 @@ class ScheduleJOptimization:
             instance = (ScheduleJCalculation(self.current_year, self.base_year_1, self.base_year_2, self.base_year_3, iteration)
                         .schedule_j_calculation(current_total_elected, current_qualified_elected))
             forms.append(instance.schedule_j_form)
+            all_adjusted_years.append(instance.adjusted_current)
+            all_adjusted_years.append(instance.adjusted_base1)
+            all_adjusted_years.append(instance.adjusted_base2)
+            all_adjusted_years.append(instance.adjusted_base3)
 
             current_total_elected -= 500
             current_ordinary_elected -= 500 * ordinary_percentage
@@ -280,11 +280,15 @@ class ScheduleJOptimization:
             created_iterations = list(
                 CalculationIteration.objects.filter(dataset=self.dataset).order_by("id")
             )[-len(iterations):]
+
+        # Link iteration to form, bulk update
         for form, iteration in zip(forms, created_iterations):
             form.iteration = iteration
         ScheduleJForm.objects.bulk_create(forms)
         
+        # Get sets of adjusted years, link iteration to sets
         for adjusted, iteration in zip(chunker(all_adjusted_years, 4), created_iterations):
             for i in adjusted:
                 i.iteraion = iteration
+        AdjustedTaxData.objects.bulk_create(all_adjusted_years)
         return
