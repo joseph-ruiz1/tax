@@ -125,7 +125,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
     def create_step(self, request):
         serializer = self.get_serializer(data={})
         # Consider making this structure flow into the FE form for validation purposes
-        if serializer.is_valid():    
+        if serializer.is_valid():
             dataset = serializer.save(user=request.user)
             return Response({
                 'success': True,
@@ -173,6 +173,8 @@ class DataSetViewSet(viewsets.ModelViewSet):
         dataset = self.get_object()
         update_serializer = self.get_serializer(dataset, data=request.data, partial=True)
         if update_serializer.is_valid():
+            # Remove previous calculations before returning results
+            CalculationIteration.objects.filter(dataset=dataset).delete()
             update_calculations(dataset, update_serializer)
             results_serializer = OutputSerializer(dataset)
             return Response({
