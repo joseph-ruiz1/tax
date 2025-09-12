@@ -295,7 +295,6 @@ TEST_CASES = [
     },
 ]
 
-
 SCHEDULE_J_TEST_CASES = [
     {
         'inputs': [

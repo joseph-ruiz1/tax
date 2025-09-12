@@ -144,7 +144,6 @@ class DataSetViewSet(viewsets.ModelViewSet):
 
         if serializer.is_valid():
             update_calculations(dataset, serializer)
-
             return Response({
                     'success': True,
                     'message': 'Patched Successfully',
