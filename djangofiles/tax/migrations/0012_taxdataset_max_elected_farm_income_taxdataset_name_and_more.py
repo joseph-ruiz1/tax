@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='taxdataset',
             name='name',
-            field=models.CharField(default='Set for <django.db.models.fields.related.ForeignKey>', max_length=50),
+            field=models.CharField(default='Set for <django.db.models.fields.related.ForeignKey>', max_length=200),
         ),
         migrations.AddField(
             model_name='taxdataset',
