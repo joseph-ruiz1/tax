@@ -32,11 +32,11 @@ class TaxYearDataDetailSerializer(serializers.ModelSerializer):
 
 class SchJFormSerializer(serializers.ModelSerializer):
     """
-    Only show line 23 for now since it is just the tax savings
+    Show total tax and the associated elected farm incomes
     """
     class Meta:
         model = ScheduleJForm
-        fields = ["line_23"]
+        fields = ["line_23", 'line_2a', 'line_2b']
 
 class CalculationIterationSerializer(serializers.ModelSerializer):
     """
@@ -139,7 +139,6 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-        
 
 class OutputSerializer(serializers.ModelSerializer):
     """

@@ -62,21 +62,17 @@
             <div class="chart-section">
                 <div class="section-header">
                     <h3>Tax Comparison by Year</h3>
-                    <div class="chart-controls">
-                        <button class="chart-toggle active">Bar Chart</button>
-                        <button class="chart-toggle">Line Chart</button>
-                    </div>
                 </div>
-                <div class="chart-placeholder">
-                    <div class="chart-icon">📊</div>
                     <apexchart
-                        type="line"
+                        v-if="series.length > 0"
                         height="350"
                         :options="chartOptions"
                         :series="series"
                       ></apexchart>
-                    <p class="chart-subtitle">Comparing baseline vs optimized tax calculations</p>
-                  </div>
+                      <div v-else class="chart-placeholder">
+                        <div class="chart-icon">📊</div>
+                        <p>Loading chart data...</p>
+                      </div>
               </div>
           </div>
       </div>
@@ -91,7 +87,6 @@ import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
-import VueApexCharts from 'vue3-apexcharts'
 
 const route = useRoute()
 const router = useRouter()
@@ -108,6 +103,130 @@ const form = reactive({
     qualified_farm_income: 0,
     tax_years: [],
 })
+
+const series = ref([])
+
+const chartOptions = ref({
+  chart: {
+    id: 'tax-savings-chart',
+    type: 'area'
+  },
+  toolbar: {
+    show: true,
+    offsetX: 0,
+    offsetY: 0,
+    autoSelected: 'zoom',
+    tools: {
+      download: true,
+      selection: true,
+      zoom: true,
+      zoomin: true,
+      zoomout: true,
+      pan: true,
+      reset: true,
+      customIcons: [],
+    },
+    reset: 'Reset Zoom',
+    },
+  animations: {
+    enabled: true,
+    easing: 'easeinout',
+    speed: 800,
+    animateGradually: {
+        enabled: true,
+        delay: 150,
+    },
+  dynamicAnimation: {
+    enabled: true,
+    speed: 350,
+    },
+  },
+  dataLabels: {
+    enabled: false,
+  },
+  stroke: {
+    curve: 'straight',
+    width: 2,
+  },
+  xaxis: {
+    type: 'numeric',
+     labels: {
+      formatter: function(val) {
+        val = val | 0
+        return '$' + val.toLocaleString()
+      }
+    },
+    categories: [],
+    title: {
+      text: 'Amount elected'
+    },
+    tickAmount: 10,
+  },
+  yaxis: {
+    type: 'numeric',
+    title: {
+      text: 'Total Tax'
+    },
+    labels: {
+      formatter: function(val) {
+        return '$' + val.toLocaleString()
+      }
+    }
+  },
+  title: {
+    text: 'Tax Comparison',
+    align: 'center',
+    style: {
+      fontSize: '16px',
+      fontWeight: 'bold',
+    }
+  },
+  legend: {
+    position: 'top'
+  },
+  colors: ['#4c51bf', '#48bb78', '#f56565'],
+  tooltip: {
+    x: {
+      show: false,
+      format: 'numeric',
+      formatter: function(val) {
+        return '$' + val.toLocaleString()
+      }
+    },
+    y: {
+      format: 'numeric',
+      formatter: function(val) {
+        return '$' + val.toLocaleString()
+      }
+    },
+    theme: 'dark',
+    },
+})
+
+const updateChartData = () => {
+  if (!outputs.value) return
+
+  const sch_j_total = outputs.value.results.map(result => parseFloat(result.form.line_23))
+  const elected = outputs.value.results.map(result => parseFloat(result.form.line_2a))
+  console.log(elected[1])
+  console.log(sch_j_total[1])
+  const qualified_elected = outputs.value.results.map(result => parseFloat(result.form.line_2b))
+
+  chartOptions.value = {
+    ...chartOptions.value,
+    xaxis: {
+      ...chartOptions.value.xaxis,
+      categories: elected
+    }
+  }
+
+  series.value = [
+    {
+      name: 'Total tax amount',
+      data: sch_j_total
+    }
+  ]
+}
 
 const fetchResults = async () => {
     try {
@@ -127,8 +246,12 @@ const fetchResults = async () => {
           qualified_farm_income: inputs.value?.qualified_farm_income,
           tax_years: taxYears
         })
+
+        updateChartData()
+
     } catch (err) {
         error.value = 'Failed to fetch results'
+        console.error('Error fetching Results', err)
     } finally {
         loading.value = false
     }
@@ -138,32 +261,22 @@ const submitForm = async () => {
     try {
         const id = route.params.id
         const response = await apiService.updateDataset(id, form)
+        await fetchResults()
+
     } catch (err) {
         console.error('Failed to update dataset:', err)
     }
 }
 
-const series = ref([
-  {
-    name: 'Sales',
-    data: [30, 40, 35, 50, 49, 60, 70, 91, 125]
-  }
-])
-
-const chartOptions = ref({
-  chart: {
-    id: 'simple-line-chart'
-  },
-  xaxis: {
-    categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-  },
-  title: {
-    text: 'Simple Line Chart'
-  }
-})
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value || 0)
+}
 
 onMounted(async () => {
-    await fetchResults()  
+    await fetchResults()
 })
 </script>
 
