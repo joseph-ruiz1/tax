@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
 from .utils import create_schedulej_fields
@@ -27,7 +26,7 @@ FILING_STATUS = {
 class TaxDataSet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='datasets')
     created_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=50, default="Created Set")
+    name = models.CharField(max_length=200, default="Created Set")
     max_elected_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     qualified_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ordinary_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
