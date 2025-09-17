@@ -98,11 +98,11 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
 "http://localhost:5173",
-"https://tax-vue.onrender.com/"
+"https://tax-vue.onrender.com"
 ]
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
-    "https://tax-vue.onrender.com/"
+    "https://tax-vue.onrender.com"
 ]
 
 SESSION_COOKIE_SAMESITE = 'Lax'
