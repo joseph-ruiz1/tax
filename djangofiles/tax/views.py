@@ -26,7 +26,6 @@ class AuthViewSet(viewsets.ViewSet):
     """
     Handles authentication
     """
-
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
         """
@@ -90,7 +89,8 @@ class UserViewSet(viewsets.GenericViewSet):
         """
         Get current user
         """
-        serializer = self.get_serializer(request.user)
+        queryset = User.objects.all()
+        serializer = self.get_serializer(queryset) # request.user
         return Response(serializer.data)
 
 class DataSetViewSet(viewsets.ModelViewSet):
