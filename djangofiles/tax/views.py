@@ -83,7 +83,7 @@ class UserViewSet(viewsets.GenericViewSet):
     View for CRUD operations
     """
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @action(detail=False, methods=['get'])
     def me(self, request):
