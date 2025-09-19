@@ -89,7 +89,7 @@ class UserViewSet(viewsets.GenericViewSet):
         """
         Get current user
         """
-        queryset = User.objects.all()
+        queryset = User.objects.filter(id=1)
         serializer = self.get_serializer(queryset) # request.user
         return Response(serializer.data)
 
