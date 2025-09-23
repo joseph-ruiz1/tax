@@ -58,23 +58,34 @@
 
         <!-- Right Panel - Results -->
         <div class="results-panel">
-            <!-- Chart Area -->
-            <div class="chart-section">
-                <div class="section-header">
-                    <h3>Tax Comparison by Year</h3>
-                </div>
-                    <apexchart
-                        v-if="series.length > 0"
-                        height="350"
-                        :options="chartOptions"
-                        :series="series"
-                      ></apexchart>
-                      <div v-else class="chart-placeholder">
-                        <div class="chart-icon">📊</div>
-                        <p>Loading chart data...</p>
-                      </div>
+          <!-- Chart Area -->
+          <div class="chart-section">
+            <div class="section-header">
+                <h3>Tax Comparison by Year</h3>
+            </div>
+            <vue-apex-charts
+                id="tax-savings-chart"
+                v-if="series.length > 0"
+                height="350"
+                :options="chartOptions"
+                :series="series"
+              ></vue-apex-charts>
+              <div v-else class="chart-placeholder">
+                <div class="chart-icon">📊</div>
+                <p>Loading chart data...</p>
               </div>
-          </div>
+            <div class="section-header">
+              <h3>Net Tax Savings/Expense by Year</h3>
+            </div>
+            <vue-apex-charts
+                id="tax-delta-chart"
+                v-if="series.length > 0"
+                height="350"
+                :options="deltaChartOptions"
+                :series="delta_series"
+                ></vue-apex-charts>
+            </div>
+        </div>
       </div>
     <div v-else>
         loading...
@@ -87,6 +98,7 @@ import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
+import VueApexCharts from 'vue3-apexcharts'
 
 const route = useRoute()
 const router = useRouter()
@@ -105,40 +117,40 @@ const form = reactive({
 })
 
 const series = ref([])
-
-const chartOptions = ref({
+const delta_series = ref([])
+const baseOptions = {
   chart: {
-    id: 'tax-savings-chart',
-    type: 'area'
-  },
-  toolbar: {
-    show: true,
-    offsetX: 0,
-    offsetY: 0,
-    autoSelected: 'zoom',
-    tools: {
-      download: true,
-      selection: true,
-      zoom: true,
-      zoomin: true,
-      zoomout: true,
-      pan: true,
-      reset: true,
-      customIcons: [],
+    type: 'area',
+    toolbar: {
+      show: true,
+      offsetX: 0,
+      offsetY: 0,
+      autoSelected: '',
+      tools: {
+        download: false,
+        zoom: true,
+        zoomin: true,
+        zoomout: true,
+        pan: true,
+        reset: true,
+      },
+      reset: 'Reset Zoom',
     },
-    reset: 'Reset Zoom',
-    },
-  animations: {
-    enabled: true,
-    easing: 'easeinout',
-    speed: 800,
-    animateGradually: {
+    animations: {
+      enabled: true,
+      easing: 'easeinout',
+      speed: 800,
+      animateGradually: {
         enabled: true,
         delay: 150,
+      },
+      dynamicAnimation: {
+        enabled: true,
+        speed: 350,
+      },
     },
-  dynamicAnimation: {
-    enabled: true,
-    speed: 350,
+    zoom: {
+      allowMouseWheelZoom: false,
     },
   },
   dataLabels: {
@@ -148,59 +160,83 @@ const chartOptions = ref({
     curve: 'straight',
     width: 2,
   },
+  grid: {
+    padding: {
+      bottom: 30,
+    },
+  },
   xaxis: {
     type: 'numeric',
-     labels: {
-      formatter: function(val) {
+    labels: {
+      formatter: function (val) {
         val = val | 0
         return '$' + val.toLocaleString()
-      }
+      },
+    },
+    title: {
+      text: 'Amount Elected',
+      offsetY: 15
     },
     categories: [],
-    title: {
-      text: 'Amount elected'
-    },
     tickAmount: 10,
   },
   yaxis: {
     type: 'numeric',
-    title: {
-      text: 'Total Tax'
-    },
     labels: {
-      formatter: function(val) {
+      formatter: function (val) {
         return '$' + val.toLocaleString()
-      }
-    }
-  },
-  title: {
-    text: 'Tax Comparison',
-    align: 'center',
-    style: {
-      fontSize: '16px',
-      fontWeight: 'bold',
+      },
+    },
+    title: {
+      offsetX: -6
     }
   },
   legend: {
-    position: 'top'
+    position: 'top',
   },
   colors: ['#4c51bf', '#48bb78', '#f56565'],
   tooltip: {
     x: {
       show: false,
       format: 'numeric',
-      formatter: function(val) {
+      formatter: function (val) {
         return '$' + val.toLocaleString()
-      }
+      },
     },
     y: {
       format: 'numeric',
-      formatter: function(val) {
+      formatter: function (val) {
         return '$' + val.toLocaleString()
-      }
+      },
     },
     theme: 'dark',
+  },
+}
+
+const chartOptions = ref({
+  ...baseOptions,
+  chart: {
+    ...baseOptions.chart,
+    id: 'tax-savings-chart',
     },
+  yaxis: {
+    ...baseOptions.yaxis,
+    title: { ...baseOptions.yaxis.title, 
+    text: 'Total Tax' },
+  },
+})
+
+const deltaChartOptions = ref({
+  ...baseOptions,
+  chart: {
+    ...baseOptions.chart,
+    id: 'delta-tax-savings-chart',
+  },
+  yaxis: {
+    ...baseOptions.yaxis,
+    title: { ...baseOptions.yaxis.title, 
+    text: 'Total Tax Savings/Expense' },
+  },
 })
 
 const updateChartData = () => {
@@ -219,10 +255,25 @@ const updateChartData = () => {
     }
   }
 
+  deltaChartOptions.value = {
+    ...deltaChartOptions.value,
+    xaxis: {
+      ...deltaChartOptions.value.xaxis,
+      categories: elected
+    }
+  }
+
   series.value = [
     {
-      name: 'Total tax amount',
+      name: 'Total tax by year',
       data: sch_j_total
+    }
+  ]
+
+  delta_series.value = [
+    {
+      name: 'Total tax savings/expense',
+      data: tax_delta
     }
   ]
 }
@@ -482,28 +533,12 @@ input:focus, select:focus {
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
+  margin: auto
 }
 
 .chart-controls {
   display: flex;
   gap: 0.5rem;
-}
-
-.chart-toggle {
-  padding: 0.5rem 1rem;
-  border: 2px solid #e2e8f0;
-  background: white;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.chart-toggle.active {
-  background: #4c51bf;
-  color: white;
-  border-color: #4c51bf;
 }
 
 .chart-placeholder {
