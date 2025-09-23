@@ -79,18 +79,6 @@ const form = ref({
     ]
 })
 
-const nextYear = () => {
-    if (currentYearIndex.value < 3) {
-        currentYearIndex.value++
-    }
-}
-
-const prevYear = () => {
-    if (currentYearIndex.value > 0) {
-        currentYearIndex--
-    }
-}
-
 const submitForm = async () => {
     try {
         const id = route.params.id
