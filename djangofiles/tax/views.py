@@ -33,11 +33,10 @@ class AuthViewSet(viewsets.ViewSet):
         """
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.validated_data['user']
-            login(request, user) # Create cookie
+            # Create cookie
+            login(request, serializer.validated_data) 
             return Response({
                 'success': True,
-                'user': user,
                 'message': 'Login successful'
             })
         return Response({

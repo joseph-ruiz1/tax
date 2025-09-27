@@ -312,7 +312,6 @@ const submitForm = async () => {
         const id = route.params.id
         const response = await apiService.updateDataset(id, form)
         await fetchResults()
-
     } catch (err) {
         console.error('Failed to update dataset:', err)
     }

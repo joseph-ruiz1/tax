@@ -4,11 +4,13 @@ axios.defaults.withCredentials = true
 
 
 export const apiService = {
-  async login(username, password) {
-    const response = await axios.post('/auth/login/', {
-      username,
-      password
-    })
+  async login(formData) {
+    const response = await axios.post('/auth/login/', formData)
+    return response.data
+  },
+
+  async register(formData) {
+    const response = await axios.post('/auth/register/', formData)
     return response.data
   },
 

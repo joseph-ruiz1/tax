@@ -7,6 +7,12 @@ from rest_framework import serializers
 from .models import FILING_STATUS, YEAR, TaxDataSet, TaxYearData, CalculationIteration, ScheduleJForm
 from .utils import validate_tax_years
 
+class UserSerializer(serializers.ModelSerializer):
+    datasets = serializers.PrimaryKeyRelatedField(many=True, queryset=TaxDataSet.objects.all())
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'datasets', 'date_joined']
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -17,14 +23,7 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(username=username, password=password)
         if not user:
             raise serializers.ValidationError('Invalid credentials')
-        data['user'] = user
-        return data
-
-class UserSerializer(serializers.ModelSerializer):
-    datasets = serializers.PrimaryKeyRelatedField(many=True, queryset=TaxDataSet.objects.all())
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'datasets', 'date_joined']
+        return user
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=5)
@@ -32,7 +31,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'password']
+        fields = ['username', 'password', 'password_confirm']
 
     def validate_username(self, value):
         """
@@ -53,7 +52,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         Create user with validated data, remove password validator
         """
         validated_data.pop('password_confirm')
-        
+
         user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password']
