@@ -16,7 +16,7 @@ from rest_framework.decorators import action
 from .services import TaxCalculation, ScheduleJOptimization, ScheduleJCalculation, CalculationIteration
 from .forms import TaxYearDataFormSet, TaxDataSetForm
 from .models import TaxYearData, TaxDataSet, ScheduleJForm
-from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer
+from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer, UserRegistrationSerializer
 from .utils import update_calculations
 
 class IndexView(TemplateView):
@@ -37,13 +37,31 @@ class AuthViewSet(viewsets.ViewSet):
             login(request, user) # Create cookie
             return Response({
                 'success': True,
-                'user': UserSerializer(user).data,
+                'user': user,
                 'message': 'Login successful'
             })
         return Response({
             'success': False,
             'errors': serializer.errors,
             }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
+    def register(self, request):
+        """
+        Registration endpoint, create user and logs in
+        """
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            login(request, user)
+            return Response({
+                'success': True,
+                'message': 'Registration successful'
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def logout(self, request):
@@ -76,6 +94,7 @@ class AuthViewSet(viewsets.ViewSet):
         Get current user's info
         """
         return Response(UserSerializer(request.user).data)
+    
 
 class UserViewSet(viewsets.GenericViewSet):
     """

@@ -217,6 +217,9 @@ class ScheduleJCalculation:
         # Schedule J tax for 2024
         output.line_23 = output.line_18 - output.line_22
 
+        # Tax savings/expense compared to not using Sch J
+        output.tax_delta = self.current_year.total_tax - output.line_23
+
         return ScheduleJResultContainer(
             schedule_j_form=output,
             adjusted_current_year=adjusted_current_year,
@@ -237,7 +240,6 @@ class ScheduleJOptimization:
         self.elected_farm_income = elected_farm_income
         self.elected_farm_qualified = elected_farm_qualified
         self.dataset = dataset
-
 
     def optimize_sch_j(self, elected_farm_income, elected_farm_qualified):
         """

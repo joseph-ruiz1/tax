@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction
 from django.contrib.auth.models import Group, User
 from django.contrib.auth import authenticate
 from rest_framework import serializers
@@ -25,6 +26,41 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'datasets', 'date_joined']
 
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=5)
+    password_confirm = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+
+    def validate_username(self, value):
+        """
+        Username must be unique
+        """
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate(self, data):
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError("Passwords do not match")
+        return data
+    
+    @transaction.atomic
+    def create(self, validated_data):
+        """
+        Create user with validated data, remove password validator
+        """
+        validated_data.pop('password_confirm')
+        
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password']
+        )
+        return user
+
+
 class TaxYearDataDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaxYearData
@@ -36,7 +72,7 @@ class SchJFormSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = ScheduleJForm
-        fields = ["line_23", 'line_2a', 'line_2b']
+        fields = ["line_23", 'line_2a', 'line_2b', 'tax_delta']
 
 class CalculationIterationSerializer(serializers.ModelSerializer):
     """
@@ -172,7 +208,10 @@ class OutputSerializer(serializers.ModelSerializer):
         iterations = CalculationIterationSerializer(iterations_instances, many=True).data
         best_instance = instance.return_optimal_amount()
         best = SchJFormSerializer(best_instance).data
+        best_delta_instance = instance.return_best_tax_delta()
+        best_delta = SchJFormSerializer(best_delta_instance).data
         return {
             'results': iterations,
-            'best': best
+            'best': best,
+            'best_delta': best_delta
         }
