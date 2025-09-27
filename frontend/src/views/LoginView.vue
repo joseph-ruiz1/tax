@@ -89,7 +89,7 @@
             :class="{ error: errors.password }"
             required
             autocomplete="new-password"
-            minlength="8"
+            minlength="4"
           >
           <div v-if="errors.password" class="error-message">{{ errors.password }}</div>
         </div>
@@ -160,28 +160,24 @@ const showError = (field, message) => {
 const handleLogin = async () => {
   clearErrors()
   loading.value = true
-
   try {
     const response = await apiService.login(loginForm)
-    
     if (response.success) {
-      successMessage.value = 'Login successful! Redirecting...'
-    } else {
-      if (response.errors) {
-        Object.keys(response.errors).forEach(field => {
-          const errorMsg = Array.isArray(response.errors[field]) 
-            ? response.errors[field][0] 
-            : response.errors[field]
-          showError(field, errorMsg)
-        })
-      }
+      successMessage.value = 'Login successful. Redirecting...'
+      router.push('/')
     }
   } catch (error) {
     console.error('Login error:', error)
-    showError('username', 'An error occurred. Please try again.')
+    // Handle server errors
+    if (error.response && error.response.status >= 500) {
+      showError('username', 'Server error. Please try again later.')
+    } else if (error.response && error.response.status >= 400) {
+      showError('username', 'Invalid credentials. Please try again.')
+    } else {
+      showError('username', 'Please check your connection and try again.')
+    }
   } finally {
     loading.value = false
-    router.push('/')
   }
 }
 
@@ -200,29 +196,40 @@ const handleRegister = async () => {
 
   loading.value = true
 
-  try {
-    const response = await apiService.register(registerForm)
-    
-    if (response.success) {
-      successMessage.value = 'Account created successfully! Redirecting...'
-    } else {
-      if (response.errors) {
-        Object.keys(response.errors).forEach(field => {
-          const errorMsg = Array.isArray(response.errors[field]) 
-            ? response.errors[field][0] 
-            : response.errors[field]
-          showError(field, errorMsg)
-        })
+    try {
+      const response = await apiService.register(registerForm)
+      
+      if (response.success) {
+        successMessage.value = 'Account created successfully! Redirecting...'
+        router.push('/')
       }
+    } catch (error) {
+      console.error('Registration error:', error)
+      if (error.response && error.response.data) {
+        const data = error.response.data
+
+        if (data.errors) {
+          Object.keys(data.errors).forEach(field => {
+          if (field === 'non_field_errors') {
+            showError('password_confirm', data.errors[field][0])
+          } else {
+            const errorMsg = Array.isArray(data.errors[field]) 
+              ? data.errors[field][0] 
+              : data.errors[field]
+            showError(field, errorMsg)
+          }
+        })
+        } else {
+          showError('username', 'Registration failed. Please try again.')
+        } 
+      } else {
+      // Generic error fallback for network issues
+      showError('username', 'Registration failed. Please try again.')
+      }
+    } finally {
+      loading.value = false
     }
-  } catch (error) {
-    console.error('Registration error:', error)
-    showError('An error occurred. Please try again.')
-  } finally {
-    loading.value = false
-    router.push('/')
   }
-}
 </script>
 
 <style scoped>

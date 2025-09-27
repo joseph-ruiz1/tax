@@ -26,7 +26,7 @@ class LoginSerializer(serializers.Serializer):
         return user
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=5)
+    password = serializers.CharField(write_only=True, min_length=4)
     password_confirm = serializers.CharField(write_only=True)
 
     class Meta:
@@ -42,8 +42,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
+        errors = {}
         if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError("Passwords do not match")
+            errors['password_confirm'] = "Passwords do not match"
+        if errors:
+            raise serializers.ValidationError(errors)
+
         return data
     
     @transaction.atomic
