@@ -2,7 +2,6 @@
 <template>
     <div class="dashboard-container">
         <!-- Header -->
-        <h2>Datasets:</h2>
         <div class="dashboard-header">
             <div class="dashboard-title">
                 <h1>Welcome back, {{ user?.username || 'user' }}</h1>
