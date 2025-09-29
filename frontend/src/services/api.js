@@ -31,12 +31,6 @@ export const apiService = {
     }
   },
 
-  // User endpoints, needs updating
-  async getUsers() {
-    const response = await axios.get('/users/me')
-    return response.data
-  },
-
   async getCurrentUser() {
     const response = await axios.get('/auth/me/')
     return response.data
@@ -69,6 +63,11 @@ export const apiService = {
 
   async getDatasetDetail(id) {
     const response = await axios.get(`/datasets/${id}/`)
+    return response.data
+  },
+
+  async deleteDataset(id) {
+    const response = await axios.delete(`/datasets/${id}/`)
     return response.data
   },
 

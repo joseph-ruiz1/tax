@@ -89,11 +89,10 @@ class CalculationIterationSerializer(serializers.ModelSerializer):
 
 class TaxDataSetSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
-    tax_years = TaxYearDataDetailSerializer(many=True, read_only=True)
 
     class Meta:
         model = TaxDataSet
-        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "tax_years"]
+        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "created_at"]
 
 class TaxDataSetDetailSerializer(serializers.ModelSerializer):
     """
@@ -127,6 +126,7 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
         fields = ["id", "tax_years"]
         read_only_fields = ["id"]
     
+    @transaction.atomic
     def create(self, validated_data):
         dataset = TaxDataSet.objects.create(**validated_data)
         # Create 4 blank years

@@ -5,6 +5,7 @@
         <div class="form-panel">
             <div class="dataset-header">
                 <h1>General info</h1>
+                <a href="/"><p>Return to dashboard</p></a>
                 <form class="dataset-form">
                     <p class="title">Title</p>
                     <input v-model="form.name" placeholder="Enter Calculation Name" required>
@@ -56,12 +57,12 @@
             <button @click="submitForm" class="submit-btn">Update Calculation</button>
         </div>
 
-        <!-- Right Panel - Results -->
+        <!--Results -->
         <div class="results-panel">
           <!-- Chart Area -->
           <div class="chart-section">
             <div class="section-header">
-                <h3>Tax Comparison by Year</h3>
+                <h3>Total 2024 tax</h3>
             </div>
             <vue-apex-charts
                 id="tax-savings-chart"
@@ -71,11 +72,10 @@
                 :series="series"
               ></vue-apex-charts>
               <div v-else class="chart-placeholder">
-                <div class="chart-icon">📊</div>
                 <p>Loading chart data...</p>
               </div>
             <div class="section-header">
-              <h3>Net Tax Savings/Expense by Year</h3>
+              <h3>Net Tax Savings/Expense</h3>
             </div>
             <vue-apex-charts
                 id="tax-delta-chart"
@@ -265,14 +265,14 @@ const updateChartData = () => {
 
   series.value = [
     {
-      name: 'Total tax by year',
+      name: 'Total 2024 tax',
       data: sch_j_total
     }
   ]
 
   delta_series.value = [
     {
-      name: 'Total tax savings/expense',
+      name: 'Total 2024 tax savings/expense',
       data: tax_delta
     }
   ]

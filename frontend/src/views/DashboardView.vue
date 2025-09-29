@@ -10,7 +10,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <!-- Quick Actions -->
     <div class="quick-actions">
@@ -23,8 +22,7 @@
         </button>
         <router-link to="/datasets" class="action-btn">
           <div class="action-text">
-            <h4>View Datasets</h4>
-            <p>Access your most recent dataset</p>
+            <h4>Jump to most recent dataset</h4>
           </div>
         </router-link>
       </div>
@@ -34,9 +32,12 @@
     <div class="datasets-section">
       <div class="section-header">
         <h2>Recent Datasets</h2>
-        <router-link to="/datasets" class="view-all-btn">
-          View All →
-        </router-link>
+        <button
+        v-if="hasMoreDatasets"
+        @click="toggleShowAll"
+        class="view-all-btn">
+          {{ showAllDatasets ? 'Show less': `Show all (${datasets.length})` }}
+        </button>
       </div>
       
       <div v-if="loading" class="loading-state">
@@ -58,7 +59,29 @@
           </div>
         </button>
       </div>
+
+      <div v-else class="dataset-grid">
+        <div
+        v-for="dataset in displayedDatasets"
+        :key="dataset.id"
+        class="dataset-card"
+        @click="navigateToDataset(dataset.id)"
+        >
+        <h3>{{ dataset.name }}</h3> 
+        <div class="dataset-meta">
+            <span>Created {{ formatDate(dataset.created_at) }}</span>
+            <button 
+            @click.stop="deleteDataset(dataset.id)" 
+            class="dataset-delete" 
+            title="Delete">
+                x
+            </button>
+          </div> 
+        </div>
+      </div>
     </div>
+  </div>
+
 </template>
 
 <script setup>
@@ -70,14 +93,24 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const datasets = ref([])
-const form = ref({})
+const form = ref('')
 const user = ref(null)
-const showDatasets = ref(false)
+const showAllDatasets = ref(false)
 
-// Computed property for recent datasets (first 6)
-const recentDatasets = computed(() => {
-  return datasets.value.slice(0, 6)
+const displayedDatasets = computed(() => {
+    if (showAllDatasets.value) {
+        return datasets.value
+    }
+  return datasets.value.slice(-6, -1)
 })
+
+const hasMoreDatasets = computed(() => {
+    return datasets.value.length > 5
+})
+
+const toggleShowAll = () => {
+    showAllDatasets.value = !showAllDatasets.value
+}
 
 const handleLogout = async () => {
     try {
@@ -120,6 +153,19 @@ const createNewDataset = async () => {
     }
 }
 
+const deleteDataset = async (id) => {
+   if (!confirm('Are you sure you want to delete this dataset?')) {
+    return
+  }
+    try {
+        await apiService.deleteDataset(id)
+        datasets.value = datasets.value.filter(d => d.id !== id)
+    } catch (err) {
+        error.value = 'Failed to delete dataset'
+        console.log('Error delting dataset', err)
+    }
+}
+
 onMounted(async () => {
     await Promise.all([
         fetchUser(),
@@ -127,15 +173,23 @@ onMounted(async () => {
     ])
 })
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
 </script>
 
 <style scoped>
 .dashboard-container {
-  max-width: 1800px;
   margin: 0 auto;
   padding: 2rem;
   background: linear-gradient(135deg, #434b6f 0%, #2e2735 100%);
-  min-height: 100vh;
+  min-height: 20vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -218,7 +272,7 @@ onMounted(async () => {
   color: #1a202c;
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .actions-grid {
@@ -355,9 +409,9 @@ onMounted(async () => {
   font-size: 0.85rem;
 }
 
-.dataset-status {
-  background: rgba(72, 187, 120, 0.1);
-  color: #38a169;
+.dataset-delete {
+  background: rgba(11, 0, 0, 0.1);
+  color: #ab223b;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-weight: 600;
@@ -434,5 +488,4 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 }
-
 </style>

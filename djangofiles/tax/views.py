@@ -128,7 +128,9 @@ class DataSetViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return TaxDataSetSerializer
-        elif self.action in ['retrieve']:
+        elif self.action == 'retrieve':
+            return TaxDataSetDetailSerializer
+        elif self.action == 'delete':
             return TaxDataSetDetailSerializer
         elif self.action == 'create_step':
             return CreateCalculationSerializer
