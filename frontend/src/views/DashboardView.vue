@@ -25,7 +25,7 @@
         <router-link to="/datasets" class="action-btn">
           <div class="action-text">
             <h4>View Datasets</h4>
-            <p>Access your saved datasets</p>
+            <p>Access your most recent dataset</p>
           </div>
         </router-link>
       </div>
@@ -55,7 +55,7 @@
           <div class="action-icon">➕</div>
           <div class="action-text">
             <h4>Create Dataset</h4>
-            <p>Start your first analysis</p>
+            <p>Start your first calculation</p>
           </div>
         </button>
       </div>
@@ -202,47 +202,6 @@ onMounted(async () => {
 .logout-btn:hover {
   background: rgba(229, 62, 62, 0.2);
   transform: translateY(-1px);
-}
-
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.stat-icon {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.stat-card h3 {
-  color: #1a202c;
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.stat-card p {
-  color: #718096;
-  font-size: 1rem;
 }
 
 /* Quick Actions */
