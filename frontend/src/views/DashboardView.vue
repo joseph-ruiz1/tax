@@ -166,13 +166,6 @@ const deleteDataset = async (id) => {
     }
 }
 
-onMounted(async () => {
-    await Promise.all([
-        fetchUser(),
-        fetchDatasets()
-    ])
-})
-
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -181,6 +174,23 @@ const formatDate = (dateString) => {
     day: 'numeric'
   })
 }
+
+const navigateToDataset = async (id) => {
+  try {
+    response = await apiService.getResults(id)
+    router.push(`/datasets/${id}/results`)
+  } catch (err) {
+    error.value = 'Failed to load results'
+    console.log('Error loading results', err)
+  }
+}
+
+onMounted(async () => {
+    await Promise.all([
+        fetchUser(),
+        fetchDatasets()
+    ])
+})
 
 </script>
 
