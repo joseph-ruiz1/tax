@@ -17,14 +17,18 @@
       <div class="actions-grid">
         <button class="action-btn success" @click="createNewDataset">
           <div class="action-text">
-            <h4>New Tax Calculation</h4>
+            <h3>New Tax Calculation</h3>
           </div>
         </button>
-        <router-link to="/datasets" class="action-btn">
+        <button 
+        v-if="lastDataset"
+        class="action-btn" 
+        @click="navigateToDataset(lastDataset.id)">
           <div class="action-text">
-            <h4>Jump to most recent dataset</h4>
+            <h3>Jump to most recently created dataset</h3>
+            <h4>{{ lastDataset.name }} - {{ lastDataset.max_elected_farm_income }}</h4>
           </div>
-        </router-link>
+        </button>
       </div>
     </div>
 
@@ -101,7 +105,12 @@ const displayedDatasets = computed(() => {
     if (showAllDatasets.value) {
         return datasets.value
     }
-  return datasets.value.slice(-6, -1)
+  return datasets.value.slice(-6)
+})
+
+const lastDataset = computed(() => {
+  const datasets = displayedDatasets.value
+  return datasets.length > 0 ? datasets[datasets.length - 1] : null
 })
 
 const hasMoreDatasets = computed(() => {
@@ -177,7 +186,7 @@ const formatDate = (dateString) => {
 
 const navigateToDataset = async (id) => {
   try {
-    response = await apiService.getResults(id)
+    const response = await apiService.getResults(id)
     router.push(`/datasets/${id}/results`)
   } catch (err) {
     error.value = 'Failed to load results'
@@ -331,10 +340,17 @@ onMounted(async () => {
   flex: 1;
 }
 
-.action-text h4 {
+.action-text h3 {
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 0.25rem;
+}
+
+.action-text h4 {
+  font-size: 1rem;
+  font-weight: 200;
+  margin-bottom: 0.25rem;
+  color: rgb(184, 182, 182);
 }
 
 .action-text p {
