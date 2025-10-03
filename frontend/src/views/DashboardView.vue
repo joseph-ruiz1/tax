@@ -53,11 +53,9 @@
       </div>
 
       <div v-else-if="datasets.length === 0" class="empty-state">
-        <h3>No datasets yet</h3>
-        <p>Create your first dataset</p>
         <button class="action-btn success" @click="createNewDataset">
           <div class="action-icon">➕</div>
-          <div class="action-text">
+          <div class="action-text centered">
             <h4>Create Dataset</h4>
             <p>Start your first calculation</p>
           </div>
@@ -316,6 +314,7 @@ onMounted(async () => {
   align-items: center;
   gap: 1rem;
   text-decoration: none;
+  max-width: 300px;
 }
 
 .action-btn:hover {
@@ -334,10 +333,23 @@ onMounted(async () => {
 
 .action-icon {
   font-size: 1.5rem;
+  display: flex;
+  align-items: center;
 }
 
 .action-text {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+.action-text.centered {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .action-text h3 {
@@ -458,6 +470,14 @@ onMounted(async () => {
 .empty-state {
   text-align: center;
   padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-state .action-btn {
+  justify-content: center;
+  min-height: 120px;
 }
 
 .empty-icon {
@@ -465,18 +485,23 @@ onMounted(async () => {
   margin-bottom: 1rem;
 }
 
-.empty-state h3 {
-  color: #1a202c;
+.empty-state h4 {
+  color: #ffffff;
   font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: .5rem;
+  margin: 0;
+  padding: 0;
 }
 
 .empty-state p {
-  color: #718096;
+  color: #ffffff;
   font-size: 1rem;
   margin-bottom: 2rem;
+  margin: 0;
+  padding: 0;
 }
+
 
 /* Responsive */
 @media (max-width: 768px) {
