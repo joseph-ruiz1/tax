@@ -2,7 +2,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://your-backend.onrender.com/tax/api/:splat"
+      "dest": "https://your-backend.onrender.com/tax/api/$1"
     },
     {
       "src": "/(.*)",
