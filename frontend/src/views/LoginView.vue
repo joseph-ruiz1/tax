@@ -2,8 +2,7 @@
   <div class="auth-container">
     <div class="auth-card">
       <div class="auth-header">
-        <h1>Tax Analytics</h1>
-        <p>Access your personalized tax insights</p>
+        <h1>Schedule J Optimizer</h1>
       </div>
 
       <div class="auth-tabs">

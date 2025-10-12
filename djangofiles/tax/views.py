@@ -93,23 +93,6 @@ class AuthViewSet(viewsets.ViewSet):
         Get current user's info
         """
         return Response(UserSerializer(request.user).data)
-    
-
-class UserViewSet(viewsets.GenericViewSet):
-    """
-    View for CRUD operations
-    """
-    serializer_class = UserSerializer
-    permission_classes = [AllowAny]
-
-    @action(detail=False, methods=['get'])
-    def me(self, request):
-        """
-        Get current user
-        """
-        queryset = User.objects.filter(id=1)
-        serializer = self.get_serializer(queryset) # request.user
-        return Response(serializer.data)
 
 class DataSetViewSet(viewsets.ModelViewSet):
     """
