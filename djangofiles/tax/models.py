@@ -42,6 +42,11 @@ class TaxDataSet(models.Model):
     def save(self, *args, **kwargs):
         self.ordinary_farm_income = max(self.max_elected_farm_income - self.qualified_farm_income, Decimal('0'))
         super().save(*args, **kwargs)
+
+    def return_best_tax_delta(self):
+        return ScheduleJForm.objects.filter(
+            iteration__dataset=self
+        ).order_by('tax_delta').last()
         
 
 class TaxYearStructure(models.Model):
@@ -125,6 +130,7 @@ class AdjustedTaxData(TaxYearStructure):
 class ScheduleJForm(models.Model):
     iteration = models.OneToOneField(CalculationIteration, on_delete=models.CASCADE, related_name="form")
     locals().update(create_schedulej_fields())
+    tax_delta = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
         field_values = [f"{field.name}={getattr(self, field.name)}" for field in self._meta.fields]

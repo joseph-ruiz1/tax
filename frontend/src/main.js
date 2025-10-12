@@ -12,7 +12,4 @@ axios.defaults.withXSRFToken = true;
 axios.defaults.xsrfCookieName = 'csrftoken';
 axios.defaults.xsrfHeaderName = 'X-CSRFTOKEN';
 
-
-
 createApp(App).use(router).use(VueApexCharts).mount('#app')
-

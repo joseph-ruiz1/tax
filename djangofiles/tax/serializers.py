@@ -1,10 +1,17 @@
 from rest_framework import serializers
+from django.db import transaction
 from django.contrib.auth.models import Group, User
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
 from .models import FILING_STATUS, YEAR, TaxDataSet, TaxYearData, CalculationIteration, ScheduleJForm
 from .utils import validate_tax_years
+
+class UserSerializer(serializers.ModelSerializer):
+    datasets = serializers.PrimaryKeyRelatedField(many=True, queryset=TaxDataSet.objects.all())
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'datasets', 'date_joined']
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -16,14 +23,46 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(username=username, password=password)
         if not user:
             raise serializers.ValidationError('Invalid credentials')
-        data['user'] = user
-        return data
+        return user
 
-class UserSerializer(serializers.ModelSerializer):
-    datasets = serializers.PrimaryKeyRelatedField(many=True, queryset=TaxDataSet.objects.all())
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=4)
+    password_confirm = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'datasets', 'date_joined']
+        fields = ['username', 'password', 'password_confirm']
+
+    def validate_username(self, value):
+        """
+        Username must be unique
+        """
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate(self, data):
+        errors = {}
+        if data['password'] != data['password_confirm']:
+            errors['password_confirm'] = "Passwords do not match"
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return data
+    
+    @transaction.atomic
+    def create(self, validated_data):
+        """
+        Create user with validated data, remove password validator
+        """
+        validated_data.pop('password_confirm')
+
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password']
+        )
+        return user
+
 
 class TaxYearDataDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -36,7 +75,7 @@ class SchJFormSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = ScheduleJForm
-        fields = ["line_23", 'line_2a', 'line_2b']
+        fields = ["line_23", 'line_2a', 'line_2b', 'tax_delta']
 
 class CalculationIterationSerializer(serializers.ModelSerializer):
     """
@@ -50,11 +89,10 @@ class CalculationIterationSerializer(serializers.ModelSerializer):
 
 class TaxDataSetSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
-    tax_years = TaxYearDataDetailSerializer(many=True, read_only=True)
 
     class Meta:
         model = TaxDataSet
-        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "tax_years"]
+        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "created_at"]
 
 class TaxDataSetDetailSerializer(serializers.ModelSerializer):
     """
@@ -88,6 +126,7 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
         fields = ["id", "tax_years"]
         read_only_fields = ["id"]
     
+    @transaction.atomic
     def create(self, validated_data):
         dataset = TaxDataSet.objects.create(**validated_data)
         # Create 4 blank years
@@ -172,7 +211,10 @@ class OutputSerializer(serializers.ModelSerializer):
         iterations = CalculationIterationSerializer(iterations_instances, many=True).data
         best_instance = instance.return_optimal_amount()
         best = SchJFormSerializer(best_instance).data
+        best_delta_instance = instance.return_best_tax_delta()
+        best_delta = SchJFormSerializer(best_delta_instance).data
         return {
             'results': iterations,
-            'best': best
+            'best': best,
+            'best_delta': best_delta
         }

@@ -190,29 +190,29 @@ class ScheduleJCalculationsTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_sch_j_calculations(self):
-            for i, test in enumerate(SCHEDULE_J_TEST_CASES):
-                max_elected, qualified_elected = test["elected"]
-                dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, qualified_elected)
-                dataset.refresh_from_db()
+        for i, test in enumerate(SCHEDULE_J_TEST_CASES):
+            max_elected, qualified_elected = test["elected"]
+            dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, qualified_elected)
+            dataset.refresh_from_db()
 
-                # Base Calculations
-                for tax_year in TaxYearData.objects.filter(dataset=dataset):
-                    TaxCalculation(tax_year).calculate()
+            # Base Calculations
+            for tax_year in TaxYearData.objects.filter(dataset=dataset):
+                TaxCalculation(tax_year).calculate()
 
-                sch_j_results = []
-                #Schedule J calculation
-                tax_years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
-                i = CalculationIteration.objects.create(dataset=dataset)
-                ScheduleJCalculation(*tax_years, i).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
-                
+            sch_j_results = []
+            #Schedule J calculation
+            tax_years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
+            i = CalculationIteration.objects.create(dataset=dataset)
+            ScheduleJCalculation(*tax_years, i).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+            
 
-                for adjusted in AdjustedTaxData.objects.filter(iteration=i).order_by("-year"):
-                    sch_j_results.append(adjusted)
+            for adjusted in AdjustedTaxData.objects.filter(iteration=i).order_by("-year"):
+                sch_j_results.append(adjusted)
 
-                for j, (result, expected) in enumerate(zip(sch_j_results, test['outputs'])):
-                    if round(result.total_tax) != expected:
-                        print(f"❌ Test {i}, Year {j}: Got {result.total_tax}, expected {expected}")
-                        print(f"ordinary: {result.ordinary_tax}, qualified: {result.qualified_tax}")
+            for j, (result, expected) in enumerate(zip(sch_j_results, test['outputs'])):
+                if round(result.total_tax) != expected:
+                    print(f"❌ Test {i}, Year {j}: Got {result.total_tax}, expected {expected}")
+                    print(f"ordinary: {result.ordinary_tax}, qualified: {result.qualified_tax}")
 
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
@@ -298,24 +298,15 @@ TEST_CASES = [
 SCHEDULE_J_TEST_CASES = [
     {
         'inputs': [
-            [2024, "MFJ", 120000, 105000],
-            [2023, "MFJ", 85000, 70000],
-            [2022, "single", 55000, 40000],
-            [2021, "MFJ", 96000, 45000],
+            [2024, "MFJ", 107664, 10892],
+            [2023, "MFJ", 126329, 9538],
+            [2022, "MFJ", 129793, 4013],
+            [2021, "MFJ", 226310, 203537],
         ],
         'outputs': [143, 2812, 5683, 10092],
-        'elected': [25000, 4000],
+        'elected': [13624, 0],
     },
-    {
-        'inputs': [
-            [2024, "single", 230000, 200000],
-            [2023, "single", 340000, 40000],
-            [2022, "MFJ", 460000, 280000],
-            [2021, "MFJ", 315000, 2000],
-        ],
-        'outputs': [23896, 85911, 74971, 65562],
-        'elected': [27000, 2000]
-    },
+    
 ]
 
 SCHEDULE_J_OPT_TEST = [

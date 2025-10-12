@@ -4,7 +4,7 @@ from .utils import chunker
 
 from decimal import Decimal
 
-
+# CONSIDER MAKING SAVE FIELD AN ARGUMENT TO SCH J CALC FOR TESTING PURPOSES
 class TaxCalculation:
     def __init__(self, tax_data: TaxYearData):
         self.tax_data = tax_data
@@ -161,7 +161,7 @@ class ScheduleJCalculation:
         adjusted_current_year.taxable_ordinary = self.current_year.taxable_ordinary - elected_ordinary
 
         # Find tax on 2024 taxable less elected farm income
-        TaxCalculation(adjusted_current_year).calculate()
+        TaxCalculation(adjusted_current_year).calculate(save=False)
         output.line_4 = adjusted_current_year.total_tax
 
         # Distribute elected farm income to each year, calculate tax
@@ -172,31 +172,31 @@ class ScheduleJCalculation:
             }
 
         for year, (base_income, adjusted_income, calculate_tax) in update_lines.items():
-                base = self.base_years[year]
-                adjusted = adjusted_bases[year]
+            base = self.base_years[year]
+            adjusted = adjusted_bases[year]
 
-                # Pull base income from given tax info
-                base_ordinary_income =  int(base.taxable_ordinary)
-                base_qualified_income = int(base.qualified_income)
-                base_taxable_income = int(base.taxable_income)
+            # Pull base income from given tax info
+            base_ordinary_income =  int(base.taxable_ordinary)
+            base_qualified_income = int(base.qualified_income)
+            base_taxable_income = int(base.taxable_income)
 
-                setattr(output, base_income, base_taxable_income)
+            setattr(output, base_income, base_taxable_income)
 
-                # Increase income by 1/3
-                adjusted_ordinary_income = base_ordinary_income + distribute_farm_ordinary
-                adjusted_qualified_income = base_qualified_income + distribute_farm_qualified
-                adjusted_taxable_income = base_taxable_income + distribute_total_elected
+            # Increase income by 1/3
+            adjusted_ordinary_income = base_ordinary_income + distribute_farm_ordinary
+            adjusted_qualified_income = base_qualified_income + distribute_farm_qualified
+            adjusted_taxable_income = base_taxable_income + distribute_total_elected
 
-                # Place increased income total taxable income into Sch J
-                setattr(output, adjusted_income, adjusted_taxable_income) 
+            # Place increased income total taxable income into Sch J
+            setattr(output, adjusted_income, adjusted_taxable_income) 
 
-                # Increase ordinary, qualified, taxable income with respective elected farm incomes
-                adjusted.taxable_ordinary = adjusted_ordinary_income
-                adjusted.qualified_income = adjusted_qualified_income
-                adjusted.taxable_income = adjusted_taxable_income
+            # Increase ordinary, qualified, taxable income with respective elected farm incomes
+            adjusted.taxable_ordinary = adjusted_ordinary_income
+            adjusted.qualified_income = adjusted_qualified_income
+            adjusted.taxable_income = adjusted_taxable_income
 
-                TaxCalculation(adjusted).calculate(save=False)
-                setattr(output, calculate_tax, adjusted.total_tax)
+            TaxCalculation(adjusted).calculate(save=False)
+            setattr(output, calculate_tax, adjusted.total_tax)
 
         output.line_17 = output.line_4 + output.line_8 + output.line_12 + output.line_16
         output.line_18 = output.line_17 
@@ -216,6 +216,9 @@ class ScheduleJCalculation:
 
         # Schedule J tax for 2024
         output.line_23 = output.line_18 - output.line_22
+
+        # Tax savings/expense compared to not using Sch J
+        output.tax_delta = self.current_year.total_tax - output.line_23
 
         return ScheduleJResultContainer(
             schedule_j_form=output,
@@ -237,7 +240,6 @@ class ScheduleJOptimization:
         self.elected_farm_income = elected_farm_income
         self.elected_farm_qualified = elected_farm_qualified
         self.dataset = dataset
-
 
     def optimize_sch_j(self, elected_farm_income, elected_farm_qualified):
         """

@@ -4,12 +4,18 @@
         <div class="dataset-header">
             <h1>General info</h1>
             <form class="dataset-form">
+              <div class="form-group">
                 <p class="title">Title</p>
                 <input v-model="form.name" placeholder="Enter Calculation Name">
+              </div>
+              <div class="form-group">
                 <p class="title">Max Elected Farm Income</p>
                 <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income">
+              </div>
+              <div class="form-group">
                 <p class="title">Qualified Farm Income</p>
                 <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains">
+              </div>
             </form>
         </div>
 
@@ -26,30 +32,33 @@
         </div>
 
         <!-- Current Year Form -->
-        <div class="year-form">
+        <div class="dataset-header">
+          <h1>Yearly Tax Data</h1>
             <h3>Tax Year {{ form.tax_years[currentYearIndex].year }}</h3>
-            <form>
+            <form class="dataset-form">
+              <div class="form-group">
                 <p class="title">Filing Status</p>
                 <select v-model="form.tax_years[currentYearIndex].filing_status">
                     <option disabled value="">Filing Status</option>
                     <option>Single</option>
                     <option>Married Filing Jointly</option>
                 </select>
-                <p class="title">Taxable Income</p>
+              </div>
+              <div class="form-group"><p class="title">Taxable Income</p>
                 <input
                 v-model.number="form.tax_years[currentYearIndex].taxable_income"
                 placeholder="Taxable income"
                 >
+              </div>
+              <div class="form-group">
                 <p class="title">Qualified Income</p>
                 <input
                 v-model.number="form.tax_years[currentYearIndex].qualified_income"
                 placeholder="Qualified income"
                 >
+              </div>
             </form>
-
-            
         </div>
-        
         <button @click="submitForm" class="submit-btn">Submit</button>
     </div>
 </template>
@@ -79,18 +88,6 @@ const form = ref({
     ]
 })
 
-const nextYear = () => {
-    if (currentYearIndex.value < 3) {
-        currentYearIndex.value++
-    }
-}
-
-const prevYear = () => {
-    if (currentYearIndex.value > 0) {
-        currentYearIndex--
-    }
-}
-
 const submitForm = async () => {
     try {
         const id = route.params.id
@@ -110,16 +107,12 @@ const submitForm = async () => {
     }
 }
 
-onMounted(async () => {
-  
-})
 
 </script>
 
 <style scoped>
 /* Main container */
 .form-container {
-  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
   background: linear-gradient(135deg, #434b6f 0%, #2e2735 100%);
@@ -132,8 +125,9 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 2rem;
+  padding: 1.5rem;
+  margin: 0 auto 2rem auto;
+  max-width: 700px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -147,16 +141,24 @@ onMounted(async () => {
 }
 
 .dataset-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .title {
     color: #1a202c;
     font-size: 1rem;
-    font-weight: 700;
-    text-align: left;
+    font-weight: 600;
+    display: flex;
 }
 
 /* Year Navigation Tabs */
@@ -193,30 +195,17 @@ onMounted(async () => {
   transform: translateY(-2px);
 }
 
-/* Year Form Section */
-.year-form {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.year-form h3 {
-  color: #1a202c;
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 1rem 0;
-  text-align: center;
-}
-
-.year-form form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+.form-group {
+  display: flex;
+  flex-direction: column;
   gap: .5rem;
-  margin-bottom: 2rem;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
 }
 
 /* Input Styles */
@@ -229,9 +218,20 @@ input {
   color: #1a202c;
   transition: all 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+select {
+  padding: .5rem 1.25rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  background: white;
+  color: #1a202c;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-input:focus {
+input:focus, select:focus {
   outline: none;
   border-color: #4c51bf;
   box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.1);

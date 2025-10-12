@@ -16,7 +16,7 @@ from rest_framework.decorators import action
 from .services import TaxCalculation, ScheduleJOptimization, ScheduleJCalculation, CalculationIteration
 from .forms import TaxYearDataFormSet, TaxDataSetForm
 from .models import TaxYearData, TaxDataSet, ScheduleJForm
-from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer
+from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer, UserRegistrationSerializer
 from .utils import update_calculations
 
 class IndexView(TemplateView):
@@ -33,17 +33,34 @@ class AuthViewSet(viewsets.ViewSet):
         """
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.validated_data['user']
-            login(request, user) # Create cookie
+            # Create cookie
+            login(request, serializer.validated_data) 
             return Response({
                 'success': True,
-                'user': UserSerializer(user).data,
                 'message': 'Login successful'
             })
         return Response({
             'success': False,
             'errors': serializer.errors,
             }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
+    def register(self, request):
+        """
+        Registration endpoint, create user and logs in
+        """
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            login(request, user)
+            return Response({
+                'success': True,
+                'message': 'Registration successful'
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def logout(self, request):
@@ -77,22 +94,6 @@ class AuthViewSet(viewsets.ViewSet):
         """
         return Response(UserSerializer(request.user).data)
 
-class UserViewSet(viewsets.GenericViewSet):
-    """
-    View for CRUD operations
-    """
-    serializer_class = UserSerializer
-    permission_classes = [AllowAny]
-
-    @action(detail=False, methods=['get'])
-    def me(self, request):
-        """
-        Get current user
-        """
-        queryset = User.objects.filter(id=1)
-        serializer = self.get_serializer(queryset) # request.user
-        return Response(serializer.data)
-
 class DataSetViewSet(viewsets.ModelViewSet):
     """
     Dataset dashboard page. Allows for viewing and deleting. Creates are handled in CalculationEntryView
@@ -110,7 +111,9 @@ class DataSetViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return TaxDataSetSerializer
-        elif self.action in ['retrieve']:
+        elif self.action == 'retrieve':
+            return TaxDataSetDetailSerializer
+        elif self.action == 'delete':
             return TaxDataSetDetailSerializer
         elif self.action == 'create_step':
             return CreateCalculationSerializer
