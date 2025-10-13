@@ -4,16 +4,37 @@
         <!-- Left Panel - Form -->
         <div class="form-panel">
             <div class="dataset-header">
+              <div class="dataset-title">
+                <button class="to-dashboard-btn" @click="toDashboard">← Back</button>
                 <h1>General info</h1>
-                <a href="/"><p>Return to dashboard</p></a>
-                <form class="dataset-form">
-                    <p class="title">Title</p>
-                    <input v-model="form.name" placeholder="Enter Calculation Name" required>
+              </div>
+              <form class="dataset-form">
+                <div class="field-container">
+                  <p class="title">Title</p>
+                <input v-model="form.name" placeholder="Enter Calculation Name" required>
+                </div>
+
+                <div class="field-container">
+                  <div class="title-with-info">
                     <p class="title">Max Elected Farm Income</p>
-                    <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income" required>
+                    <button type="button" class="info-btn" aria-label="More information">
+                      <span class="info-icon">i</span>
+                      <span class="tooltip">The maximum amount of farm income that can be elected for special treatment</span>
+                    </button>
+                  </div>
+                  <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income" required>
+                </div>
+
+                <div class="field-container">
+                  <div class="title-with-info">
                     <p class="title">Qualified Farm Income</p>
-                    <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required>
-                </form>
+                    <button type="button" class="info-btn" aria-label="More information">
+                      <span class="info-icon">i</span>
+                      <span class="tooltip">The maximum amount of farm income that can be elected for special treatment</span>
+                    </button>
+                  </div>
+                <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required></div>
+              </form>
             </div>
 
             <!-- Year Navigation-->
@@ -30,30 +51,54 @@
 
             <!-- Current Year Form -->
             <div class="year-form" v-if="form.tax_years[currentYearIndex]">
-                <h3>Tax Year {{ form.tax_years[currentYearIndex].year }}</h3>
+              <div class="dataset-title">
+                <h1>Tax Year {{ form.tax_years[currentYearIndex].year }}</h1>
+              </div>
+        
                 <form>
-                    <p class="title">Filing Status</p>
-                    <select v-model="form.tax_years[currentYearIndex].filing_status" required>
+                  <div class="field-container">
+                    <div class="title-with-info">
+                      <p class="title">Filing Status</p>
+                    </div>
+                      <select v-model="form.tax_years[currentYearIndex].filing_status" required>
                         <option disabled value="">Filing Status</option>
                         <option v-for="opt in filingStatusOptions" :key="opt.value" :value="opt.value">
                           {{ opt.label }}
                         </option>
-                    </select>
-                    <p class="title">Taxable Income</p>
-                    <input
-                    v-model.number="form.tax_years[currentYearIndex].taxable_income"
-                    placeholder="Taxable income"
-                    required
-                    >
-                    <p class="title">Qualified Income</p>
-                    <input
-                    v-model.number="form.tax_years[currentYearIndex].qualified_income"
-                    placeholder="Qualified income"
-                    required
-                    >
+                      </select>
+                    </div>
+                    
+                    <div class="field-container">
+                      <div class="title-with-info">
+                        <p class="title">Taxable Income</p>
+                        <button type="button" class="info-btn" aria-label="More information">
+                          <span class="info-icon">i</span>
+                          <span class="tooltip">The maximum amount of farm income that can be elected for special treatment</span>
+                        </button>
+                      </div>
+                        <input
+                        v-model.number="form.tax_years[currentYearIndex].taxable_income"
+                        placeholder="Taxable income"
+                        required
+                        >
+                    </div>
+                    
+                    <div class="field-container">
+                      <div class="title-with-info">
+                        <p class="title">Qualified Income</p>
+                        <button type="button" class="info-btn" aria-label="More information">
+                          <span class="info-icon">i</span>
+                          <span class="tooltip">Qualified income</span>
+                        </button>
+                      </div>
+                        <input
+                        v-model.number="form.tax_years[currentYearIndex].qualified_income"
+                        placeholder="Qualified income"
+                        required
+                        >
+                    </div>
                 </form>
             </div>
-            
             <button @click="submitForm" class="submit-btn">Update Calculation</button>
         </div>
 
@@ -317,11 +362,8 @@ const submitForm = async () => {
     }
 }
 
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0)
+const toDashboard = async () => {
+  router.push('/')
 }
 
 onMounted(async () => {
@@ -333,7 +375,7 @@ onMounted(async () => {
 /* Main Layout */
 .results-container {
   display: grid;
-  grid-template-columns: 1fr 2fr; /* Left: 1/3, Right: 2/3 */
+  grid-template-columns: 1fr 3fr; /* Left: 1/3, Right: 2/3 */
   gap: 2rem;
   max-width: 1800px;
   margin: 0 auto;
@@ -361,11 +403,18 @@ onMounted(async () => {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.dataset-title {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .dataset-header h1 {
   color: #1a202c;
   font-size: 1.5rem;
   font-weight: 700;
-  margin: 0 0 1rem 0;
+  margin: 0;
   text-align: center;
 }
 
@@ -374,12 +423,151 @@ onMounted(async () => {
   gap: 1rem;
 }
 
+.field-container input, select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.field-container select {
+   width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+/* Title styling within field container */
+.field-container .title {
+  font-weight: 600;
+  color: #1a202c;
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.field-container input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.field-container input:hover {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.field-container input::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 0.95rem;
+}
+
+.title-with-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.title-with-info .title {
+  margin: 0; /* Remove default paragraph margin */
+}
+
 .title {
   color: #1a202c;
   font-size: 1rem;
   font-weight: 700;
   text-align: left;
   margin: 0.5rem 0 0.25rem 0;
+}
+
+.info-btn {
+  position: relative;
+   background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  cursor: help;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.info-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: scale(1.1);
+}
+
+.info-icon {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3b82f6;
+  font-style: italic;
+  display: block;
+  line-height: 1;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px); /* Positions above the button */
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a202c;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Tooltip arrow */
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1a202c;
+}
+
+/* Show tooltip on hover */
+.info-btn:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.to-dashboard-btn {
+  position: absolute;
+  left: 0;
+  background: rgba(46, 39, 53, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  color: #000000;
+  padding: 0.3rem .3rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.to-dashboard-btn:hover {
+  background: rgba(255, 255, 255, .1);
+  transform: translateY(-1px);
 }
 
 .year-tabs {
@@ -424,6 +612,14 @@ onMounted(async () => {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.year-form h1 {
+  color: #1a202c;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
 .year-form h3 {
   color: #1a202c;
   font-size: 1.25rem;
@@ -446,7 +642,7 @@ input, select {
   color: #1a202c;
   transition: all 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  width: 100%;
+  width: 65%;
   box-sizing: border-box;
 }
 
