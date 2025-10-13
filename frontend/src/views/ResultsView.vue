@@ -3,51 +3,53 @@
     <div class="results-container" v-if="!loading">
         <!-- Left Panel - Form -->
         <div class="form-panel">
-            <div class="dataset-header">
-              <div class="dataset-title">
-                <button class="to-dashboard-btn" @click="toDashboard">← Back</button>
-                <h1>General info</h1>
-              </div>
-              <form class="dataset-form">
-                <div class="field-container">
-                  <p class="title">Title</p>
-                <input v-model="form.name" placeholder="Enter Calculation Name" required>
-                </div>
-
-                <div class="field-container">
-                  <div class="title-with-info">
-                    <p class="title">Max Elected Farm Income</p>
-                    <button type="button" class="info-btn" aria-label="More information">
-                      <span class="info-icon">i</span>
-                      <span class="tooltip">The maximum amount of farm income that can be elected for special treatment</span>
-                    </button>
-                  </div>
-                  <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income" required>
-                </div>
-
-                <div class="field-container">
-                  <div class="title-with-info">
-                    <p class="title">Qualified Farm Income</p>
-                    <button type="button" class="info-btn" aria-label="More information">
-                      <span class="info-icon">i</span>
-                      <span class="tooltip">The maximum amount of farm income that can be elected for special treatment</span>
-                    </button>
-                  </div>
-                <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required></div>
-              </form>
+          <div class="dataset-header">
+            <div class="dataset-title">
+              <button class="to-dashboard-btn" @click="toDashboard">← Back</button>
+              <h1>General info</h1>
             </div>
 
-            <!-- Year Navigation-->
-            <div class="year-tabs" v-if="form.tax_years.length > 0">
-                <button
+            <form class="dataset-form">
+              <div class="field-container">
+                <p class="title">Title</p>
+                <input v-model="form.name" placeholder="Enter Calculation Name" required>
+              </div>
+
+              <div class="field-container">
+                <div class="title-with-info">
+                  <p class="title">Max Elected Farm Income</p>
+                  <button type="button" class="open-modal-btn" @click="isOpen = true" aria-label="More information">
+                    <span class="info-icon">i</span>
+                    <span class="tooltip">Click for more details</span>
+                  </button>
+                </div>
+                <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income" required>
+              </div>
+
+              <div class="field-container">
+                <div class="title-with-info">
+                  <p class="title">Qualified Farm Income</p>
+                  <button type="button" class="info-btn" aria-label="More information">
+                    <span class="info-icon">i</span>
+                    <span class="tooltip">The portion of the total elected farm income that is made up of capital gains. Caclulated as long term farm gains - short term farm loss. 1250 gains are currently not supported.</span>
+                  </button>
+                </div>
+                <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required>
+              </div>
+            </form>
+          </div>
+
+          <!-- Year Navigation-->
+          <div class="year-tabs" v-if="form.tax_years.length > 0">
+              <button
                 v-for="(year, index) in form.tax_years"
                 :key="year.year"
                 @click="currentYearIndex = index"
                 :class="{ active: index === currentYearIndex }"
-                >
-                    {{ year.year }}
-                </button>
-            </div>
+              >
+                  {{ year.year }}
+              </button>
+          </div>
 
             <!-- Current Year Form -->
             <div class="year-form" v-if="form.tax_years[currentYearIndex]">
@@ -73,13 +75,13 @@
                         <p class="title">Taxable Income</p>
                         <button type="button" class="info-btn" aria-label="More information">
                           <span class="info-icon">i</span>
-                          <span class="tooltip">The maximum amount of farm income that can be elected for special treatment</span>
+                          <span class="tooltip">Taxable Income from the return. Adjustment for elected income not needed.</span>
                         </button>
                       </div>
                         <input
-                        v-model.number="form.tax_years[currentYearIndex].taxable_income"
-                        placeholder="Taxable income"
-                        required
+                          v-model.number="form.tax_years[currentYearIndex].taxable_income"
+                          placeholder="Taxable income"
+                          required
                         >
                     </div>
                     
@@ -88,13 +90,13 @@
                         <p class="title">Qualified Income</p>
                         <button type="button" class="info-btn" aria-label="More information">
                           <span class="info-icon">i</span>
-                          <span class="tooltip">Qualified income</span>
+                          <span class="tooltip">Long term capital gains + qualified dividends</span>
                         </button>
                       </div>
                         <input
-                        v-model.number="form.tax_years[currentYearIndex].qualified_income"
-                        placeholder="Qualified income"
-                        required
+                          v-model.number="form.tax_years[currentYearIndex].qualified_income"
+                          placeholder="Qualified income"
+                          required
                         >
                     </div>
                 </form>
@@ -128,13 +130,40 @@
                 height="350"
                 :options="deltaChartOptions"
                 :series="delta_series"
-                ></vue-apex-charts>
-            </div>
+            ></vue-apex-charts>
+          </div>
         </div>
       </div>
     <div v-else>
         loading...
     </div>
+
+    <!-- Modal - Teleported to body -->
+  <Teleport to="body">
+    <div v-if="isOpen">
+      <modal-content
+        @close="isOpen = false"
+        title="Farm Income Worksheet"
+        :close-on-overlay-click="true"
+      >
+      <!-- Main content -->
+        <div>
+          <div class="field-container">
+            <div class="title-with-info">
+              <p class="title">Filing Status</p>
+            </div>
+              <!-- <input v-model="exampleValue" placeholder="Enter something" /> -->
+          </div>
+        </div>
+        
+        <!-- Optional footer with action buttons -->
+        <template #footer>
+          <button @click="handleSave" class="btn-primary">Save</button>
+          <button @click="isOpen = false" class="btn-secondary">Cancel</button>
+        </template>
+      </modal-content>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -144,6 +173,7 @@ import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
 import VueApexCharts from 'vue3-apexcharts'
+import ModalContent from './ModalContent.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -151,8 +181,9 @@ const loading = ref(true)
 const error = ref('')
 const inputs = ref(null)
 const outputs = ref(null)
-
+const isOpen = ref(false)
 const currentYearIndex = ref(0)
+
 
 const form = reactive({
     name: '',
@@ -375,7 +406,7 @@ onMounted(async () => {
 /* Main Layout */
 .results-container {
   display: grid;
-  grid-template-columns: 1fr 3fr; /* Left: 1/3, Right: 2/3 */
+  grid-template-columns: 1fr 2.5fr; /* Left: 1/3, Right: 2/3 */
   gap: 2rem;
   max-width: 1800px;
   margin: 0 auto;
@@ -488,7 +519,7 @@ onMounted(async () => {
 
 .info-btn {
   position: relative;
-   background: rgba(59, 130, 246, 0.1);
+  background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 50%;
   width: 20px;
@@ -519,18 +550,23 @@ onMounted(async () => {
   bottom: calc(100% + 8px); /* Positions above the button */
   left: 50%;
   transform: translateX(-50%);
-  background: #1a202c;
+  background: #545557; 
+  border: 2px solid rgba(0, 0, 0, 0.3);
   color: white;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
+  line-height: 1.5;
   font-size: 0.875rem;
-  white-space: nowrap;
+  white-space: normal;
+  min-width: 200px;
+  max-width: 320px;
+  width: max-content;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease;
   pointer-events: none;
-  z-index: 10;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Tooltip arrow */
@@ -559,7 +595,7 @@ onMounted(async () => {
   padding: 0.3rem .3rem;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
@@ -720,7 +756,7 @@ input:focus, select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: .5rem;
 }
 
 .section-header h3 {
@@ -816,6 +852,42 @@ input:focus, select:focus {
 
 .reduction {
   color: #48bb78;
+  font-weight: 600;
+}
+
+/* Modal */
+.open-modal-btn {
+  padding: .2rem .5rem;
+  background: #3b82f6;
+  color: rgb(63, 27, 27);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.open-modal-btn:hover {
+  background: #2563eb;
+}
+
+.btn-primary {
+  padding: 0.5rem .5rem;
+  background: #717275;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
   font-weight: 600;
 }
 
