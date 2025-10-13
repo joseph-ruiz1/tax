@@ -138,32 +138,12 @@
         loading...
     </div>
 
-    <!-- Modal - Teleported to body -->
-  <Teleport to="body">
-    <div v-if="isOpen">
-      <modal-content
-        @close="isOpen = false"
-        title="Farm Income Worksheet"
-        :close-on-overlay-click="true"
-      >
-      <!-- Main content -->
-        <div>
-          <div class="field-container">
-            <div class="title-with-info">
-              <p class="title">Filing Status</p>
-            </div>
-              <!-- <input v-model="exampleValue" placeholder="Enter something" /> -->
-          </div>
-        </div>
-        
-        <!-- Optional footer with action buttons -->
-        <template #footer>
-          <button @click="handleSave" class="btn-primary">Save</button>
-          <button @click="isOpen = false" class="btn-secondary">Cancel</button>
-        </template>
-      </modal-content>
-    </div>
-  </Teleport>
+    <farm-income-modal
+    :is-open="isOpen"
+    :worksheet="farm_income_worksheet"
+    @close="isOpen = false"
+    @save="handleWorksheetSave"
+    />
 </template>
 
 <script setup>
@@ -173,7 +153,7 @@ import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
 import VueApexCharts from 'vue3-apexcharts'
-import ModalContent from './ModalContent.vue'
+import FarmIncomeModal from './FarmIncomeModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -190,6 +170,17 @@ const form = reactive({
     max_elected_farm_income: 0,
     qualified_farm_income: 0,
     tax_years: [],
+})
+
+const farm_income_worksheet = reactive({
+  schedule_f: null,
+  wages: null,
+  schedule_c: null,
+  schedule_e: null,
+  form_4835: null,
+  ccf: null,
+  se_deduction: null,
+  form_4797: null,
 })
 
 const series = ref([])
@@ -392,6 +383,12 @@ const submitForm = async () => {
         console.error('Failed to update dataset:', err)
     }
 }
+
+const handleWorksheetSave = (worksheetData) => {
+  console.log('Saved worksheet data:', worksheetData);
+  farm_income_worksheet.value = worksheetData;
+  // Do whatever you need with the saved data
+};
 
 const toDashboard = async () => {
   router.push('/')
