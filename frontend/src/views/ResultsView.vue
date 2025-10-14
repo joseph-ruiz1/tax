@@ -18,12 +18,16 @@
               <div class="field-container">
                 <div class="title-with-info">
                   <p class="title">Max Elected Farm Income</p>
-                  <button type="button" class="open-modal-btn" @click="isOpen = true" aria-label="More information">
+                  <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="More information">
                     <span class="info-icon">i</span>
                     <span class="tooltip">Click for more details</span>
                   </button>
                 </div>
-                <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income" required>
+                <input 
+                v-model="form.max_elected_farm_income" 
+                placeholder="Enter Farm income" 
+                :disabled="hasWorksheetData"
+                @input="handleSingleValue">
               </div>
 
               <div class="field-container">
@@ -173,17 +177,50 @@ const form = reactive({
 })
 
 const farm_income_worksheet = reactive({
-  schedule_f: null,
-  wages: null,
-  schedule_c: null,
-  schedule_e: null,
-  form_4835: null,
-  ccf: null,
-  se_deduction: null,
-  qbi: null,
-  form_4797: null,
-  sch_d: null,
+  schedule_f: 0,
+  wages: 0,
+  schedule_c: 0,
+  schedule_e: 0,
+  form_4835: 0,
+  ccf: 0,
+  se_deduction: 0,
+  qbi: 0,
+  form_4797: 0,
+  sch_d: 0,
 })
+
+// Receiving from child
+const farmIncomeWorksheet = ref(null)
+const worksheetTotal = ref(0)
+
+const hasWorksheetData = computed (() => {
+  return farmIncomeWorksheet.value !== null
+})
+
+const effectiveFarmIncome = computed(() => {
+  return hasWorksheetData.value ? worksheetTotal.value : form.value.max_elected_farm_income
+})
+
+const openWorksheetModal = () => {
+  isOpen.value = true
+}
+
+const handleWorksheetSave = ({ worksheetData, total }) => {
+  // Store the worksheet data and total
+  farmIncomeWorksheet.value = worksheetData
+  worksheetTotal.value = total
+  
+  // Update the form field to show the total
+  formData.value.farm_income = total
+}
+
+// Reset worksheet if user uses general field
+const handleSingleValue = (value) => {
+  if (hasWorksheetData.value) {
+    farmIncomeWorksheet.value = null
+    worksheetTotal.value = 0
+  }
+}
 
 const series = ref([])
 const delta_series = ref([])
@@ -379,18 +416,12 @@ const fetchResults = async () => {
 const submitForm = async () => {
     try {
         const id = route.params.id
-        const response = await apiService.updateDataset(id, form)
+        const response = await apiService.updateDataset(id, form, farm_income_worksheet)
         await fetchResults()
     } catch (err) {
         console.error('Failed to update dataset:', err)
     }
 }
-
-const handleWorksheetSave = (worksheetData) => {
-  console.log('Saved worksheet data:', worksheetData);
-  farm_income_worksheet.value = worksheetData;
-  // Do whatever you need with the saved data
-};
 
 const toDashboard = async () => {
   router.push('/')
