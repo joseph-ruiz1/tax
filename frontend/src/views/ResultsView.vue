@@ -180,7 +180,9 @@ const farm_income_worksheet = reactive({
   form_4835: null,
   ccf: null,
   se_deduction: null,
+  qbi: null,
   form_4797: null,
+  sch_d: null,
 })
 
 const series = ref([])
