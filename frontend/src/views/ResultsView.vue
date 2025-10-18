@@ -20,14 +20,19 @@
                   <p class="title">Max Elected Farm Income</p>
                   <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="More information">
                     <span class="info-icon">i</span>
-                    <span class="tooltip">Click for more details</span>
                   </button>
                 </div>
-                <input 
+                <input
+                type="number"
                 v-model="form.max_elected_farm_income" 
                 placeholder="Enter Farm income" 
                 :disabled="hasWorksheetData"
-                @input="handleSingleValue">
+                @blur="handleSingleValue"
+                @keydown.enter="handleSingleValue"
+                >
+                <span v-if="hasWorksheetData" class="worksheet-indicator">
+                  (Using worksheet: {{ worksheetTotal }})
+                </span>
               </div>
 
               <div class="field-container">
@@ -38,7 +43,7 @@
                     <span class="tooltip">The portion of the total elected farm income that is made up of capital gains. Caclulated as long term farm gains - short term farm loss. 1250 gains are currently not supported.</span>
                   </button>
                 </div>
-                <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required>
+                <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required type="number">
               </div>
             </form>
           </div>
@@ -86,6 +91,7 @@
                           v-model.number="form.tax_years[currentYearIndex].taxable_income"
                           placeholder="Taxable income"
                           required
+                          type="number"
                         >
                     </div>
                     
@@ -101,6 +107,7 @@
                           v-model.number="form.tax_years[currentYearIndex].qualified_income"
                           placeholder="Qualified income"
                           required
+                          type="number"
                         >
                     </div>
                 </form>
@@ -144,7 +151,7 @@
 
     <farm-income-modal
     :is-open="isOpen"
-    :worksheet="farm_income_worksheet"
+    :worksheet="farmIncomeWorksheet"
     @close="isOpen = false"
     @save="handleWorksheetSave"
     />
@@ -167,6 +174,7 @@ const inputs = ref(null)
 const outputs = ref(null)
 const isOpen = ref(false)
 const currentYearIndex = ref(0)
+const usingWorksheet = ref(false)
 
 
 const form = reactive({
@@ -176,29 +184,29 @@ const form = reactive({
     tax_years: [],
 })
 
-const farm_income_worksheet = reactive({
-  schedule_f: 0,
-  wages: 0,
-  schedule_c: 0,
-  schedule_e: 0,
-  form_4835: 0,
-  ccf: 0,
-  se_deduction: 0,
-  qbi: 0,
-  form_4797: 0,
-  sch_d: 0,
+const farmIncomeWorksheet = ref({
+    schedule_f: 0,
+    wages: 0,
+    sch_c: 0,
+    sch_e: 0,
+    form_4835: 0,
+    ccf: 0,
+    se_deduction: 0,
+    qbi: 0,
+    form_4797: 0,
+    sch_d: 0,
 })
-
-// Receiving from child
-const farmIncomeWorksheet = ref(null)
 const worksheetTotal = ref(0)
 
+ // If worksheet exists and has non-zero values
 const hasWorksheetData = computed (() => {
-  return farmIncomeWorksheet.value !== null
-})
+  if (!usingWorksheet) return false
 
-const effectiveFarmIncome = computed(() => {
-  return hasWorksheetData.value ? worksheetTotal.value : form.value.max_elected_farm_income
+  const otherFields = Object.entries(farmIncomeWorksheet.value)
+  .filter(([key]) => key !== 'schedule_f')
+  .some(([i, value]) => value !== 0)
+
+  return otherFields
 })
 
 const openWorksheetModal = () => {
@@ -209,16 +217,24 @@ const handleWorksheetSave = ({ worksheetData, total }) => {
   // Store the worksheet data and total
   farmIncomeWorksheet.value = worksheetData
   worksheetTotal.value = total
-  
-  // Update the form field to show the total
-  formData.value.farm_income = total
 }
 
-// Reset worksheet if user uses general field
-const handleSingleValue = (value) => {
-  if (hasWorksheetData.value) {
-    farmIncomeWorksheet.value = null
-    worksheetTotal.value = 0
+const handleSingleValue = (event) => {
+  if (event.type == 'blur' || event.key == 'enter') {
+    // Reset worksheet
+    farmIncomeWorksheet.value = {
+      schedule_f: form.max_elected_farm_income,
+      wages: 0,
+      sch_c: 0,
+      sch_e: 0,
+      form_4835: 0,
+      ccf: 0,
+      se_deduction: 0,
+      qbi: 0,
+      form_4797: 0,
+      sch_d: 0,
+    }
+    worksheetTotal.value = form.max_elected_farm_income
   }
 }
 
@@ -414,13 +430,22 @@ const fetchResults = async () => {
 }
 
 const submitForm = async () => {
+  const submissionData = {
+    name: form.name,
+    max_elected_farm_income: form.max_elected_farm_income,
+    farm_income_worksheet: farmIncomeWorksheet.value,
+    qualified_farm_income: form.qualified_farm_income,
+    tax_years: form.tax_years
+  }
+  console.log(form.max_elected_farm_income)
+  console.log(farmIncomeWorksheet.value)
     try {
         const id = route.params.id
-        const response = await apiService.updateDataset(id, form, farm_income_worksheet)
-        await fetchResults()
+        const response = await apiService.updateDataset(id, submissionData)
+        await(fetchResults)
     } catch (err) {
         console.error('Failed to update dataset:', err)
-    }
+    } // Need error here
 }
 
 const toDashboard = async () => {

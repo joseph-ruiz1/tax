@@ -24,89 +24,89 @@ function getCookie(name) {
 
 export const apiService = {
   async login(formData) {
-    const response = await api.post('/auth/login/', formData);
-    return response.data;
+    const response = await api.post('/auth/login/', formData)
+    return response.data
   },
 
   async register(formData) {
-    const response = await api.post('/auth/register/', formData);
-    return response.data;
+    const response = await api.post('/auth/register/', formData)
+    return response.data
   },
 
   async logout() {
-    const response = await api.post('/auth/logout/');
-    return response.data;
+    const response = await api.post('/auth/logout/')
+    return response.data
   },
 
   async checkAuth() {
     try {
-      const response = await api.get('/auth/check/');
-      return response.data;
+      const response = await api.get('/auth/check/')
+      return response.data
     } catch (error) {
       if (error.response?.status === 401) {
-        return { authenticated: false };
+        return { authenticated: false }
       }
-      throw error;
+      throw error
     }
   },
 
   async getCurrentUser() {
-    const response = await api.get('/auth/me/');
-    return response.data;
+    const response = await api.get('/auth/me/')
+    return response.data
   },
 
   async getUser(id) {
-    const response = await api.get(`/users/${id}/`);
-    return response.data;
+    const response = await api.get(`/users/${id}/`)
+    return response.data
   },
 
   async createUser(userData) {
-    const response = await api.post('/users/', userData);
-    return response.data;
+    const response = await api.post('/users/', userData)
+    return response.data
   },
 
   async updateUser(id, userData) {
-    const response = await api.put(`/users/${id}/`, userData);
-    return response.data;
+    const response = await api.put(`/users/${id}/`, userData)
+    return response.data
   },
 
   async deleteUser(id) {
-    const response = await api.delete(`/users/${id}/`);
-    return response.data;
+    const response = await api.delete(`/users/${id}/`)
+    return response.data
   },
 
   async getDatasetList() {
-    const response = await api.get('/datasets/');
-    return response.data;
+    const response = await api.get('/datasets/')
+    return response.data
   },
 
   async getDatasetDetail(id) {
-    const response = await api.get(`/datasets/${id}/`);
-    return response.data;
+    const response = await api.get(`/datasets/${id}/`)
+    return response.data
   },
 
   async deleteDataset(id) {
-    const response = await api.delete(`/datasets/${id}/`);
-    return response.data;
+    const response = await api.delete(`/datasets/${id}/`)
+    return response.data
   },
 
   async createDataset(formData) {
-    const response = await api.post('/datasets/create/', formData);
-    return response.data;
+    const response = await api.post('/datasets/create/', formData)
+    return response.data
   },
 
   async patchDataset(id, formData) {
-    const response = await api.patch(`/datasets/${id}/new/`, formData);
-    return response.data;
+    const response = await api.patch(`/datasets/${id}/new/`, formData)
+    return response.data
   },
 
   async getResults(id) {
-    const response = await api.get(`/datasets/${id}/results/`);
-    return response.data;
+    const response = await api.get(`/datasets/${id}/results/`)
+    return response.data
   },
 
   async updateDataset(id, formData) {
-    const response = await api.patch(`/datasets/${id}/results-update/`, formData);
-    return response.data;
+    const response = await api.patch(`/datasets/${id}/results-update/`, formData)
+    return response.data
   },
 };

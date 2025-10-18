@@ -1,4 +1,4 @@
-vue<template>
+<template>
   <Teleport to="body">
     <div v-if="isOpen">
       <modal-content
@@ -20,7 +20,7 @@ vue<template>
                 <input 
                 v-model.number="localWorksheet[field.key]" 
                 :placeholder="field.placeholder" 
-                type="number""
+                type="number"
                 />
             </div>
         </div>
@@ -117,10 +117,9 @@ const initializeWorksheet = () => {
     return form
 }
 
-const localWorksheet = ref(initializeWorksheet)
+const localWorksheet = ref(initializeWorksheet())
 
-
-// Computed property for total
+// Calculate total
 const totalFarmIncome = computed(() => {
     return Object.values(localWorksheet.value).reduce((sum, value) => {
         const numValue = parseFloat(value) || 0
@@ -128,28 +127,26 @@ const totalFarmIncome = computed(() => {
     }, 0)
 })
 
-onMounted(() => {
-    if (props.worksheet) {
-        localWorksheet.value = {...props.worksheet}
-    }
-})
-
-// Watch for changes to the prop and update local copy
+// Populates modal upon GET
 watch(() => props.worksheet, (newVal) => {
-  localWorksheet.value = { ...newVal }
-}, { immediate: true, deep: true })
+  if (newVal) {
+    localWorksheet.value = { ...newVal}
+  } else {
+    localWorksheet.value = initializeWorksheet()
+  }
+}, {immediate: true, deep: true})
 
 const handleClose = () => {
   emit('close')
-};
+}
 
 const handleSave = () => {
   emit('save', {
     worksheetData: {...localWorksheet.value},
     total: totalFarmIncome
-  });
+  })
   emit('close')
-};
+}
 
 
 </script>
