@@ -30,6 +30,7 @@ class TaxDataSet(models.Model):
     max_elected_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     qualified_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ordinary_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    income_worksheet = models.JSONField(null=True, blank=True, default=dict)
 
     def __str__(self):
         return '{} - {}'.format(self.name, self.pk)

@@ -185,7 +185,7 @@ const form = reactive({
 })
 
 const farmIncomeWorksheet = ref({
-    schedule_f: 0,
+    sch_f: 0,
     wages: 0,
     sch_c: 0,
     sch_e: 0,
@@ -223,7 +223,7 @@ const handleSingleValue = (event) => {
   if (event.type == 'blur' || event.key == 'enter') {
     // Reset worksheet
     farmIncomeWorksheet.value = {
-      schedule_f: form.max_elected_farm_income,
+      sch_f: form.max_elected_farm_income,
       wages: 0,
       sch_c: 0,
       sch_e: 0,
@@ -433,7 +433,7 @@ const submitForm = async () => {
   const submissionData = {
     name: form.name,
     max_elected_farm_income: form.max_elected_farm_income,
-    farm_income_worksheet: farmIncomeWorksheet.value,
+    income_worksheet: farmIncomeWorksheet.value,
     qualified_farm_income: form.qualified_farm_income,
     tax_years: form.tax_years
   }

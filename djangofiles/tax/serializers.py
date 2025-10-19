@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from decimal import Decimal
 from django.db import transaction
 from django.contrib.auth.models import Group, User
 from django.contrib.auth import authenticate
@@ -87,6 +88,31 @@ class CalculationIterationSerializer(serializers.ModelSerializer):
         model = CalculationIteration
         fields = ["id", "form"]
 
+class FarmIncomeWorksheetSerializer(serializers.Serializer):
+    sch_f = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    wages = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    sch_c = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    sch_e = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    form_4835 = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    ccf = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    se_deduction = serializers.DecimalField(max_digits=10, decimal_places=2, max_value=0, required=False)
+    qbi = serializers.DecimalField(max_digits=10, decimal_places=2, max_value=0, required=False)
+    form_4797 = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    sch_d = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+
+    def to_internal_value(self, data):
+        """
+        Validates as Decimal, but returns as floats for JSON serializer
+        """
+        validated = super().to_internal_value(data)
+
+        # Convert decimals to floats
+        return {
+            key: float(value) if isinstance(value, Decimal) and value is not None else value
+            for key, value in validated.items()
+        }
+        
+
 class TaxDataSetSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
 
@@ -141,14 +167,15 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
     Deserialize input from form submission for TaxDataSet and 4 TaxYearDatas . Requires all information.
     """
     tax_years = TaxYearDataDetailSerializer(many=True, required=True)
+    income_worksheet = FarmIncomeWorksheetSerializer(many=False, required=False)
 
     class Meta:
         model = TaxDataSet
-        fields = ["name", "max_elected_farm_income", "qualified_farm_income", "tax_years"]
+        fields = ["name", "max_elected_farm_income", "qualified_farm_income", "income_worksheet", "tax_years"]
     
     def validate(self, data):
         """
-        Validate that tax years are 2024 - 2021, filing status in options. 
+        Validate that tax years are 2024 - 2021, filing status in options.
         """
         if data['max_elected_farm_income'] < 0 or data['qualified_farm_income'] < 0:
             raise serializers.ValidationError("Cannot have negative farm income")
@@ -165,16 +192,21 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         years_data = validated_data.pop('tax_years', [])
+        income_worksheet = validated_data.pop('income_worksheet', None)
         instance.name = validated_data.get('name', instance.name)
         instance.max_elected_farm_income = validated_data.get('max_elected_farm_income', instance.max_elected_farm_income)
         instance.qualified_farm_income = validated_data.get('qualified_farm_income', instance.qualified_farm_income)
-
+        
+        # 
         for i, year_data in enumerate(years_data):
             year = year_data['year']
             tax_year = instance.tax_years.get(year=str(year))
             year_serializer = TaxYearDataDetailSerializer(tax_year, data=year_data, partial=True)
             if year_serializer.is_valid(raise_exception=True):
                 year_serializer.save()
+
+        if income_worksheet is not None:
+            instance.income_worksheet = income_worksheet
 
         instance.save()
         return instance
@@ -184,12 +216,13 @@ class OutputSerializer(serializers.ModelSerializer):
     Prepare get request data for output page
     """
     tax_years = TaxYearDataDetailSerializer(many=True, required=True)
+    income_worksheet = FarmIncomeWorksheetSerializer(many=False, allow_null=True, required=False)
     inputs = serializers.SerializerMethodField()
     outputs = serializers.SerializerMethodField()
 
     class Meta:
         model = TaxDataSet
-        fields = ["name", "max_elected_farm_income", "qualified_farm_income", "tax_years", "inputs", "outputs"]
+        fields = ["name", "max_elected_farm_income", "qualified_farm_income", "income_worksheet", "tax_years", "inputs", "outputs"]
 
     def get_inputs(self, instance):
         """
@@ -200,6 +233,7 @@ class OutputSerializer(serializers.ModelSerializer):
             "name": instance.name,
             "max_elected_farm_income": instance.max_elected_farm_income,
             "qualified_farm_income": instance.qualified_farm_income,
+            "income_worksheet": instance.income_worksheet,
             "tax_years": TaxYearDataDetailSerializer(instance.tax_years.all(), many=True).data
         }
     
