@@ -165,6 +165,7 @@ import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
 import VueApexCharts from 'vue3-apexcharts'
 import FarmIncomeModal from './FarmIncomeModal.vue'
+import { resetWorksheet } from '@/composables/resetWorksheet'
 
 const route = useRoute()
 const router = useRouter()
@@ -203,9 +204,8 @@ const hasWorksheetData = computed (() => {
   if (!usingWorksheet) return false
 
   const otherFields = Object.entries(farmIncomeWorksheet.value)
-  .filter(([key]) => key !== 'schedule_f')
+  .filter(([key]) => key !== 'sch_f')
   .some(([i, value]) => value !== 0)
-
   return otherFields
 })
 
@@ -213,28 +213,22 @@ const openWorksheetModal = () => {
   isOpen.value = true
 }
 
+// worksheetData, total 
 const handleWorksheetSave = ({ worksheetData, total }) => {
   // Store the worksheet data and total
   farmIncomeWorksheet.value = worksheetData
   worksheetTotal.value = total
+  form.max_elected_farm_income = total
 }
 
 const handleSingleValue = (event) => {
-  if (event.type == 'blur' || event.key == 'enter') {
+  if (event.type == 'blur' || event.key == 'Enter') {
     // Reset worksheet
-    farmIncomeWorksheet.value = {
-      sch_f: form.max_elected_farm_income,
-      wages: 0,
-      sch_c: 0,
-      sch_e: 0,
-      form_4835: 0,
-      ccf: 0,
-      se_deduction: 0,
-      qbi: 0,
-      form_4797: 0,
-      sch_d: 0,
-    }
-    worksheetTotal.value = form.max_elected_farm_income
+    const singleValue = parseFloat(form.max_elected_farm_income)
+    resetWorksheet(farmIncomeWorksheet)
+    farmIncomeWorksheet.value.sch_f = singleValue
+
+    usingWorksheet.value = false
   }
 }
 
@@ -418,7 +412,9 @@ const fetchResults = async () => {
           qualified_farm_income: inputs.value?.qualified_farm_income,
           tax_years: taxYears
         })
-
+        
+        // Initialize worksheet
+        farmIncomeWorksheet.value = {...inputs.value.income_worksheet}
         updateChartData()
 
     } catch (err) {
@@ -437,8 +433,6 @@ const submitForm = async () => {
     qualified_farm_income: form.qualified_farm_income,
     tax_years: form.tax_years
   }
-  console.log(form.max_elected_farm_income)
-  console.log(farmIncomeWorksheet.value)
     try {
         const id = route.params.id
         const response = await apiService.updateDataset(id, submissionData)
@@ -461,7 +455,7 @@ onMounted(async () => {
 /* Main Layout */
 .results-container {
   display: grid;
-  grid-template-columns: 1fr 2.5fr; /* Left: 1/3, Right: 2/3 */
+  grid-template-columns: 1fr 2.5fr;
   gap: 2rem;
   max-width: 1800px;
   margin: 0 auto;

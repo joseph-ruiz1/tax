@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed } from 'vue'
 import ModalContent from './ModalContent.vue'
 
 const props = defineProps({
@@ -52,13 +52,13 @@ const props = defineProps({
     type: Object,
     default: null
   }
-});
+})
 
 const emit = defineEmits(['close', 'save'])
 
 const fieldDefinitions = [
     {
-        key: 'schedule_f',
+        key: 'sch_f',
         label: 'Schedule F',
         placeholder: "Schedule F Net Profit",
     },
@@ -109,15 +109,7 @@ const fieldDefinitions = [
     },
 ]
 
-const initializeWorksheet = () => {
-    const form = {}
-    fieldDefinitions.forEach(field => {
-        form[field.key] = 0
-    })
-    return form
-}
-
-const localWorksheet = ref(initializeWorksheet())
+const localWorksheet = ref({...props.worksheet})
 
 // Calculate total
 const totalFarmIncome = computed(() => {
@@ -128,9 +120,9 @@ const totalFarmIncome = computed(() => {
 })
 
 // Populates modal upon GET
-watch(() => props.worksheet, (newVal) => {
-  if (newVal) {
-    localWorksheet.value = { ...newVal}
+watch(() => props.worksheet, (newValue) => {
+  if (newValue) {
+    localWorksheet.value = { ...newValue}
   } else {
     localWorksheet.value = initializeWorksheet()
   }
@@ -147,8 +139,6 @@ const handleSave = () => {
   })
   emit('close')
 }
-
-
 </script>
 
 <style scoped>
