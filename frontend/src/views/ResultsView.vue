@@ -19,7 +19,7 @@
                 <div class="title-with-info">
                   <p class="title">Max Elected Farm Income</p>
                   <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="More information">
-                    <span class="info-icon">i</span>
+                    <img src="../../src/assets/modalIcon.png"></img>
                   </button>
                 </div>
                 <input
@@ -31,7 +31,7 @@
                 @keydown.enter="handleSingleValue"
                 >
                 <span v-if="hasWorksheetData" class="worksheet-indicator">
-                  (Using worksheet: {{ worksheetTotal }})
+                  <p>⚠️ Using Worksheet</p>
                 </span>
               </div>
 
@@ -158,7 +158,7 @@
 </template>
 
 <script setup>
-import {ref, onMounted, computed, reactive} from 'vue'
+import {ref, onMounted, computed, reactive, nextTick} from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
@@ -197,6 +197,7 @@ const farmIncomeWorksheet = ref({
     form_4797: 0,
     sch_d: 0,
 })
+
 const worksheetTotal = ref(0)
 
  // If worksheet exists and has non-zero values
@@ -213,8 +214,7 @@ const openWorksheetModal = () => {
   isOpen.value = true
 }
 
-// worksheetData, total 
-const handleWorksheetSave = ({ worksheetData, total }) => {
+const handleWorksheetSave = async ({ worksheetData, total }) => {
   // Store the worksheet data and total
   farmIncomeWorksheet.value = worksheetData
   worksheetTotal.value = total
@@ -405,16 +405,22 @@ const fetchResults = async () => {
           ...year
         }))
 
-        // Initilize form with API data
-        Object.assign(form, {
-          name: inputs.value?.name,
-          max_elected_farm_income: inputs.value?.max_elected_farm_income,
-          qualified_farm_income: inputs.value?.qualified_farm_income,
-          tax_years: taxYears
-        })
-        
         // Initialize worksheet
-        farmIncomeWorksheet.value = {...inputs.value.income_worksheet}
+        if (inputs.value?.income_worksheet) {
+          Object.keys(farmIncomeWorksheet.value).forEach(key => {
+            farmIncomeWorksheet.value[key] = inputs.value.income_worksheet[key] || 0
+          })
+        }
+        await nextTick()
+
+        // Initilize form with API data
+        form.name = inputs.value?.name || ''
+        form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
+        form.tax_years = taxYears || []
+
+        await nextTick()
+        form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
+        
         updateChartData()
 
     } catch (err) {
@@ -436,7 +442,8 @@ const submitForm = async () => {
     try {
         const id = route.params.id
         const response = await apiService.updateDataset(id, submissionData)
-        await(fetchResults)
+        await nextTick()
+        await fetchResults()
     } catch (err) {
         console.error('Failed to update dataset:', err)
     } // Need error here
@@ -906,38 +913,31 @@ input:focus, select:focus {
 
 /* Modal */
 .open-modal-btn {
-  padding: .2rem .5rem;
-  background: #3b82f6;
+  padding: .1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   color: rgb(63, 27, 27);
-  border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-weight: 600;
   transition: background 0.2s ease;
 }
 
+.open-modal-btn img {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
 .open-modal-btn:hover {
-  background: #2563eb;
+  background: #868b95;
 }
 
-.btn-primary {
-  padding: 0.5rem .5rem;
-  background: #717275;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 400;
+.worksheet-indicator {
+  margin-top: .5rem;
 }
 
-.btn-secondary {
-  padding: 0.75rem 1.5rem;
-  background: #e5e7eb;
-  color: #374151;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
+.worksheet-indicator p {
+  color: black;
 }
 
 /* Responsive Design */

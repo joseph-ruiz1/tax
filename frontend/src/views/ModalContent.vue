@@ -81,13 +81,13 @@ const props = defineProps({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: .75rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .modal-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1a202c;
 }
@@ -115,16 +115,17 @@ const props = defineProps({
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: .5rem 1rem;
   overflow-y: auto;
   flex: 1;
 }
 
 .modal-footer {
-  padding: 1rem;
+  padding: .5rem .75rem;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.75rem;
 }
 </style>

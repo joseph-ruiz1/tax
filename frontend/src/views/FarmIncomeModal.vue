@@ -27,12 +27,16 @@
         
         <!-- Footer with action buttons -->
         <template #footer>
+          <div class="footer-actions">
             <div class="footer-total">
-                <label><strong>Total:</strong></label>
-                <div class="total-display">{{totalFarmIncome }}</div>
+              <label><strong>Total:</strong></label>
+              <div class="total-display">{{ totalFarmIncome }}</div>
             </div>
-          <button @click="handleSave" class="btn-primary">Save</button>
-          <button @click="handleClose" class="btn-secondary">Cancel</button>
+            <div class="button-group">
+              <button @click="handleClose" class="btn-secondary">Cancel</button>
+              <button @click="handleSave" class="btn-primary">Save</button>
+            </div>
+          </div>
         </template>
       </modal-content>
     </div>
@@ -142,8 +146,15 @@ const handleSave = () => {
 </script>
 
 <style scoped>
+.worksheet-form {
+  padding: 0.5rem 0;
+}
+
 .field-container {
-  margin-bottom: 1.5rem;
+  margin-bottom: .5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .field-container:last-child {
@@ -154,7 +165,7 @@ const handleSave = () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
 .title {
@@ -162,11 +173,14 @@ const handleSave = () => {
   color: #1a202c;
   font-size: 0.95rem;
   margin: 0;
+  white-space: nowrap;
 }
 
 .field-container input {
   width: 100%;
-  padding: 0.75rem 1rem;
+  max-width: 175px;
+  margin-left: auto;
+  padding: 0.5rem 1rem;
   border: 2px solid rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   font-size: 1rem;
@@ -180,6 +194,40 @@ const handleSave = () => {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Footer styling - works with parent modal-footer */
+.footer-total {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  white-space: nowrap;
+}
+
+.footer-total label {
+  margin: 0;
+  font-weight: 600;
+  color: #1a202c;
+  font-size: 0.95rem;
+}
+
+.total-display {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #000000;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
 .btn-primary {
   padding: 0.75rem 1.5rem;
   background: #3b82f6;
@@ -188,11 +236,13 @@ const handleSave = () => {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.2s ease;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
   background: #2563eb;
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -203,10 +253,28 @@ const handleSave = () => {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.2s ease;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
   background: #d1d5db;
+}
+
+.btn-clear {
+  padding: 0.75rem 1.5rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btn-clear:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
 }
 </style>
