@@ -158,7 +158,7 @@
 </template>
 
 <script setup>
-import {ref, onMounted, computed, reactive, nextTick} from 'vue'
+import {ref, onMounted, computed, reactive} from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
@@ -405,22 +405,28 @@ const fetchResults = async () => {
           ...year
         }))
 
-        // Initialize worksheet
-        if (inputs.value?.income_worksheet) {
-          Object.keys(farmIncomeWorksheet.value).forEach(key => {
-            farmIncomeWorksheet.value[key] = inputs.value.income_worksheet[key] || 0
-          })
-        }
-        await nextTick()
-
         // Initilize form with API data
         form.name = inputs.value?.name || ''
+        form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
         form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
         form.tax_years = taxYears || []
-
-        await nextTick()
-        form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
         
+        // Initialize worksheet - REPLACE entire object instead of mutating properties
+        if (inputs.value?.income_worksheet) {
+          farmIncomeWorksheet.value = {
+            sch_f: inputs.value.income_worksheet.sch_f || 0,
+            wages: inputs.value.income_worksheet.wages || 0,
+            sch_c: inputs.value.income_worksheet.sch_c || 0,
+            sch_e: inputs.value.income_worksheet.sch_e || 0,
+            form_4835: inputs.value.income_worksheet.form_4835 || 0,
+            ccf: inputs.value.income_worksheet.ccf || 0,
+            se_deduction: inputs.value.income_worksheet.se_deduction || 0,
+            qbi: inputs.value.income_worksheet.qbi || 0,
+            form_4797: inputs.value.income_worksheet.form_4797 || 0,
+            sch_d: inputs.value.income_worksheet.sch_d || 0,
+          }
+        }
+
         updateChartData()
 
     } catch (err) {
@@ -442,7 +448,6 @@ const submitForm = async () => {
     try {
         const id = route.params.id
         const response = await apiService.updateDataset(id, submissionData)
-        await nextTick()
         await fetchResults()
     } catch (err) {
         console.error('Failed to update dataset:', err)

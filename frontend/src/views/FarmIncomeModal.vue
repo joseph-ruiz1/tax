@@ -139,7 +139,7 @@ const handleClose = () => {
 const handleSave = () => {
   emit('save', {
     worksheetData: {...localWorksheet.value},
-    total: totalFarmIncome
+    total: totalFarmIncome.value
   })
   emit('close')
 }
