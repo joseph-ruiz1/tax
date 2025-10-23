@@ -6,7 +6,13 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import path from 'node:path'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    vue(),
+    // Only use devtools in local development
+    mode === 'local' && vueDevTools(),
+  ].filter(Boolean),
+
   plugins: [
     vue(),
     vueDevTools(),
@@ -30,4 +36,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))
