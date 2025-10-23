@@ -13,10 +13,6 @@ export default defineConfig(({ mode }) => ({
     mode === 'local' && vueDevTools(),
   ].filter(Boolean),
 
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
