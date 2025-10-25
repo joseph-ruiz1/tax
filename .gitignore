@@ -1,4 +1,8 @@
-.env.*
+*.env
+*.env.dev
+*.env.local
+*.env.prod
+
 __pycache__/
 *.pyc
 *.pyo
@@ -12,3 +16,4 @@ build/
 
 *.sqlite3*
 db.sqlite3
+db.sqlite3.empty
