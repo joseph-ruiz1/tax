@@ -45,7 +45,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import ModalContent from './ModalContent.vue'
+import ModalContent from '../components/ModalContent.vue'
 
 const props = defineProps({
   isOpen: {

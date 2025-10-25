@@ -8,10 +8,26 @@
                 <p class="title">Title</p>
                 <input v-model="form.name" placeholder="Enter Calculation Name">
               </div>
-              <div class="form-group">
-                <p class="title">Max Elected Farm Income</p>
-                <input v-model="form.max_elected_farm_income" placeholder="Enter Farm income">
+              <div class="field-container">
+                <div class="title-with-info">
+                  <p class="title">Max Elected Farm Income</p>
+                  <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="More information">
+                    <img src="../../src/assets/modalIcon.png"></img>
+                  </button>
+                </div>
+                <input
+                type="number"
+                v-model="form.max_elected_farm_income" 
+                placeholder="Enter Farm income" 
+                :disabled="hasWorksheetData"
+                @blur="handleSingleValue"
+                @keydown.enter="handleSingleValue"
+                >
+                <span v-if="hasWorksheetData" class="worksheet-indicator">
+                  <p>⚠️ Using Worksheet</p>
+                </span>
               </div>
+
               <div class="form-group">
                 <p class="title">Qualified Farm Income</p>
                 <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains">
@@ -61,13 +77,21 @@
         </div>
         <button @click="submitForm" class="submit-btn">Submit</button>
     </div>
+
+    <farm-income-modal
+    :is-open="isOpen"
+    :worksheet="farmIncomeWorksheet"
+    @close="isOpen = false"
+    @save="handleWorksheetSave"
+    />
 </template>
 
 <script setup>
-import {ref, onMounted} from 'vue'
+import { ref } from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
+import { useIncomeWorksheet } from '@/composables/useIncomeWorksheet'
 
 const route = useRoute()
 const router = useRouter()
@@ -88,6 +112,15 @@ const form = ref({
     ]
 })
 
+const {
+  farmIncomeWorksheet,
+  isOpen,
+  hasWorksheetData,
+  openWorksheetModal,
+  handleWorksheetSave,
+  handleSingleValue,
+} = useIncomeWorksheet(form)
+
 const submitForm = async () => {
     try {
         const id = route.params.id
@@ -106,8 +139,6 @@ const submitForm = async () => {
         console.error('Failed to update dataset:', err)
     }
 }
-
-
 </script>
 
 <style scoped>

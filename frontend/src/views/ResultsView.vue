@@ -3,50 +3,7 @@
     <div class="results-container" v-if="!loading">
         <!-- Left Panel - Form -->
         <div class="form-panel">
-          <div class="dataset-header">
-            <div class="dataset-title">
-              <button class="to-dashboard-btn" @click="toDashboard">← Back</button>
-              <h1>General info</h1>
-            </div>
-
-            <form class="dataset-form">
-              <div class="field-container">
-                <p class="title">Title</p>
-                <input v-model="form.name" placeholder="Enter Calculation Name" required>
-              </div>
-
-              <div class="field-container">
-                <div class="title-with-info">
-                  <p class="title">Max Elected Farm Income</p>
-                  <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="More information">
-                    <img src="../../src/assets/modalIcon.png"></img>
-                  </button>
-                </div>
-                <input
-                type="number"
-                v-model="form.max_elected_farm_income" 
-                placeholder="Enter Farm income" 
-                :disabled="hasWorksheetData"
-                @blur="handleSingleValue"
-                @keydown.enter="handleSingleValue"
-                >
-                <span v-if="hasWorksheetData" class="worksheet-indicator">
-                  <p>⚠️ Using Worksheet</p>
-                </span>
-              </div>
-
-              <div class="field-container">
-                <div class="title-with-info">
-                  <p class="title">Qualified Farm Income</p>
-                  <button type="button" class="info-btn" aria-label="More information">
-                    <span class="info-icon">i</span>
-                    <span class="tooltip">The portion of the total elected farm income that is made up of capital gains. Caclulated as long term farm gains - short term farm loss. 1250 gains are currently not supported.</span>
-                  </button>
-                </div>
-                <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required type="number">
-              </div>
-            </form>
-          </div>
+          <farm-income-entry v-model="form"/>
 
           <!-- Year Navigation-->
           <div class="year-tabs" v-if="form.tax_years.length > 0">
@@ -111,8 +68,8 @@
                         >
                     </div>
                 </form>
-            </div>
-            <button @click="submitForm" class="submit-btn">Update Calculation</button>
+          </div>
+          <button @click="submitForm" class="submit-btn">Update Calculation</button>
         </div>
 
         <!--Results -->
@@ -148,34 +105,24 @@
     <div v-else>
         loading...
     </div>
-
-    <farm-income-modal
-    :is-open="isOpen"
-    :worksheet="farmIncomeWorksheet"
-    @close="isOpen = false"
-    @save="handleWorksheetSave"
-    />
 </template>
 
 <script setup>
-import {ref, onMounted, computed, reactive} from 'vue'
+import {ref, onMounted, reactive} from 'vue'
 import { apiService } from '@/services/api.js'
-import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
+import { useIncomeWorksheet } from '@/composables/useIncomeWorksheet'
 import VueApexCharts from 'vue3-apexcharts'
-import FarmIncomeModal from './FarmIncomeModal.vue'
-import { resetWorksheet } from '@/composables/resetWorksheet'
+import FarmIncomeModal from '../components/FarmIncomeModal.vue'
+import FarmIncomeEntry from '@/components/FarmIncomeEntry.vue'
 
 const route = useRoute()
-const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const inputs = ref(null)
 const outputs = ref(null)
-const isOpen = ref(false)
 const currentYearIndex = ref(0)
-const usingWorksheet = ref(false)
 
 
 const form = reactive({
@@ -184,53 +131,6 @@ const form = reactive({
     qualified_farm_income: 0,
     tax_years: [],
 })
-
-const farmIncomeWorksheet = ref({
-    sch_f: 0,
-    wages: 0,
-    sch_c: 0,
-    sch_e: 0,
-    form_4835: 0,
-    ccf: 0,
-    se_deduction: 0,
-    qbi: 0,
-    form_4797: 0,
-    sch_d: 0,
-})
-
-const worksheetTotal = ref(0)
-
- // If worksheet exists and has non-zero values
-const hasWorksheetData = computed (() => {
-  if (!usingWorksheet) return false
-
-  const otherFields = Object.entries(farmIncomeWorksheet.value)
-  .filter(([key]) => key !== 'sch_f')
-  .some(([i, value]) => value !== 0)
-  return otherFields
-})
-
-const openWorksheetModal = () => {
-  isOpen.value = true
-}
-
-const handleWorksheetSave = async ({ worksheetData, total }) => {
-  // Store the worksheet data and total
-  farmIncomeWorksheet.value = worksheetData
-  worksheetTotal.value = total
-  form.max_elected_farm_income = total
-}
-
-const handleSingleValue = (event) => {
-  if (event.type == 'blur' || event.key == 'Enter') {
-    // Reset worksheet
-    const singleValue = parseFloat(form.max_elected_farm_income)
-    resetWorksheet(farmIncomeWorksheet)
-    farmIncomeWorksheet.value.sch_f = singleValue
-
-    usingWorksheet.value = false
-  }
-}
 
 const series = ref([])
 const delta_series = ref([])
@@ -411,21 +311,13 @@ const fetchResults = async () => {
         form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
         form.tax_years = taxYears || []
         
-        // Initialize worksheet - REPLACE entire object instead of mutating properties
+        // Store the worksheet data separately if it exists
+        // The FarmIncomeEntry component will handle loading it via its own composable
         if (inputs.value?.income_worksheet) {
-          farmIncomeWorksheet.value = {
-            sch_f: inputs.value.income_worksheet.sch_f || 0,
-            wages: inputs.value.income_worksheet.wages || 0,
-            sch_c: inputs.value.income_worksheet.sch_c || 0,
-            sch_e: inputs.value.income_worksheet.sch_e || 0,
-            form_4835: inputs.value.income_worksheet.form_4835 || 0,
-            ccf: inputs.value.income_worksheet.ccf || 0,
-            se_deduction: inputs.value.income_worksheet.se_deduction || 0,
-            qbi: inputs.value.income_worksheet.qbi || 0,
-            form_4797: inputs.value.income_worksheet.form_4797 || 0,
-            sch_d: inputs.value.income_worksheet.sch_d || 0,
-          }
+          // Store it temporarily so we can pass it to the component
+          form._income_worksheet = inputs.value.income_worksheet
         }
+
 
         updateChartData()
 
@@ -454,10 +346,6 @@ const submitForm = async () => {
     } // Need error here
 }
 
-const toDashboard = async () => {
-  router.push('/')
-}
-
 onMounted(async () => {
     await fetchResults()
 })
@@ -479,193 +367,7 @@ onMounted(async () => {
 }
 
 /* Left Panel - Form */
-.form-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 100%;
-}
 
-.dataset-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dataset-title {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.dataset-header h1 {
-  color: #1a202c;
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0;
-  text-align: center;
-}
-
-.dataset-form {
-  display: grid;
-  gap: 1rem;
-}
-
-.field-container input, select {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  font-size: 1rem;
-  background: white;
-  transition: all 0.3s ease;
-  outline: none;
-}
-
-.field-container select {
-   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  font-size: 1rem;
-  background: white;
-  transition: all 0.3s ease;
-  outline: none;
-}
-
-/* Title styling within field container */
-.field-container .title {
-  font-weight: 600;
-  color: #1a202c;
-  font-size: 0.95rem;
-  margin: 1rem 0 0.5rem 0;
-}
-
-.field-container input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.field-container input:hover {
-  border-color: rgba(0, 0, 0, 0.2);
-}
-
-.field-container input::placeholder {
-  color: rgba(0, 0, 0, 0.4);
-  font-size: 0.95rem;
-}
-
-.title-with-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.title-with-info .title {
-  margin: 0; /* Remove default paragraph margin */
-}
-
-.title {
-  color: #1a202c;
-  font-size: 1rem;
-  font-weight: 700;
-  text-align: left;
-  margin: 0.5rem 0 0.25rem 0;
-}
-
-.info-btn {
-  position: relative;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  cursor: help;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.info-btn:hover {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.5);
-  transform: scale(1.1);
-}
-
-.info-icon {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #3b82f6;
-  font-style: italic;
-  display: block;
-  line-height: 1;
-}
-
-.tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px); /* Positions above the button */
-  left: 50%;
-  transform: translateX(-50%);
-  background: #545557; 
-  border: 2px solid rgba(0, 0, 0, 0.3);
-  color: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  line-height: 1.5;
-  font-size: 0.875rem;
-  white-space: normal;
-  min-width: 200px;
-  max-width: 320px;
-  width: max-content;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
-  pointer-events: none;
-  z-index: 999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Tooltip arrow */
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #1a202c;
-}
-
-/* Show tooltip on hover */
-.info-btn:hover .tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-.to-dashboard-btn {
-  position: absolute;
-  left: 0;
-  background: rgba(46, 39, 53, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  color: #000000;
-  padding: 0.3rem .3rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.65rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.to-dashboard-btn:hover {
-  background: rgba(255, 255, 255, .1);
-  transform: translateY(-1px);
-}
 
 .year-tabs {
   display: flex;
