@@ -1,4 +1,4 @@
-import {ref, computed, watch } from 'vue'
+import {ref, computed } from 'vue'
 import { resetWorksheet } from '@/composables/resetWorksheet'
 
 export function useIncomeWorksheet(initialForm = null) {
@@ -33,35 +33,70 @@ export function useIncomeWorksheet(initialForm = null) {
         isOpen.value = true
     }
 
+    const closeWorksheetModal = () => {
+        isOpen.value = false
+    }
+
     const handleWorksheetSave = async ({ worksheetData, total }) => {
         // Store the worksheet data and total
-        farmIncomeWorksheet.value = worksheetData
+        // Stays in FarmIncomeEntry component
+        farmIncomeWorksheet.value = { ...worksheetData }
         worksheetTotal.value = total
-        initialForm.max_elected_farm_income = total
+        usingWorksheet.value = true
+
+        // Update parent form via initialForm reference
+        if (initialForm) {
+            initialForm.max_elected_farm_income = total
+        }
+
+        closeWorksheetModal()
     }
 
     const handleSingleValue = (event) => {
         if (event.type == 'blur' || event.key == 'Enter') {
             // Reset worksheet
-            const singleValue = parseFloat(form.max_elected_farm_income)
+            const singleValue = parseFloat(initialForm.max_elected_farm_income)
+
             resetWorksheet(farmIncomeWorksheet)
             farmIncomeWorksheet.value.sch_f = singleValue
+            worksheetTotal.value = singleValue
 
             usingWorksheet.value = false
         }
     }
 
-    return {
-        farmIncomeWorksheet,
-        worksheetTotal,
-        isOpen,
-        usingWorksheet,
+    const loadWorksheet = (worksheetData) => {
+        if (!worksheetData) return 
 
-        hasWorksheetData,
+        Object.assign(farmIncomeWorksheet.value, worksheetData)
 
-        openWorksheetModal,
-        handleWorksheetSave,
-        handleSingleValue,
-        resetWorksheet
+        // Calculate Total
+        worksheetTotal.value = Object.values(worksheetData).reduce((sum, val) => sum + (parseFloat(val) || 0), 0)
+
+        // Check if using worksheet
+        const hasOtherValues = Object.entries(worksheetData)
+            .filter(([key]) => key !== 'sch_f')
+            .some(([, value]) => value !== 0)
+        
+        usingWorksheet.value = hasOtherValues
     }
+
+    return {
+    // State
+    farmIncomeWorksheet,
+    worksheetTotal,
+    isOpen,
+    usingWorksheet,
+    
+    // Computed
+    hasWorksheetData,
+    
+    // Methods
+    openWorksheetModal,
+    closeWorksheetModal,
+    handleWorksheetSave,
+    handleSingleValue,
+    resetWorksheet,
+    loadWorksheet,
+  }
 }

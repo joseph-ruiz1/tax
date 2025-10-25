@@ -3,7 +3,11 @@
     <div class="results-container" v-if="!loading">
         <!-- Left Panel - Form -->
         <div class="form-panel">
-          <farm-income-entry v-model="form"/>
+          <farm-income-entry
+          ref="farmIncomeEntryRef"
+          v-model="form"
+          :saved-worksheet="savedWorksheet"
+          />
 
           <!-- Year Navigation-->
           <div class="year-tabs" v-if="form.tax_years.length > 0">
@@ -112,9 +116,7 @@ import {ref, onMounted, reactive} from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
-import { useIncomeWorksheet } from '@/composables/useIncomeWorksheet'
 import VueApexCharts from 'vue3-apexcharts'
-import FarmIncomeModal from '../components/FarmIncomeModal.vue'
 import FarmIncomeEntry from '@/components/FarmIncomeEntry.vue'
 
 const route = useRoute()
@@ -131,6 +133,9 @@ const form = reactive({
     qualified_farm_income: 0,
     tax_years: [],
 })
+
+const farmIncomeEntryRef = ref(null)
+const savedWorksheet = ref(null)
 
 const series = ref([])
 const delta_series = ref([])
@@ -311,13 +316,10 @@ const fetchResults = async () => {
         form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
         form.tax_years = taxYears || []
         
-        // Store the worksheet data separately if it exists
-        // The FarmIncomeEntry component will handle loading it via its own composable
+        // Load worksheet data if it exists
         if (inputs.value?.income_worksheet) {
-          // Store it temporarily so we can pass it to the component
-          form._income_worksheet = inputs.value.income_worksheet
+          savedWorksheet.value = { ...inputs.value.income_worksheet }
         }
-
 
         updateChartData()
 
@@ -330,10 +332,13 @@ const fetchResults = async () => {
 }
 
 const submitForm = async () => {
+  // Get worksheet data from FarmIncomeEntry via template ref
+  const worksheetData = farmIncomeEntryRef.value?.getWorksheetData() || null
+
   const submissionData = {
     name: form.name,
     max_elected_farm_income: form.max_elected_farm_income,
-    income_worksheet: farmIncomeWorksheet.value,
+    income_worksheet: worksheetData,
     qualified_farm_income: form.qualified_farm_income,
     tax_years: form.tax_years
   }
@@ -363,11 +368,24 @@ onMounted(async () => {
   background: linear-gradient(135deg, #434b6f 0%, #2e2735 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  box-sizing: border-box;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #434b6f 0%, #2e2735 100%);
+  color: white;
+  font-size: 1.5rem;
 }
 
 /* Left Panel - Form */
-
+.form-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
 
 .year-tabs {
   display: flex;
@@ -378,9 +396,9 @@ onMounted(async () => {
 
 .year-tabs button {
   padding: 0.75rem 1.5rem;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
   color: white;
   font-weight: 600;
   font-size: 0.9rem;
@@ -390,16 +408,14 @@ onMounted(async () => {
 }
 
 .year-tabs button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .year-tabs button.active {
   background: rgba(255, 255, 255, 0.9);
   color: #4c51bf;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  transform: translateY(-2px);
 }
 
 .year-form {
@@ -411,7 +427,11 @@ onMounted(async () => {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.year-form h1 {
+.dataset-title {
+  margin-bottom: 1.5rem;
+}
+
+.dataset-title h1 {
   color: #1a202c;
   font-size: 1.5rem;
   font-weight: 700;
@@ -419,37 +439,118 @@ onMounted(async () => {
   text-align: center;
 }
 
-.year-form h3 {
-  color: #1a202c;
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 1.5rem 0;
-  text-align: center;
-}
-
 .year-form form {
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-input, select {
-  padding: 0.75rem 1.25rem;
+.field-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.title-with-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.title {
+  color: #1a202c;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.field-container input,
+.field-container select {
+  width: 100%;
+  padding: 0.75rem 1rem;
   border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 1rem;
   background: white;
   color: #1a202c;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  width: 65%;
-  box-sizing: border-box;
+  outline: none;
 }
 
-input:focus, select:focus {
-  outline: none;
+.field-container input:focus,
+.field-container select:focus {
   border-color: #4c51bf;
   box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.1);
-  transform: translateY(-1px);
+}
+
+.field-container input::placeholder {
+  color: #a0aec0;
+}
+
+.info-btn {
+  position: relative;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  cursor: help;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  transform: scale(1.1);
+}
+
+.info-icon {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3b82f6;
+  font-style: italic;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a202c;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: normal;
+  min-width: 200px;
+  max-width: 300px;
+  width: max-content;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1a202c;
+}
+
+.info-btn:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .submit-btn {
@@ -463,8 +564,6 @@ input:focus, select:focus {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
-  width: 100%;
-  box-sizing: border-box;
 }
 
 .submit-btn:hover {
@@ -477,31 +576,6 @@ input:focus, select:focus {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  width: 100%;
-  min-height: 100%;
-}
-
-.results-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  text-align: center;
-}
-
-.results-header h1 {
-  color: #1a202c;
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-}
-
-.last-updated {
-  color: #718096;
-  font-size: 0.9rem;
-  font-style: italic;
 }
 
 /* Chart Section */
@@ -512,14 +586,13 @@ input:focus, select:focus {
   padding: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  flex: 1; /* This makes the chart section take up remaining space */
 }
 
 .section-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin-bottom: .5rem;
+  margin-bottom: 1rem;
 }
 
 .section-header h3 {
@@ -527,124 +600,20 @@ input:focus, select:focus {
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0;
-  margin: auto
-}
-
-.chart-controls {
-  display: flex;
-  gap: 0.5rem;
 }
 
 .chart-placeholder {
   background: #f7fafc;
   border: 2px dashed #e2e8f0;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 3rem 2rem;
   text-align: center;
   color: #718096;
-  min-height: 400px; /* Ensures minimum height for the chart area */
+  min-height: 350px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-}
-
-.chart-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
-
-.chart-subtitle {
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
-
-/* Table Section */
-.table-section {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.results-table {
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  width: 100%;
-}
-
-.table-header, .table-row {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr 1.2fr 1fr 1fr;
-  gap: 1rem;
-}
-
-.table-header {
-  background: #f7fafc;
-  font-weight: 700;
-  color: #4a5568;
-}
-
-.table-row {
-  background: white;
-  border-top: 1px solid #e2e8f0;
-}
-
-.table-row:hover {
-  background: #f9fafb;
-}
-
-.table-cell {
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  font-size: 0.9rem;
-}
-
-.font-medium {
-  font-weight: 600;
-}
-
-.savings {
-  color: #48bb78;
-  font-weight: 600;
-}
-
-.reduction {
-  color: #48bb78;
-  font-weight: 600;
-}
-
-/* Modal */
-.open-modal-btn {
-  padding: .1rem;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: rgb(63, 27, 27);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.open-modal-btn img {
-  width: 15px;
-  height: 15px;
-  display: block;
-}
-
-.open-modal-btn:hover {
-  background: #868b95;
-}
-
-.worksheet-indicator {
-  margin-top: .5rem;
-}
-
-.worksheet-indicator p {
-  color: black;
 }
 
 /* Responsive Design */
@@ -653,28 +622,11 @@ input:focus, select:focus {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
-  
-  .form-panel {
-    max-width: none;
-  }
 }
 
 @media (max-width: 768px) {
   .results-container {
     padding: 1rem;
-  }
-  
-  .summary-cards {
-    grid-template-columns: 1fr;
-  }
-  
-  .table-header, .table-row {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  
-  .table-cell {
-    padding: 0.75rem;
   }
   
   .year-tabs {
@@ -684,6 +636,11 @@ input:focus, select:focus {
   .year-tabs button {
     padding: 0.5rem 1rem;
     font-size: 0.8rem;
+  }
+  
+  .year-form,
+  .chart-section {
+    padding: 1.5rem;
   }
 }
 </style>

@@ -1,19 +1,23 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useIncomeWorksheet } from '@/composables/useIncomeWorksheet'
 import FarmIncomeModal from './FarmIncomeModal.vue'
+
+const router = useRouter()
 
 const props = defineProps({
     modelValue: {
         type: Object,
         required: true
+    },
+    savedWorksheet: {
+        type: Object,
+        default: null
     }
 })
 
 const emit = defineEmits(['update:modelValue'])
-
-const router = useRouter()
 
 // Create local form that syncs with parent via v-model
 const form = computed({
@@ -24,12 +28,23 @@ const form = computed({
 const {
   farmIncomeWorksheet,
   isOpen,
-  usingWorksheet,
   hasWorksheetData,
   openWorksheetModal,
+  closeWorksheetModal,
   handleWorksheetSave,
   handleSingleValue,
+  loadWorksheet,
 } = useIncomeWorksheet(form.value)
+
+// Load on mount
+if (props.savedWorksheet) {
+    loadWorksheet(props.savedWorksheet)
+}
+
+// Expose worksheet so parent can access it since componenets automatically closed by default
+defineExpose({
+    getWorksheetData: () => farmIncomeWorksheet.value
+})
 
 const toDashboard = async () => {
 router.push('/')
@@ -52,20 +67,20 @@ router.push('/')
       <div class="field-container">
         <div class="title-with-info">
           <p class="title">Max Elected Farm Income</p>
-          <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="More information">
+          <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="Open worksheet">
             <img src="../../src/assets/modalIcon.png" alt="Open worksheet">
           </button>
         </div>
         <input
           type="number"
-          v-model="form.max_elected_farm_income" 
+          v-model.number="form.max_elected_farm_income" 
           placeholder="Enter Farm income" 
           :disabled="hasWorksheetData"
           @blur="handleSingleValue"
           @keydown.enter="handleSingleValue"
         >
         <span v-if="hasWorksheetData" class="worksheet-indicator">
-          <p>⚠️ Using Worksheet</p>
+          ⚠️ Using Worksheet
         </span>
       </div>
 
@@ -77,7 +92,7 @@ router.push('/')
             <span class="tooltip">The portion of the total elected farm income that is made up of capital gains. Calculated as long term farm gains - short term farm loss. 1250 gains are currently not supported.</span>
           </button>
         </div>
-        <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains" required type="number">
+        <input v-model.number="form.qualified_farm_income" placeholder="Farm income cap gains" required type="number">
       </div>
     </form>
 
@@ -85,20 +100,13 @@ router.push('/')
     <farm-income-modal
       :is-open="isOpen"
       :worksheet="farmIncomeWorksheet"
-      @close="isOpen = false"
+      @close="closeWorksheetModal"
       @save="handleWorksheetSave"
     />
   </div>
 </template>
 
 <style scoped>
-.form-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 100%;
-}
-
 .dataset-header {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -113,82 +121,118 @@ router.push('/')
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: 1.5rem;
 }
 
-.dataset-header h1 {
+.dataset-title h1 {
   color: #1a202c;
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
-  text-align: center;
+}
+
+.to-dashboard-btn {
+  position: absolute;
+  left: 0;
+  background: rgba(46, 39, 53, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  color: #1a202c;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.to-dashboard-btn:hover {
+  background: rgba(46, 39, 53, 0.2);
+  transform: translateX(-2px);
 }
 
 .dataset-form {
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.field-container input, select {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  font-size: 1rem;
-  background: white;
-  transition: all 0.3s ease;
-  outline: none;
+.field-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.field-container select {
-   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  font-size: 1rem;
-  background: white;
-  transition: all 0.3s ease;
-  outline: none;
-}
-
-/* Title styling within field container */
-.field-container .title {
-  font-weight: 600;
+.title {
   color: #1a202c;
   font-size: 0.95rem;
-  margin: 1rem 0 0.5rem 0;
-}
-
-.field-container input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.field-container input:hover {
-  border-color: rgba(0, 0, 0, 0.2);
-}
-
-.field-container input::placeholder {
-  color: rgba(0, 0, 0, 0.4);
-  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 .title-with-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
 }
 
-.title-with-info .title {
-  margin: 0; /* Remove default paragraph margin */
-}
-
-.title {
-  color: #1a202c;
+.field-container input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 1rem;
-  font-weight: 700;
-  text-align: left;
-  margin: 0.5rem 0 0.25rem 0;
+  background: white;
+  color: #1a202c;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.field-container input:disabled {
+  background: #f7fafc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.field-container input:focus:not(:disabled) {
+  border-color: #4c51bf;
+  box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.1);
+}
+
+.field-container input::placeholder {
+  color: #a0aec0;
+}
+
+.open-modal-btn {
+  padding: 0.25rem;
+  background: rgba(76, 81, 191, 0.1);
+  border: 1px solid rgba(76, 81, 191, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.open-modal-btn img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.open-modal-btn:hover {
+  background: rgba(76, 81, 191, 0.2);
+  transform: scale(1.05);
+}
+
+.worksheet-indicator {
+  color: #d97706;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .info-btn {
@@ -202,11 +246,13 @@ router.push('/')
   cursor: help;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .info-btn:hover {
   background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.5);
   transform: scale(1.1);
 }
 
@@ -215,35 +261,31 @@ router.push('/')
   font-weight: 700;
   color: #3b82f6;
   font-style: italic;
-  display: block;
-  line-height: 1;
 }
 
 .tooltip {
   position: absolute;
-  bottom: calc(100% + 8px); /* Positions above the button */
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: #545557; 
-  border: 2px solid rgba(0, 0, 0, 0.3);
+  background: #1a202c;
   color: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  line-height: 1.5;
+  padding: 0.75rem;
+  border-radius: 8px;
   font-size: 0.875rem;
+  line-height: 1.5;
   white-space: normal;
   min-width: 200px;
-  max-width: 320px;
+  max-width: 300px;
   width: max-content;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition: all 0.2s ease;
   pointer-events: none;
-  z-index: 999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Tooltip arrow */
 .tooltip::after {
   content: '';
   position: absolute;
@@ -254,29 +296,8 @@ router.push('/')
   border-top-color: #1a202c;
 }
 
-/* Show tooltip on hover */
 .info-btn:hover .tooltip {
   opacity: 1;
   visibility: visible;
-}
-
-.to-dashboard-btn {
-  position: absolute;
-  left: 0;
-  background: rgba(46, 39, 53, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  color: #000000;
-  padding: 0.3rem .3rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.65rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.to-dashboard-btn:hover {
-  background: rgba(255, 255, 255, .1);
-  transform: translateY(-1px);
 }
 </style>

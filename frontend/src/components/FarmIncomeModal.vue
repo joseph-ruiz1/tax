@@ -123,12 +123,10 @@ const totalFarmIncome = computed(() => {
     }, 0)
 })
 
-// Populates modal upon GET
+// Populates modal upon GET; sync with prop changes
 watch(() => props.worksheet, (newValue) => {
   if (newValue) {
     localWorksheet.value = { ...newValue}
-  } else {
-    localWorksheet.value = initializeWorksheet()
   }
 }, {immediate: true, deep: true})
 
@@ -148,10 +146,12 @@ const handleSave = () => {
 <style scoped>
 .worksheet-form {
   padding: 0.5rem 0;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .field-container {
-  margin-bottom: .5rem;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -162,10 +162,8 @@ const handleSave = () => {
 }
 
 .title-with-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .title {
@@ -174,52 +172,60 @@ const handleSave = () => {
   font-size: 0.95rem;
   margin: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .field-container input {
-  width: 100%;
-  max-width: 175px;
-  margin-left: auto;
-  padding: 0.5rem 1rem;
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  width: 180px;
+  flex-shrink: 0;
+  padding: 0.6rem 1rem;
+  border: 2px solid #e2e8f0;
   border-radius: 8px;
   font-size: 1rem;
   background: white;
+  color: #1a202c;
   transition: all 0.3s ease;
   outline: none;
 }
 
 .field-container input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #4c51bf;
+  box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.1);
 }
 
-/* Footer styling - works with parent modal-footer */
+.field-container input::placeholder {
+  color: #a0aec0;
+  font-size: 0.875rem;
+}
+
+/* Footer styling */
+.footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .footer-total {
   display: flex;
   align-items: center;
-  gap: .25rem;
-  white-space: nowrap;
+  gap: 0.5rem;
 }
 
 .footer-total label {
   margin: 0;
   font-weight: 600;
   color: #1a202c;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .total-display {
-  font-size: 1.1em;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: #000000;
-}
-
-.footer-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+  color: #4c51bf;
 }
 
 .button-group {
@@ -228,53 +234,67 @@ const handleSave = () => {
   margin-left: auto;
 }
 
-.btn-primary {
+.btn-primary,
+.btn-secondary {
   padding: 0.75rem 1.5rem;
-  background: #3b82f6;
-  color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.95rem;
   transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4c51bf 0%, #434190 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(76, 81, 191, 0.3);
 }
 
 .btn-primary:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 81, 191, 0.4);
 }
 
 .btn-secondary {
-  padding: 0.75rem 1.5rem;
   background: #e5e7eb;
   color: #374151;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
   background: #d1d5db;
 }
 
-.btn-clear {
-  padding: 0.75rem 1.5rem;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
-}
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .field-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
 
-.btn-clear:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
+  .field-container input {
+    width: 100%;
+  }
+
+  .footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footer-total {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .button-group {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .button-group button {
+    flex: 1;
+  }
 }
 </style>
