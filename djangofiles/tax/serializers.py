@@ -1,11 +1,11 @@
 from rest_framework import serializers
 from decimal import Decimal
 from django.db import transaction
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
-from .models import FILING_STATUS, YEAR, TaxDataSet, TaxYearData, CalculationIteration, ScheduleJForm
+from .models import FILING_STATUS, TaxDataSet, TaxYearData, CalculationIteration, ScheduleJForm
 from .utils import validate_tax_years
 
 class UserSerializer(serializers.ModelSerializer):

@@ -1,6 +1,5 @@
 from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 
 
@@ -60,9 +59,6 @@ class TestUserModel(TestCase):
         expected_ids = list(range(1, len(users) + 1))
         actual_ids = [user.id for user in users]
         self.assertEqual(actual_ids, expected_ids)
-
-
-
 
 class TaxDataSetModelTest(TestCase):
     """
@@ -220,7 +216,7 @@ class ScheduleJOptimizationTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_optimization(self):
-        for i, test in enumerate(SCHEDULE_J_OPT_TEST):
+        for i, test in enumerate(SCHEDULE_J_OPTIMIZATION_TEST):
                 max_elected, max_qualified_elected = test["elected"]
                 dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, max_qualified_elected)
                 dataset.refresh_from_db()
@@ -243,7 +239,7 @@ class TaxDataSetSerializerTests(APITestCase):
         self.client.login(username="test", password="testing")
         
     def test_serializer_outputs(self):
-        for i, test in enumerate(SCHEDULE_J_OPT_TEST):
+        for i, test in enumerate(SCHEDULE_J_OPTIMIZATION_TEST):
                 max_elected, max_qualified_elected = test["elected"]
                 dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, max_qualified_elected)
                 dataset.refresh_from_db()
@@ -309,7 +305,7 @@ SCHEDULE_J_TEST_CASES = [
     
 ]
 
-SCHEDULE_J_OPT_TEST = [
+SCHEDULE_J_OPTIMIZATION_TEST = [
     {
         'inputs': [
             [2024, "MFJ", 120000, 105000],
