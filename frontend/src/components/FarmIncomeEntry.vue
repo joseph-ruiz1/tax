@@ -1,10 +1,13 @@
 <script setup>
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useIncomeWorksheet } from '@/composables/useIncomeWorksheet'
 import FarmIncomeModal from './FarmIncomeModal.vue'
 
 const router = useRouter()
+
+// const modelValue = defineModel('modelValue', { required: true, type: object })
+// const savedWorksheet = defineModel('savedWorksheet', { required: false, type: object})
 
 const props = defineProps({
     modelValue: {
@@ -19,7 +22,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-// Create local form that syncs with parent via v-model
+// Create local form that syncs with parent via v-model so we aren't directly mutating the prop
 const form = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
@@ -204,7 +207,7 @@ router.push('/')
 }
 
 .open-modal-btn {
-  padding: 0.25rem;
+  padding: 0rem;
   background: rgba(76, 81, 191, 0.1);
   border: 1px solid rgba(76, 81, 191, 0.3);
   border-radius: 6px;
@@ -216,8 +219,8 @@ router.push('/')
 }
 
 .open-modal-btn img {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   display: block;
 }
 

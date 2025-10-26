@@ -1,97 +1,62 @@
 <!-- DataEntryView.vue -->
 <template>
     <div class="form-container">
-        <div class="dataset-header">
-            <h1>General info</h1>
-            <form class="dataset-form">
-              <div class="form-group">
-                <p class="title">Title</p>
-                <input v-model="form.name" placeholder="Enter Calculation Name">
-              </div>
-              <div class="field-container">
-                <div class="title-with-info">
-                  <p class="title">Max Elected Farm Income</p>
-                  <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="More information">
-                    <img src="../../src/assets/modalIcon.png"></img>
-                  </button>
-                </div>
-                <input
-                type="number"
-                v-model="form.max_elected_farm_income" 
-                placeholder="Enter Farm income" 
-                :disabled="hasWorksheetData"
-                @blur="handleSingleValue"
-                @keydown.enter="handleSingleValue"
-                >
-                <span v-if="hasWorksheetData" class="worksheet-indicator">
-                  <p>⚠️ Using Worksheet</p>
-                </span>
-              </div>
+      <farm-income-entry
+      ref="farmIncomeEntryRef"
+      v-model="form"
+      :saved-worksheet="savedWorksheet"
+      />
 
-              <div class="form-group">
-                <p class="title">Qualified Farm Income</p>
-                <input v-model="form.qualified_farm_income" placeholder="Farm income cap gains">
-              </div>
-            </form>
-        </div>
+      <!-- Year Navigation-->
+      <div class="year-tabs">
+          <button
+          v-for="(year, index) in form.tax_years"
+          :key="year.year"
+          @click="currentYearIndex = index"
+          :class="{ active: index === currentYearIndex }"
+          >
+              {{ year.year }}
+          </button>
+      </div>
 
-        <!-- Year Navigation-->
-        <div class="year-tabs">
-            <button
-            v-for="(year, index) in form.tax_years"
-            :key="year.year"
-            @click="currentYearIndex = index"
-            :class="{ active: index === currentYearIndex }"
-            >
-                {{ year.year }}
-            </button>
-        </div>
-
-        <!-- Current Year Form -->
-        <div class="dataset-header">
-          <h1>Yearly Tax Data</h1>
-            <h3>Tax Year {{ form.tax_years[currentYearIndex].year }}</h3>
-            <form class="dataset-form">
-              <div class="form-group">
-                <p class="title">Filing Status</p>
-                <select v-model="form.tax_years[currentYearIndex].filing_status">
-                    <option disabled value="">Filing Status</option>
-                    <option>Single</option>
-                    <option>Married Filing Jointly</option>
-                </select>
-              </div>
-              <div class="form-group"><p class="title">Taxable Income</p>
-                <input
-                v-model.number="form.tax_years[currentYearIndex].taxable_income"
-                placeholder="Taxable income"
-                >
-              </div>
-              <div class="form-group">
-                <p class="title">Qualified Income</p>
-                <input
-                v-model.number="form.tax_years[currentYearIndex].qualified_income"
-                placeholder="Qualified income"
-                >
-              </div>
-            </form>
-        </div>
-        <button @click="submitForm" class="submit-btn">Submit</button>
+      <!-- Current Year Form -->
+      <div class="dataset-header">
+        <h1>Yearly Tax Data</h1>
+          <h3>Tax Year {{ form.tax_years[currentYearIndex].year }}</h3>
+          <form class="dataset-form">
+            <div class="form-group">
+              <p class="title">Filing Status</p>
+              <select v-model="form.tax_years[currentYearIndex].filing_status">
+                  <option disabled value="">Filing Status</option>
+                  <option>Single</option>
+                  <option>Married Filing Jointly</option>
+              </select>
+            </div>
+            <div class="form-group"><p class="title">Taxable Income</p>
+              <input
+              v-model.number="form.tax_years[currentYearIndex].taxable_income"
+              placeholder="Taxable income"
+              >
+            </div>
+            <div class="form-group">
+              <p class="title">Qualified Income</p>
+              <input
+              v-model.number="form.tax_years[currentYearIndex].qualified_income"
+              placeholder="Qualified income"
+              >
+            </div>
+          </form>
+      </div>
+      <button @click="submitForm" class="submit-btn">Submit</button>
     </div>
-
-    <farm-income-modal
-    :is-open="isOpen"
-    :worksheet="farmIncomeWorksheet"
-    @close="isOpen = false"
-    @save="handleWorksheetSave"
-    />
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
-import { useIncomeWorksheet } from '@/composables/useIncomeWorksheet'
+import FarmIncomeEntry from '@/components/FarmIncomeEntry.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,7 +65,7 @@ const error = ref('')
 
 const currentYearIndex = ref(0)
 
-const form = ref({
+const form = reactive({
     name: '',
     max_elected_farm_income: 0,
     qualified_farm_income: 0,
@@ -112,32 +77,47 @@ const form = ref({
     ]
 })
 
-const {
-  farmIncomeWorksheet,
-  isOpen,
-  hasWorksheetData,
-  openWorksheetModal,
-  handleWorksheetSave,
-  handleSingleValue,
-} = useIncomeWorksheet(form)
+const farmIncomeEntryRef = ref(null)
+const savedWorksheet = ref({
+  sch_f: 0,
+  wages: 0,
+  sch_c: 0,
+  sch_e: 0,
+  form_4835: 0,
+  ccf: 0,
+  se_deduction: 0,
+  qbi: 0,
+  form_4797: 0,
+  sch_d: 0,
+})
 
 const submitForm = async () => {
-    try {
-        const id = route.params.id
-        const filingstatusMapping = {
-            'Single': 'single',
-            'Married Filing Jointly': 'MFJ'
-        }
-        form.value.tax_years?.forEach(year => {
-            if (filingstatusMapping[year.filing_status]) {
-                year.filing_status = filingstatusMapping[year.filing_status]
-            }
-        })
-        const response = await apiService.patchDataset(id, form.value)
-        router.push(`/datasets/${id}/results`)
-    } catch (err) {
-        console.error('Failed to update dataset:', err)
+  const worksheetData = farmIncomeEntryRef.value?.getWorksheetData() || null
+
+  const submissionData = {
+    name: form.name,
+    max_elected_farm_income: form.max_elected_farm_income,
+    income_worksheet: worksheetData,
+    qualified_farm_income: form.qualified_farm_income,
+    tax_years: form.tax_years
+  }
+
+  const filingstatusMapping = {
+    'Single': 'single',
+    'Married Filing Jointly': 'MFJ'
+  }
+  form.tax_years?.forEach(year => {
+    if (filingstatusMapping[year.filing_status]) {
+        year.filing_status = filingstatusMapping[year.filing_status]
     }
+  })
+  try {
+    const id = route.params.id
+    const response = await apiService.patchDataset(id, submissionData)
+    router.push(`/datasets/${id}/results`)
+  } catch (err) {
+      console.error('Failed to update dataset:', err)
+  }
 }
 </script>
 

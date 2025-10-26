@@ -21,7 +21,7 @@ export function useIncomeWorksheet(initialForm = null) {
 
     // If worksheet exists and has non-zero values
     const hasWorksheetData = computed (() => {
-        if (!usingWorksheet) return false
+        if (!usingWorksheet.value) return false
 
         const otherFields = Object.entries(farmIncomeWorksheet.value)
         .filter(([key]) => key !== 'sch_f')
@@ -48,19 +48,17 @@ export function useIncomeWorksheet(initialForm = null) {
         if (initialForm) {
             initialForm.max_elected_farm_income = total
         }
-
         closeWorksheetModal()
     }
 
     const handleSingleValue = (event) => {
-        if (event.type == 'blur' || event.key == 'Enter') {
+        if (event.type === 'blur' || event.key === 'Enter') {
             // Reset worksheet
-            const singleValue = parseFloat(initialForm.max_elected_farm_income)
+            const singleValue = parseFloat(initialForm.max_elected_farm_income) || 0
 
             resetWorksheet(farmIncomeWorksheet)
             farmIncomeWorksheet.value.sch_f = singleValue
             worksheetTotal.value = singleValue
-
             usingWorksheet.value = false
         }
     }

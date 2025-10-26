@@ -209,7 +209,16 @@ const baseOptions = {
       },
     },
     title: {
-      offsetX: -6
+      offsetX: -1,
+      offsetY: 5,
+      style: {
+        color: undefined,
+        fontSize: '14px',
+        fontFamily: 'Helvetica, Arial, sans-serif',
+        fontWeight: 600,
+        cssClass: 'apexcharts-xaxis-title',
+
+      }
     }
   },
   legend: {
@@ -583,7 +592,7 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 2rem;
+  padding: 3rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
