@@ -212,12 +212,8 @@ const baseOptions = {
       offsetX: -1,
       offsetY: 5,
       style: {
-        color: undefined,
         fontSize: '14px',
-        fontFamily: 'Helvetica, Arial, sans-serif',
         fontWeight: 600,
-        cssClass: 'apexcharts-xaxis-title',
-
       }
     }
   },
