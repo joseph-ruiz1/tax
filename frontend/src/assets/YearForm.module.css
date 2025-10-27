@@ -1,0 +1,206 @@
+/* Left Panel - Form */
+.formPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+/* Shared card styling - used for both General Info and Year Forms */
+.datasetHeader {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.yearTabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.yearTabs button {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.yearTabs button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.yearTabs button.active {
+  background: rgba(255, 255, 255, 0.9);
+  color: #4c51bf;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.yearForm {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.datasetTitle {
+  margin-bottom: 1.5rem;
+}
+
+.datasetTitle h1 {
+  color: #1a202c;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+.yearForm form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.fieldContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.titleWithInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.title {
+  color: #1a202c;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.fieldContainer input,
+.fieldContainer select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  color: #1a202c;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.fieldContainer input:focus,
+.fieldContainer select:focus {
+  border-color: #4c51bf;
+  box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.1);
+}
+
+.fieldContainer input::placeholder {
+  color: #a0aec0;
+}
+
+.infoBtn {
+  position: relative;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  cursor: help;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.infoBtn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  transform: scale(1.1);
+}
+
+.infoIcon {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3b82f6;
+  font-style: italic;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a202c;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: normal;
+  min-width: 200px;
+  max-width: 300px;
+  width: max-content;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1a202c;
+}
+
+.infoBtn:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.submitBtn {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+}
+
+.submitBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(72, 187, 120, 0.5);
+}

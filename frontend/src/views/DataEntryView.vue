@@ -21,28 +21,48 @@
 
       <!-- Current Year Form -->
       <div class="dataset-header">
-        <h1>Yearly Tax Data</h1>
-          <h3>Tax Year {{ form.tax_years[currentYearIndex].year }}</h3>
+          <h1>Tax Year {{ form.tax_years[currentYearIndex].year }}</h1>
+
           <form class="dataset-form">
             <div class="form-group">
               <p class="title">Filing Status</p>
-              <select v-model="form.tax_years[currentYearIndex].filing_status">
-                  <option disabled value="">Filing Status</option>
-                  <option>Single</option>
-                  <option>Married Filing Jointly</option>
+              <select v-model="form.tax_years[currentYearIndex].filing_status" required>
+                <option disabled value="">Filing Status</option>
+                <option v-for="opt in filingStatusOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
               </select>
             </div>
-            <div class="form-group"><p class="title">Taxable Income</p>
+
+            <div class="form-group">
+              <div class="title-with-info">
+                <p class="title">Taxable Income</p>
+                <button type="button" class="info-btn" aria-label="More information">
+                  <span class="info-icon">i</span>
+                  <span class="tooltip">Taxable Income from the return. Adjustment for elected income not needed.</span>
+                </button>
+              </div>
               <input
               v-model.number="form.tax_years[currentYearIndex].taxable_income"
               placeholder="Taxable income"
+              required
+              type="number"
               >
             </div>
+
             <div class="form-group">
-              <p class="title">Qualified Income</p>
+              <div class="title-with-info">
+                <p class="title">Qualified Income</p>
+                <button type="button" class="info-btn" aria-label="More information">
+                  <span class="info-icon">i</span>
+                  <span class="tooltip">Long term capital gains + qualified dividends.</span>
+                </button>
+              </div>
               <input
               v-model.number="form.tax_years[currentYearIndex].qualified_income"
-              placeholder="Qualified income"
+              placeholder="Taxable income"
+              required
+              type="number"
               >
             </div>
           </form>
@@ -56,6 +76,8 @@ import { reactive, ref } from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
+import { filingStatusOptions } from '@/composables/filingstatusOptions'
+
 import FarmIncomeEntry from '@/components/FarmIncomeEntry.vue'
 
 const route = useRoute()
@@ -312,5 +334,78 @@ input::placeholder {
 .submit-btn:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(72, 187, 120, 0.5);
+}
+
+
+.info-btn {
+  position: relative;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  cursor: help;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  transform: scale(1.1);
+}
+
+.info-icon {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3b82f6;
+  font-style: italic;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a202c;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: normal;
+  min-width: 200px;
+  max-width: 300px;
+  width: max-content;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1a202c;
+}
+
+.info-btn:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.title-with-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>
