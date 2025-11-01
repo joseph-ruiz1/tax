@@ -98,8 +98,8 @@ ORDINARY_TAX_TABLES = {
             ".22": [Decimal("80251"),    Decimal("171050"), Decimal("9235.0")],
             ".24": [Decimal("171051"),   Decimal("326600"), Decimal("29211.0")],
             ".32": [Decimal("326601"),   Decimal("414700"), Decimal("66543.0")],
-            ".35": [Decimal("414701"),   Decimal("622050"), Decimal("94 35.0")],
-            ".37": [Decimal("622 51"),   Decimal("1000000000"), Decimal("167307.5")]
+            ".35": [Decimal("414701"),   Decimal("622050"), Decimal("9435.0")],
+            ".37": [Decimal("62251"),   Decimal("1000000000"), Decimal("167307.5")]
         }
     },
     "2019": {
@@ -119,7 +119,7 @@ ORDINARY_TAX_TABLES = {
             ".24": [Decimal("168401"),   Decimal("321450"), Decimal("28765.00")],
             ".32": [Decimal("321451"),   Decimal("408200"), Decimal("65497.00")],
             ".35": [Decimal("408201"),   Decimal("612350"), Decimal("93257")],
-            ".37": [Decimal("612 351"),   Decimal("1000000000"), Decimal("164709.5")]
+            ".37": [Decimal("612351"),   Decimal("1000000000"), Decimal("164709.5")]
         }
     },
     "2018": {
@@ -195,38 +195,38 @@ QUALIFIED_TAX_TABLES = {
     },
     "2020": {
         "single": {
-            ".0%": [Decimal("0"),         Decimal("40000")],
-            ".15%": [Decimal("40001"),   Decimal("441450")],
-            ".20%": [Decimal("441451"),   Decimal("1000000000")]
+            "0": [Decimal("0"),         Decimal("40000")],
+            ".15": [Decimal("40001"),   Decimal("441450")],
+            ".20": [Decimal("441451"),   Decimal("1000000000")]
         },
         "MFJ": {
-            ".0%": [Decimal("0"),         Decimal("80000")],
-            ".15%": [Decimal("80001"),   Decimal("496600")],
-            ".20%": [Decimal("496601"),   Decimal("1000000000")]
+            "0": [Decimal("0"),         Decimal("80000")],
+            ".15": [Decimal("80001"),   Decimal("496600")],
+            ".20": [Decimal("496601"),   Decimal("1000000000")]
         }
     },
     "2019": {
         "single": {
-            ".0%": [Decimal("0"),         Decimal("39375")],
-            ".15%": [Decimal("39376"),   Decimal("434550")],
-            ".20%": [Decimal("434551"),   Decimal("1000000000")]
+            "0": [Decimal("0"),         Decimal("39375")],
+            ".15": [Decimal("39376"),   Decimal("434550")],
+            ".20": [Decimal("434551"),   Decimal("1000000000")]
         },
         "MFJ": {
-            ".0%": [Decimal("0"),         Decimal("78750")],
-            ".15%": [Decimal("78751"),   Decimal("488850")],
-            ".20%": [Decimal("488851"),   Decimal("1000000000")]
+            "0": [Decimal("0"),         Decimal("78750")],
+            ".15": [Decimal("78751"),   Decimal("488850")],
+            ".20": [Decimal("488851"),   Decimal("1000000000")]
         }
     },
     "2018": {
         "single": {
-            ".0%": [Decimal("0"),         Decimal("38600")],
-            ".15%": [Decimal("38601"),   Decimal("425800")],
-            ".20%": [Decimal("425801"),  Decimal("1000000000")]
+            "0": [Decimal("0"),         Decimal("38600")],
+            ".15": [Decimal("38601"),   Decimal("425800")],
+            ".20": [Decimal("425801"),  Decimal("1000000000")]
         },
         "MFJ": {
-            ".0%": [Decimal("0"),         Decimal("77200")],
-            ".15%": [Decimal("77201"),   Decimal("479000")],
-            ".20%": [Decimal("479001"),  Decimal("1000000000")]
+            "0": [Decimal("0"),         Decimal("77200")],
+            ".15": [Decimal("77201"),   Decimal("479000")],
+            ".20": [Decimal("479001"),  Decimal("1000000000")]
         }
     },
 }
