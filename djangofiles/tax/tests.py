@@ -317,3 +317,36 @@ SCHEDULE_J_OPTIMIZATION_TEST = [
         'elected': [25000, 4000],
     },
 ]
+
+class CalculationsTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_base_tax_calculations(self):
+        # Create test sets
+        for i, test in enumerate(TEST):
+            dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], 0, 0)
+
+            total_tax_results = []
+            # Base calculations
+            for tax_year in TaxYearData.objects.filter(dataset=dataset):
+                TaxCalculation(tax_year).calculate()
+                total_tax_results.append(round(tax_year.total_tax))
+
+            # Compare to expected
+            for j, (result, expected) in enumerate(zip(total_tax_results, test['outputs'])):
+                if round(result) != expected:
+                    print(f"❌ Test {i}, Year {j}: Got {result}, expected {expected}")
+
+TEST = [
+    {
+        'inputs': [
+            [2024, "single", 100000, 40000],
+            [2023, "MFJ", 20000, 100],
+            [2022, "MFJ", 2000, 50],
+            [2021, "single", 100000, 10000],
+        ],
+        'outputs': [14253, 1990, 195, 17121],
+    },
+]

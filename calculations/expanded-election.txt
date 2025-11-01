@@ -1,0 +1,12 @@
+if election, year - x receives 1/3 of election amount; x = all years less than current
+current year income = non-farm income (net of election)
+
+if all years elected
+2023 income = non farm income; passes down to prior years
+2022 income = 1/3 2023 income + non-farm income; passes down to prior years
+2021 = 1/3 2023 income + 1/3 2022 inome + non-farm income; does not pass down
+
+if 2023, 2021 elected
+2023 income = non farm income; passes to prior years
+2022 income = 1/3 2023 elected + 2022 taxable; does not pass down
+2021 income = 1/3 2023 elected + 2021 non-farm; does not pass down
