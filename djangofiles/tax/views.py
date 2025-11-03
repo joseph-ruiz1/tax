@@ -119,7 +119,6 @@ class DataSetViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='create')
     def create_step(self, request):
         serializer = self.get_serializer(data={})
-        # Consider making this structure flow into the FE form for validation purposes
         if serializer.is_valid():
             dataset = serializer.save(user=request.user)
             return Response({

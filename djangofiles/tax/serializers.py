@@ -133,14 +133,14 @@ class TaxDataSetDetailSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """
-        Validate there are only 4 year instances for data entered before other serializations.
+        Validate the years only go to 2018
         """
         current_year = 2024
+         # MIGHT BE BUGGY SINCE TESTING AS STR, DOING YEAR +1 INSTEAD OF YEAR -1
         for i, year in enumerate(data['tax_years']):
             if str(year['year']) != str(current_year):
-                # TYPE ERROR WITH YEAR
                 raise serializers.ValidationError(f"Year error. {year['year']} not valid.")
-            year += 1
+            year -= 1
 
 class CreateCalculationSerializer(serializers.ModelSerializer):
     """
@@ -164,7 +164,7 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
 
 class CalculationEntrySerializer(serializers.ModelSerializer):
     """
-    Deserialize input from form submission for TaxDataSet and 4 TaxYearDatas . Requires all information.
+    Deserialize input from form submission for TaxDataSet and TaxYearDatas. Requires all information.
     """
     tax_years = TaxYearDataDetailSerializer(many=True, required=True)
     income_worksheet = FarmIncomeWorksheetSerializer(many=False, required=False)
@@ -197,7 +197,7 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
         instance.max_elected_farm_income = validated_data.get('max_elected_farm_income', instance.max_elected_farm_income)
         instance.qualified_farm_income = validated_data.get('qualified_farm_income', instance.qualified_farm_income)
         
-        # 
+        # Saving each tax year
         for i, year_data in enumerate(years_data):
             year = year_data['year']
             tax_year = instance.tax_years.get(year=str(year))

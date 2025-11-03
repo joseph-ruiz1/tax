@@ -1,6 +1,6 @@
 from .calculations import tax_brackets
 from .models import TaxYearData, AdjustedTaxData, CalculationIteration, ScheduleJForm
-from .utils import chunker
+from .utils import chunker, create_schedulej_fields
 
 from decimal import Decimal
 
@@ -88,8 +88,95 @@ class TaxCalculation:
         self.find_total_tax()
         if save:
             self.tax_data.save()
+
+class AdjustedTaxData():
+    """
+    Represents a single tax year that has been allocated elected farm income. Separate from TaxYearData so
+    instances don't get stored to DB, but keeps the same struct for calculation consistency and ease of use.
+    Results of this calculation are internally only; API uses ScheduleJResultsContainer instead.
+    
+    Attributes:
+        Same as TaxYearStruct
+    """
+    DEFAULT_FIELDS = ['year', 'filing_status', 'taxable_income', 'qualified_income']
+
+    def __init__(self,
+                year: str,
+                filing_status: str,
+                taxable_income: Decimal = 0,
+                qualified_income: Decimal = 0,
+                ordinary_rate: Decimal = 0,
+                lower_ordinary_bound: Decimal = 0,
+                upper_ordinary_bound: Decimal = 0,
+                prior_ordinary_bracket_tax: Decimal = 0,
+                ordinary_tax: Decimal = 0,
+                qualified_tax: Decimal = 0,
+                total_tax: Decimal = 0):
+        self.year = year
+        self.filing_status = filing_status
+        self.taxable_income = taxable_income
+        self.qualified_income = qualified_income
+        self.taxable_ordinary = self.taxable_income - self.qualified_income
+        self.ordinary_rate = ordinary_rate
+        self.lower_ordinary_bound = lower_ordinary_bound
+        self.upper_ordinary_bound = upper_ordinary_bound
+        self.prior_ordinary_bracket_tax = prior_ordinary_bracket_tax
+        self.ordinary_tax = ordinary_tax
+        self.qualified_tax = qualified_tax
+        self.total_tax = total_tax
+
+    @classmethod
+    def from_model_instance(cls, model_instance, fields=None):
+        """
+        Extract key fields from TaxYearData Model instance
+
+        Args: 
+            model_instance: TaxYearData Model instance to extract from
+            fields: List of field names to extract or None for DEFAULT_FIELDS
+
+        Returns:
+            Instance of AdjustedTaxData
+        """
+        instance = cls()
+
+        if fields:
+            for field_name in fields:
+                setattr(instance, field_name, getattr(model_instance, field_name))
+        fields = [field.name for field in model_instance._meta.get_fields()]
+
+        return instance
+
+class ScheduleJForm():
+    """
+    Contains results from a single Schedule J calculation and mimics the lines on the form.
+    Instances don't get stored to DB, used in ScheduleJCalculation.
+    Internal use only; API uses ScheduleJResultsContainer instead.
+    """
+    def __init__(self):
+        """
+        Create lines for Schedule J Form
+        """
+        for n in range(1, 24):
+            setattr(self, f'line{n}', None)
+        for i in 'abc':
+            setattr(self, f'line_2{i}', None)
+
+    def __str__(self):
+        field_values = [f"{field.name}={getattr(self, field.name)}" for field in self._meta.fields]
+        return f"{self.__class__.__name__}({', '.join(field_values)})"
+
         
 class ScheduleJResultContainer:
+    """
+    Contains results from Schedule J Calculation.
+
+    Attributes:
+        schedule_j_form (ScheduleJForm): Filled out Schedule J Form
+        long_form (Boolean): All Sch J values or only key values (Default)
+        all_years (Boolean): All AdjustedTaxData or none (Default)
+        elected_farm_income (int): Amount we elected
+        elected_farm_qualified (int): Total elected made up of qualified income
+    """
     def __init__(self, schedule_j_form: ScheduleJForm,
                  adjusted_current_year: AdjustedTaxData,
                  adjusted_base1: AdjustedTaxData,
@@ -113,31 +200,50 @@ class ScheduleJResultContainer:
             "adjusted_base2": self.adjusted_base2.to_dict(),
             "adjusted_base3": self.adjusted_base3.to_dict(),
             "elected_farm_income": self.elected_farm_income,
-            "elected_farm_qualified": self.elected_farm_qualified, }
+            "elected_farm_qualified": self.elected_farm_qualified
+            }
 
 
 class ScheduleJCalculation:
+    """
+    Represents a Schedule J tax computation for a given current year as well as prior years if electing Sch J.
+    
+    Attributes:
+        current_year (TaxYearData): The  current year tax data.
+        base_years (dict[int, TaxYearData]): Mapping of base tax years (e.g., 2021-2023)
+            to their corresponding `TaxYearData` instances. Base includes three years, but can go up to 6 years.
+    """
+    
     def __init__(self, current_year: TaxYearData, base_year_1: TaxYearData, base_year_2: TaxYearData, 
                  base_year_3: TaxYearData, iteration: CalculationIteration):
         self.current_year = current_year
+        # base_years can be back to 2018
         self.base_years = {2021: base_year_1, 2022: base_year_2, 2023: base_year_3}
         self.iteration = iteration
 
     def schedule_j_calculation(self, elected_farm_income: Decimal, elected_cap_gains: Decimal) -> ScheduleJResultContainer:
         """
-        Runs calculation and returns ResultContainer object, does not directly save to DB
+        Runs a single Schedule J calculation based on the elected income values
+
+        Args:
+            elected_farm_income (Decimal): The amount of farm income elected for averaging
+            elected_cap_gains (Decimal): The amount of elected income made up of capital gains
+
+        Returns:
+            ScheduleJResultContainer: An object containing the computed Sch J results, which includes
+            total tax for each year
+        
+        Raises: TypeError: If arguments are not a Decimal 
         """
         if not isinstance(elected_farm_income, Decimal):
             raise TypeError("Not a Decimal")
         if not isinstance(elected_cap_gains, Decimal):
             raise TypeError("Not a Decimal")
 
-        # Create ScheduleJForm and AdjustedTaxData but do not save to DB yet, will be done in bulk create
-        output = ScheduleJForm(iteration=self.iteration)
-        adjusted_current_year = AdjustedTaxData.from_base(self.current_year, self.iteration, save=False)
-
-        # Create new instances for adjusted base years
-        adjusted_bases = {year: AdjustedTaxData.from_base(base, self.iteration, save=False) for year, base in self.base_years.items()}
+        # Create instances for calculations
+        output = ScheduleJForm()
+        adjusted_current_year = AdjustedTaxData.from_model_instance(self.current_year)
+        adjusted_bases = {year: AdjustedTaxData.from_model_instance(base) for year, base in self.base_years.items()}
 
         output.line_1 = self.current_year.taxable_income
         output.line_2a = elected_farm_income
@@ -241,10 +347,13 @@ class ScheduleJOptimization:
         self.elected_farm_qualified = elected_farm_qualified
         self.dataset = dataset
 
-    def optimize_sch_j(self, elected_farm_income, elected_farm_qualified):
+    def optimize_sch_j(self, elected_farm_income: Decimal, elected_farm_qualified: Decimal):
         """
         Create lists we can temporarily store objects in, then bulk create
         """
+        # for sch j calculation, we need to know the years and how elected income flows. start from highest year so we know
+        # how that income flows down. also need to know how many sch j calcualtions we're doing in total.
+
         iterations = []
         forms = []
         all_adjusted_years = []

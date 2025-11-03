@@ -84,16 +84,16 @@ def update_calculations(dataset, serializer):
 
     updated_dataset = serializer.save()
     years = updated_dataset.tax_years.all().order_by('-year')
-
+    
     # Base Calculations
     for tax_year in years:    
         TaxCalculation(tax_year).calculate()
         tax_year.save()
 
-    optimize = ScheduleJOptimization(*years, 
-                                        elected_farm_income=updated_dataset.max_elected_farm_income, 
-                                        elected_farm_qualified=updated_dataset.qualified_farm_income, 
-                                        dataset=updated_dataset)
+    optimize = ScheduleJOptimization(*years,
+                                    elected_farm_income=updated_dataset.max_elected_farm_income, 
+                                    elected_farm_qualified=updated_dataset.qualified_farm_income, 
+                                    dataset=updated_dataset)
     optimize.optimize_sch_j(updated_dataset.max_elected_farm_income, updated_dataset.qualified_farm_income)
 
     return dataset, serializer, optimize

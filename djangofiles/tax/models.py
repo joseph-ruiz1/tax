@@ -50,6 +50,12 @@ class TaxDataSet(models.Model):
         ).order_by('tax_delta').last()
         
 
+class ScheduleJOptimization(models.Model):
+    dataset = models.ForeignKey(TaxDataSet, on_delete=models.CASCADE)
+    inputs = models.JSONField(null=True, blank=True, default=dict)
+    best_result = models.JSONField(null=True, blank=True, default=dict)
+
+
 class TaxYearStructure(models.Model):
     year = models.CharField(max_length=4, choices=YEAR)
     filing_status = models.CharField(max_length=6, choices=FILING_STATUS)
