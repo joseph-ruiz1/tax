@@ -90,7 +90,7 @@ def update_calculations(dataset, serializer):
         TaxCalculation(tax_year).calculate()
         tax_year.save()
 
-    optimize = ScheduleJOptimization(*years,
+    optimize = ScheduleJOptimization(years,
                                     elected_farm_income=updated_dataset.max_elected_farm_income, 
                                     elected_farm_qualified=updated_dataset.qualified_farm_income, 
                                     dataset=updated_dataset)
