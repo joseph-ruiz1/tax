@@ -137,14 +137,15 @@ class AdjustedTaxData():
         Returns:
             Instance of AdjustedTaxData
         """
-        instance = cls()
+        if fields is None:
+            fields=cls.DEFAULT_FIELDS
 
-        if fields:
-            for field_name in fields:
-                setattr(instance, field_name, getattr(model_instance, field_name))
-        fields = [field.name for field in model_instance._meta.get_fields()]
-
-        return instance
+        kwargs = {}
+        # Read fields we want to extract to create instance with
+        for field_name in fields:
+            kwargs[field_name] = getattr(model_instance, field_name)
+        
+        return cls(**kwargs)
 
 class ScheduleJForm():
     """
@@ -162,8 +163,8 @@ class ScheduleJForm():
             setattr(self, f'line_2{i}', None)
 
     def __str__(self):
-        field_values = [f"{field.name}={getattr(self, field.name)}" for field in self._meta.fields]
-        return f"{self.__class__.__name__}({', '.join(field_values)})"
+        return f"Elected Farm Income: {self.line_2a} | Total Tax: {self.line_23}"
+
 
         
 class ScheduleJResultContainer:
@@ -172,33 +173,28 @@ class ScheduleJResultContainer:
 
     Attributes:
         schedule_j_form (ScheduleJForm): Filled out Schedule J Form
-        long_form (Boolean): All Sch J values or only key values (Default)
-        all_years (Boolean): All AdjustedTaxData or none (Default)
         elected_farm_income (int): Amount we elected
         elected_farm_qualified (int): Total elected made up of qualified income
+        long_form (Boolean): All Sch J values or only key values (Default)
+        all_years (Boolean): All AdjustedTaxData or none (Default)
     """
     def __init__(self, schedule_j_form: ScheduleJForm,
-                 adjusted_current_year: AdjustedTaxData,
-                 adjusted_base1: AdjustedTaxData,
-                 adjusted_base2: AdjustedTaxData,
-                 adjusted_base3: AdjustedTaxData,
-                 elected_farm_income: float,
-                 elected_farm_qualified: float):
+                 elected_farm_income,
+                 elected_farm_qualified,
+                 long_form=False,
+                 all_years=False
+                 ):
         self.schedule_j_form = schedule_j_form
-        self.adjusted_current = adjusted_current_year
-        self.adjusted_base1 = adjusted_base1
-        self.adjusted_base2 = adjusted_base2
-        self.adjusted_base3 = adjusted_base3
         self.elected_farm_income = elected_farm_income
         self.elected_farm_qualified = elected_farm_qualified
+        # self.adjusted_current = adjusted_current_year
+        # self.adjusted_base1 = adjusted_base1
+        # self.adjusted_base2 = adjusted_base2
+        # self.adjusted_base3 = adjusted_base3
 
     def to_dict(self):
         return {
             "schedule_j_form": self.schedule_j_form,
-            "adjusted_current": self.adjusted_current.to_dict(),
-            "adjusted_base1": self.adjusted_base1.to_dict(),
-            "adjusted_base2": self.adjusted_base2.to_dict(),
-            "adjusted_base3": self.adjusted_base3.to_dict(),
             "elected_farm_income": self.elected_farm_income,
             "elected_farm_qualified": self.elected_farm_qualified
             }
@@ -212,14 +208,17 @@ class ScheduleJCalculation:
         current_year (TaxYearData): The  current year tax data.
         base_years (dict[int, TaxYearData]): Mapping of base tax years (e.g., 2021-2023)
             to their corresponding `TaxYearData` instances. Base includes three years, but can go up to 6 years.
+
+        Takes in all years as a list, extracts the first year and sets it to current_year
     """
     
-    def __init__(self, current_year: TaxYearData, base_year_1: TaxYearData, base_year_2: TaxYearData, 
-                 base_year_3: TaxYearData, iteration: CalculationIteration):
-        self.current_year = current_year
-        # base_years can be back to 2018
-        self.base_years = {2021: base_year_1, 2022: base_year_2, 2023: base_year_3}
-        self.iteration = iteration
+    def __init__(self, years: list):
+        # Organize years
+        self.years = sorted(years, key=lambda y: y.year)
+        # Current year is last
+        self.current_year = self.years.pop(-1)
+        # Structures like {2021: 2021 instance, 2022: 2022 instance}
+        self.base_years = {y.year: y for y in self.years}
 
     def schedule_j_calculation(self, elected_farm_income: Decimal, elected_cap_gains: Decimal) -> ScheduleJResultContainer:
         """
@@ -272,9 +271,9 @@ class ScheduleJCalculation:
 
         # Distribute elected farm income to each year, calculate tax
         update_lines = {
-                2021: ['line_5', 'line_7', 'line_8'],
-                2022: ['line_9', 'line_11', 'line_12'],
-                2023: ['line_13', 'line_15', 'line_16']
+                '2021': ['line_5', 'line_7', 'line_8'],
+                '2022': ['line_9', 'line_11', 'line_12'],
+                '2023': ['line_13', 'line_15', 'line_16']
             }
 
         for year, (base_income, adjusted_income, calculate_tax) in update_lines.items():
@@ -309,9 +308,9 @@ class ScheduleJCalculation:
 
          # Get baseline tax from each year
         base_tax = {
-                2021: 'line_19',
-                2022: 'line_20',
-                2023: 'line_21',
+                '2021': 'line_19',
+                '2022': 'line_20',
+                '2023': 'line_21',
             }
 
         for year, (tax_amount) in base_tax.items():
@@ -328,12 +327,11 @@ class ScheduleJCalculation:
 
         return ScheduleJResultContainer(
             schedule_j_form=output,
-            adjusted_current_year=adjusted_current_year,
-            adjusted_base1=adjusted_bases[2021],
-            adjusted_base2=adjusted_bases[2022],
-            adjusted_base3=adjusted_bases[2023],
             elected_farm_income=elected_farm_income,
-            elected_farm_qualified=elected_qualified)
+            elected_farm_qualified=elected_qualified,
+            long_form=False,
+            all_years=False
+            )
 
 
 class ScheduleJOptimization:
