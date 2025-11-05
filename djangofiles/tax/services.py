@@ -164,6 +164,9 @@ class ScheduleJForm():
 
     def __str__(self):
         return f"Elected Farm Income: {self.line_2a} | Total Tax: {self.line_23}"
+    
+    def __repr__(self):
+        return f"Elected Farm Income: {self.line_2a} | Total Tax: {self.line_23}"
 
         
 class ScheduleJResultContainer:
@@ -334,6 +337,10 @@ class ScheduleJCalculation:
 
 
 class ScheduleJOptimization:
+    """
+    Represents a single Schedule J Optimization
+    """
+    
     def __init__(self, years, elected_farm_income: float, elected_farm_qualified: float, dataset: TaxYearData):
         self.years = sorted(years, key=lambda y: y.year)
         self.elected_farm_income = elected_farm_income
@@ -342,12 +349,18 @@ class ScheduleJOptimization:
 
     def optimize_sch_j(self, elected_farm_income: Decimal, elected_farm_qualified: Decimal):
         """
-        Create lists we can temporarily store objects in, then bulk create
+        Run Schedule J Optimization by iterating through the max elected farm income until we get to 0.
+
+        Args:
+            elected_farm_income (Decimal): The maximum amount of farm income that can be elected to average
+            elected_cap_gains (Decimal): The amount of elected income made up of capital gains
+
+        Returns:
+            results (list): All ScheduleJForm instances that were calcualted
         """
         # for sch j calculation, we need to know the years and how elected income flows. start from highest year so we know
         # how that income flows down. also need to know how many sch j calcualtions we're doing in total.
 
-        iterations = []
         forms = []
         all_adjusted_years = []
 
@@ -369,4 +382,4 @@ class ScheduleJOptimization:
             current_ordinary_elected -= 500 * ordinary_percentage
             current_qualified_elected -= 500 * qualified_percentage
             
-        return
+        return forms

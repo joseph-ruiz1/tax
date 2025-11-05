@@ -82,8 +82,7 @@ def validate_tax_years(dataset: object):
 def update_calculations(dataset, serializer):
     from .services import TaxCalculation, ScheduleJOptimization
 
-    updated_dataset = serializer.save()
-    years = updated_dataset.tax_years.all().order_by('-year')
+    years = serializer.tax_years.all().order_by('-year')
     
     # Base Calculations
     for tax_year in years:    

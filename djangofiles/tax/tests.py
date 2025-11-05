@@ -227,11 +227,10 @@ class ScheduleJOptimizationTest(TestCase):
                 for year in years:
                     TaxCalculation(year).calculate()
 
-        optimize = ScheduleJOptimization(*years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, dataset=dataset)
-        optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+        optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, dataset=dataset)
+        results = optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+        print(results)
         
-        results = ScheduleJForm.objects.filter(iteration__dataset=dataset).values_list("line_23", flat=True)
-        print(dataset.return_optimal_amount())
         
 class TaxDataSetSerializerTests(APITestCase):
     def setUp(self):

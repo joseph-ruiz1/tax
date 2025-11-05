@@ -125,6 +125,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
                 'success': True,
                 'dataset_id': dataset.id
             }, status=status.HTTP_201_CREATED)
+        
         return Response({
             'success': False,
             'message': 'Dataset Creation failed',
@@ -137,13 +138,12 @@ class DataSetViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
 
         if serializer.is_valid():
-            update_calculations(dataset, serializer)
+            serializer.save()
             return Response({
                     'success': True,
-                    'message': 'Patched Successfully',
+                    'message': 'Data saved successfully',
                     'dataset': serializer.data,
-                })
-                
+                })    
         return Response({
             'success': False,
             'errors': serializer.errors,
@@ -152,7 +152,11 @@ class DataSetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='results')
     def results_get(self, request, pk=None):
         dataset = self.get_object()
-        serializer = self.get_serializer(dataset)
+
+        results = update_calculations(dataset, serializer.data)
+
+        serializer = self.get_serializer(dataset, context={'results': results})
+     
         return Response({
             'success': True,
             'message': 'Get Successful',

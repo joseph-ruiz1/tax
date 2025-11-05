@@ -241,6 +241,8 @@ class OutputSerializer(serializers.ModelSerializer):
         """
         Results of calculations. Previously computed upon patch. Manually extract iterations since inside method.
         """
+
+    
         iterations_instances = instance.iterations.all()
         iterations = CalculationIterationSerializer(iterations_instances, many=True).data
         best_instance = instance.return_optimal_amount()
