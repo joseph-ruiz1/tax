@@ -169,12 +169,14 @@ class DataSetViewSet(viewsets.ModelViewSet):
     def results_patch(self, request, pk=None):
         # Can refactor this into a single result method with separate actions for self.method = get/post
         dataset = self.get_object()
-        update_serializer = self.get_serializer(dataset, data=request.data, partial=True)
-        if update_serializer.is_valid():
-            # Remove previous calculations before returning results
-            CalculationIteration.objects.filter(dataset=dataset).delete()
-            update_calculations(dataset)
-            results_serializer = OutputSerializer(dataset)
+        serializer = self.get_serializer(dataset, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+           
+           
+            results = update_calculations(dataset)
+            results_serializer = OutputSerializer(dataset, context={'results': results})
+            print(results_serializer.data['inputs'])
             return Response({
                 'success': True,
                 'message': 'Patch successful',

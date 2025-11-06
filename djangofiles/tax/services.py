@@ -178,6 +178,9 @@ class ScheduleJResultContainer:
         elected_farm_qualified (int): Total elected made up of qualified income
         long_form (Boolean): All Sch J values or only key values (Default)
         all_years (Boolean): All AdjustedTaxData or none (Default)
+
+    Notes: Eventually I should expand this where the object can take an arg to show all lines of the form
+    and the computation results for each year. Will help when extending calculations later.
     """
     def __init__(self, schedule_j_form: ScheduleJForm,
                  elected_farm_income,

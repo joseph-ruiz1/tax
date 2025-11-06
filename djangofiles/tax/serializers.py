@@ -72,7 +72,8 @@ class TaxYearDataDetailSerializer(serializers.ModelSerializer):
 
 class SchJFormSerializer(serializers.Serializer):
     """
-    Show total tax and the associated elected farm incomes
+    Show total tax and the associated elected farm incomes. 
+    Eventually I should build where all Sch J lines can be serialized. Maybe have an arg for it
     """
     line_23 = serializers.DecimalField(max_digits=12, decimal_places=2)
     line_2a = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
@@ -215,7 +216,7 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
 
 class OutputSerializer(serializers.ModelSerializer):
     """
-    Prepare get request data for output page
+    Prepare our inputs and outputs for results page
     """
     tax_years = TaxYearDataDetailSerializer(many=True, required=True)
     income_worksheet = FarmIncomeWorksheetSerializer(many=False, allow_null=True, required=False)
@@ -228,7 +229,7 @@ class OutputSerializer(serializers.ModelSerializer):
 
     def get_inputs(self, instance):
         """
-        Form for front end to patch
+        Form for our general info, years, and income worksheet
         """
         validate_tax_years(instance)
         return {
@@ -241,19 +242,12 @@ class OutputSerializer(serializers.ModelSerializer):
     
     def get_outputs(self, instance):
         """
-        Results of calculations. Previously computed upon patch. Manually extract iterations since inside method.
+        Results of calculations. Schedule J Form serialized in its own serializer.
+        This serializer not very robust right now, but will keep for future expansion (like showing optimal results).
         """
         results = self.context.get('results')
-        print(results)
         iterations = SchJFormSerializer(results, many=True).data
-        print(iterations)
-        # best_instance = instance.return_optimal_amount()
-        # best = SchJFormSerializer(best_instance).data
-        # best_delta_instance = instance.return_best_tax_delta()
-        # best_delta = SchJFormSerializer(best_delta_instance).data
     
         return {
             'results': iterations,
-            # 'best': best,
-            # 'best_delta': best_delta
         }

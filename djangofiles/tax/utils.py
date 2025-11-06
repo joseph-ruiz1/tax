@@ -87,7 +87,6 @@ def update_calculations(dataset):
         dataset (TaxDataSet): Years get extracted in function
     
     Returns:
-        dataset (TaxDataSet): No updates made to dataset or models
         optimize (ScheduleJOptimization): Schedule J optimization results
     """
     from .services import TaxCalculation, ScheduleJOptimization
