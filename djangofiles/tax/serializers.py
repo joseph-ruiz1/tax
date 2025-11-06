@@ -70,13 +70,15 @@ class TaxYearDataDetailSerializer(serializers.ModelSerializer):
         model = TaxYearData
         fields = ["id", "year", "filing_status", "taxable_income", "qualified_income"]
 
-class SchJFormSerializer(serializers.ModelSerializer):
+class SchJFormSerializer(serializers.Serializer):
     """
     Show total tax and the associated elected farm incomes
     """
-    class Meta:
-        model = ScheduleJForm
-        fields = ["line_23", 'line_2a', 'line_2b', 'tax_delta']
+    line_23 = serializers.DecimalField(max_digits=12, decimal_places=2)
+    line_2a = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
+    line_2b = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
+    tax_delta = serializers.DecimalField(max_digits=12, decimal_places=2)
+    
 
 class CalculationIterationSerializer(serializers.ModelSerializer):
     """
@@ -241,16 +243,17 @@ class OutputSerializer(serializers.ModelSerializer):
         """
         Results of calculations. Previously computed upon patch. Manually extract iterations since inside method.
         """
-
+        results = self.context.get('results')
+        print(results)
+        iterations = SchJFormSerializer(results, many=True).data
+        print(iterations)
+        # best_instance = instance.return_optimal_amount()
+        # best = SchJFormSerializer(best_instance).data
+        # best_delta_instance = instance.return_best_tax_delta()
+        # best_delta = SchJFormSerializer(best_delta_instance).data
     
-        iterations_instances = instance.iterations.all()
-        iterations = CalculationIterationSerializer(iterations_instances, many=True).data
-        best_instance = instance.return_optimal_amount()
-        best = SchJFormSerializer(best_instance).data
-        best_delta_instance = instance.return_best_tax_delta()
-        best_delta = SchJFormSerializer(best_delta_instance).data
         return {
             'results': iterations,
-            'best': best,
-            'best_delta': best_delta
+            # 'best': best,
+            # 'best_delta': best_delta
         }

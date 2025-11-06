@@ -268,10 +268,10 @@ const deltaChartOptions = ref({
 const updateChartData = () => {
   if (!outputs.value) return
 
-  const sch_j_total = outputs.value.results.map(result => parseFloat(result.form.line_23))
-  const tax_delta = outputs.value.results.map(result => parseFloat(result.form.tax_delta))
-  const elected = outputs.value.results.map(result => parseFloat(result.form.line_2a))
-  const qualified_elected = outputs.value.results.map(result => parseFloat(result.form.line_2b))
+  const sch_j_total = outputs.value.results.map(result => parseFloat(result.line_23))
+  const tax_delta = outputs.value.results.map(result => parseFloat(result.tax_delta))
+  const elected = outputs.value.results.map(result => parseFloat(result.line_2a))
+  const qualified_elected = outputs.value.results.map(result => parseFloat(result.line_2b))
 
   chartOptions.value = {
     ...chartOptions.value,

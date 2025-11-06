@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+import pickle
 from .services import CalculationIteration
 from .models import TaxDataSet
 from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer, UserRegistrationSerializer
@@ -153,7 +154,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
     def results_get(self, request, pk=None):
         dataset = self.get_object()
 
-        results = update_calculations(dataset, serializer.data)
+        results = update_calculations(dataset)
 
         serializer = self.get_serializer(dataset, context={'results': results})
      
@@ -172,7 +173,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
         if update_serializer.is_valid():
             # Remove previous calculations before returning results
             CalculationIteration.objects.filter(dataset=dataset).delete()
-            update_calculations(dataset, update_serializer)
+            update_calculations(dataset)
             results_serializer = OutputSerializer(dataset)
             return Response({
                 'success': True,

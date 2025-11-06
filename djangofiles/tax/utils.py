@@ -79,10 +79,20 @@ def validate_tax_years(dataset: object):
 
 
 
-def update_calculations(dataset, serializer):
+def update_calculations(dataset):
+    """
+    Helper function to run Schedule J optimization
+
+    Arguments:
+        dataset (TaxDataSet): Years get extracted in function
+    
+    Returns:
+        dataset (TaxDataSet): No updates made to dataset or models
+        optimize (ScheduleJOptimization): Schedule J optimization results
+    """
     from .services import TaxCalculation, ScheduleJOptimization
 
-    years = serializer.tax_years.all().order_by('-year')
+    years = dataset.tax_years.all().order_by('-year')
     
     # Base Calculations
     for tax_year in years:    
@@ -90,9 +100,8 @@ def update_calculations(dataset, serializer):
         tax_year.save()
 
     optimize = ScheduleJOptimization(years,
-                                    elected_farm_income=updated_dataset.max_elected_farm_income, 
-                                    elected_farm_qualified=updated_dataset.qualified_farm_income, 
-                                    dataset=updated_dataset)
-    optimize.optimize_sch_j(updated_dataset.max_elected_farm_income, updated_dataset.qualified_farm_income)
-
-    return dataset, serializer, optimize
+                                    elected_farm_income=dataset.max_elected_farm_income, 
+                                    elected_farm_qualified=dataset.qualified_farm_income, 
+                                    dataset=dataset
+                                    ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+    return optimize

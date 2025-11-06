@@ -1,6 +1,5 @@
 from .calculations import tax_brackets
 from .models import TaxYearData, AdjustedTaxData, CalculationIteration, ScheduleJForm
-from .utils import chunker, create_schedulej_fields
 
 from decimal import Decimal
 
@@ -356,7 +355,7 @@ class ScheduleJOptimization:
             elected_cap_gains (Decimal): The amount of elected income made up of capital gains
 
         Returns:
-            results (list): All ScheduleJForm instances that were calcualted
+            results (list): A list of all ScheduleJForm objects that were calcualted
         """
         # for sch j calculation, we need to know the years and how elected income flows. start from highest year so we know
         # how that income flows down. also need to know how many sch j calcualtions we're doing in total.
