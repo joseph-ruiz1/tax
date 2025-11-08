@@ -8,13 +8,14 @@ from .utils import build_taxyear_formset_data, chunker
 from .serializers import  OutputSerializer
 from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, ScheduleJIncomeAllocator
 
+# HELPER FUNCTIONS
 def create_taxdataset(user, elected, elected_qualified):
     return TaxDataSet.objects.create(user=user, max_elected_farm_income=elected, qualified_farm_income=elected_qualified)
-
 
 def create_taxyeardata(year, filing_status, taxable_income, qualified_income, dataset):
     return TaxYearData.objects.create(year=year, filing_status=filing_status, taxable_income=taxable_income, \
                                   qualified_income=qualified_income, dataset=dataset)
+
 
 def create_dataset_with_tax_years(user, tax_year_inputs: tuple, elected, elected_qualified):
     dataset = create_taxdataset(user, elected, elected_qualified)
@@ -39,7 +40,87 @@ def create_test_user(username, password):
 def create_several_test_users(username, password):
     return User.objects.create_user(username=username, password=password)
 
+def create_tax_year_data_list(test_cases, user, save=True):
+    """
+    Creates TaxDataSet instances for each test case. Creates TaxYearData instances for each case and attaches dataset.
+    
+    Example input:
+        SCHEDULE_J_ALLOCATION_TEST = [
+            {'inputs': [
+                dict(year=2024, filing_status='MFJ', taxable_income=120000, qualified_income=105000,
+                     is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
+                dict(year=2023, filing_status='MFJ', taxable_income=85000, qualified_income=70000,
+                     is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
+            ],
+            'outputs': [143, 2812],
+            'dataset': dict(name='test', max_elected_farm_income=10000, qualified=0)
+        ]
+    
+    Also supports compact list style:
+        [
+            [2024, 'MFJ', 120000, 105000, True, 10000, 0],
+            ...
+        ]
 
+    Args:
+        test_cases (list): list of dicts or lists describing TaxYearData.
+        save (bool): whether to save the instances to the database (default True).
+    
+    Returns:
+        list[TaxYearData]: list of created instances.
+        Example:
+            [{'inputs': [TaxYearDatas], 'outputs': [], 'dataset': {dataset inputs}, 'dataset_instance': TaxDataSet}]
+    """
+
+    processed_cases = []
+    for i, case in enumerate(test_cases, start=1):
+        # --- create dataset ---
+        dataset_info = case.get("dataset", {})
+        dataset_name = dataset_info.get("name", f"Test Dataset {i}")
+        dataset_fields = dataset_info.copy()
+        dataset_fields["name"] = dataset_name  # ensure name is included
+
+        dataset = TaxDataSet(**dataset_fields, user=user)
+        if save:
+            dataset.save()
+
+     # --- create TaxYearData instances linked to dataset ---
+        raw_inputs = case.get("inputs", [])
+        instances = []
+
+        for entry in raw_inputs:
+            if isinstance(entry, dict):
+                obj = TaxYearData(dataset=dataset, **entry)
+            elif isinstance(entry, (list, tuple)):
+                if len(entry) != 7:
+                    raise ValueError(f"Expected 7 values per list, got {len(entry)} → {entry}")
+                year, filing_status, taxable_income, qualified_income, is_electing, elected_farm_income, qualified_farm_income = entry
+                obj = TaxYearData(
+                    dataset=dataset,
+                    year=year,
+                    filing_status=filing_status,
+                    taxable_income=taxable_income,
+                    qualified_income=qualified_income,
+                    is_electing=bool(is_electing),
+                    elected_farm_income=elected_farm_income,
+                    qualified_farm_income=qualified_farm_income,
+                )
+            else:
+                raise TypeError(f"Expected dict or list, got {type(entry)}")
+
+            if save:
+                obj.save()
+            instances.append(obj)
+
+        case_copy = case.copy()
+        case_copy["dataset_instance"] = dataset
+        case_copy["inputs"] = instances
+        processed_cases.append(case_copy)
+
+    return processed_cases
+
+
+# TESTS
 class TestUserModel(TestCase):
     def test_create_single_user(self):
         """
@@ -269,14 +350,13 @@ class ElectedIncomeDistributionTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_serializer_outputs(self):
-        for i, test in enumerate(SCHEDULE_J_OPTIMIZATION_TEST):
-                max_elected, max_qualified_elected = test["elected"]
-                dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, max_qualified_elected)
-                dataset.refresh_from_db()
+        test_years = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
 
-                years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
-                results = ScheduleJIncomeAllocator(dataset).allocate_all_years(years)
-                print(results)
+        # Get the dataset instance
+        dataset = test_years[0]['dataset_instance']
+        # List instead of queryset
+        years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
+        results = ScheduleJIncomeAllocator(dataset).allocate_all_years(years)
 
            
 CREDENTIALS = [
@@ -332,16 +412,31 @@ SCHEDULE_J_TEST_CASES = [
 SCHEDULE_J_OPTIMIZATION_TEST = [
     {
         'inputs': [
-            [2024, "MFJ", 120000, 105000, 0, 0, 0],
-            [2023, "MFJ", 85000, 70000, True, 10000, 1000],
+            [2024, "MFJ", 120000, 105000, True, 10000, 0],
+            [2023, "MFJ", 85000, 70000, True, 20000, 1000],
             [2022, "single", 55000, 40000, 0, 0, 0],
             [2021, "MFJ", 96000, 45000, 0, 0, 0],
+            [2020, "MFJ", 10000, 450, 0, 0, 0],
         ],
         'outputs': [143, 2812, 5683, 10092],
         'elected': [25000, 4000],
     },
 ]
 
+SCHEDULE_J_ALLOCATION_TEST = [
+    {
+        'inputs': [
+            dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
+            dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
+            dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+            dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+            dict(year=2020, filing_status="MFJ", taxable_income=10000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+        ],
+        'outputs': [],
+        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0)
+    },
+]
+    
 class CalculationsTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")

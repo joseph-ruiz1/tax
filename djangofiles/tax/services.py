@@ -210,9 +210,11 @@ class ScheduleJIncomeAllocator:
         """
         Distributes qualified income across all years
         """
+        print(years)
         for year in years:
             if year.is_electing:
                 self.allocate_income(election_year=year, other_years=years, elected_income=year.elected_farm_income, elected_qualified_income=year.qualified_farm_income)
+        return years
 
     def allocate_income(self, election_year, other_years, elected_income, elected_qualified_income):
         """
@@ -233,7 +235,10 @@ class ScheduleJIncomeAllocator:
 
         amount_to_distribute = elected_income / 3
         amount_to_distribute_qualified = elected_qualified_income / 3
-        three_prior_years = other_years.pop(-3)
+
+        # Distribute to only the prior 3 years
+        three_prior_years = list(other_years)[-3:]
+
         for year in three_prior_years:
             year.taxable_income += amount_to_distribute
             year.qualified_income += amount_to_distribute_qualified
