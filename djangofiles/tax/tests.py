@@ -3,10 +3,10 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 
 
-from .models import TaxYearData, TaxDataSet, User, CalculationIteration, AdjustedTaxData, ScheduleJForm
+from .models import TaxYearData, TaxDataSet, User
 from .utils import build_taxyear_formset_data, chunker
-from .serializers import TaxDataSetDetailSerializer, TaxYearDataDetailSerializer, OutputSerializer
-from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization
+from .serializers import  OutputSerializer
+from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, ScheduleJIncomeAllocator
 
 def create_taxdataset(user, elected, elected_qualified):
     return TaxDataSet.objects.create(user=user, max_elected_farm_income=elected, qualified_farm_income=elected_qualified)
@@ -19,14 +19,17 @@ def create_taxyeardata(year, filing_status, taxable_income, qualified_income, da
 def create_dataset_with_tax_years(user, tax_year_inputs: tuple, elected, elected_qualified):
     dataset = create_taxdataset(user, elected, elected_qualified)
     for tax_year in tax_year_inputs:
-        year, filing_status, taxable_income, qualified_income = tax_year
+        year, filing_status, taxable_income, qualified_income, is_electing, elected_farm_income, qualified_farm_income = tax_year
 
         TaxYearData.objects.create(
             dataset=dataset,
             year=year,
             filing_status=filing_status,
             taxable_income=taxable_income,
-            qualified_income=qualified_income
+            qualified_income=qualified_income,
+            is_electing=is_electing,
+            elected_farm_income=elected_farm_income,
+            qualified_farm_income=qualified_farm_income
         )
     return dataset
 
@@ -232,7 +235,10 @@ class ScheduleJOptimizationTest(TestCase):
         print(results)
         
         
-class TaxDataSetSerializerTests(APITestCase):
+class TaxDataSetSerializerTest(APITestCase):
+    """
+    updated for on demand calculations
+    """
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
@@ -252,7 +258,26 @@ class TaxDataSetSerializerTests(APITestCase):
         optimize = ScheduleJOptimization(*years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, dataset=dataset)
         optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
 
-        data = OutputSerializer(dataset).data        
+        data = OutputSerializer(dataset).data
+
+class ElectedIncomeDistributionTest(TestCase):
+    """
+    Test to make sure elected income is being distributed properly
+    """
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_serializer_outputs(self):
+        for i, test in enumerate(SCHEDULE_J_OPTIMIZATION_TEST):
+                max_elected, max_qualified_elected = test["elected"]
+                dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, max_qualified_elected)
+                dataset.refresh_from_db()
+
+                years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
+                results = ScheduleJIncomeAllocator(dataset).allocate_all_years(years)
+                print(results)
+
            
 CREDENTIALS = [
             ('test1', 'testing123'), 
@@ -307,10 +332,10 @@ SCHEDULE_J_TEST_CASES = [
 SCHEDULE_J_OPTIMIZATION_TEST = [
     {
         'inputs': [
-            [2024, "MFJ", 120000, 105000],
-            [2023, "MFJ", 85000, 70000],
-            [2022, "single", 55000, 40000],
-            [2021, "MFJ", 96000, 45000],
+            [2024, "MFJ", 120000, 105000, 0, 0, 0],
+            [2023, "MFJ", 85000, 70000, True, 10000, 1000],
+            [2022, "single", 55000, 40000, 0, 0, 0],
+            [2021, "MFJ", 96000, 45000, 0, 0, 0],
         ],
         'outputs': [143, 2812, 5683, 10092],
         'elected': [25000, 4000],

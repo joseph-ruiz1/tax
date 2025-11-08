@@ -166,7 +166,7 @@ class ScheduleJForm():
     
     def __repr__(self):
         return f"Elected Farm Income: {self.line_2a} | Total Tax: {self.line_23}"
-
+    
         
 class ScheduleJResultContainer:
     """
@@ -176,8 +176,8 @@ class ScheduleJResultContainer:
         schedule_j_form (ScheduleJForm): Filled out Schedule J Form
         elected_farm_income (int): Amount we elected
         elected_farm_qualified (int): Total elected made up of qualified income
-        long_form (Boolean): All Sch J values or only key values (Default)
-        all_years (Boolean): All AdjustedTaxData or none (Default)
+        long_form (boolean): All Sch J values or only key values (Default)
+        all_years (boolean): All AdjustedTaxData or none (Default)
 
     Notes: Eventually I should expand this where the object can take an arg to show all lines of the form
     and the computation results for each year. Will help when extending calculations later.
@@ -191,10 +191,6 @@ class ScheduleJResultContainer:
         self.schedule_j_form = schedule_j_form
         self.elected_farm_income = elected_farm_income
         self.elected_farm_qualified = elected_farm_qualified
-        # self.adjusted_current = adjusted_current_year
-        # self.adjusted_base1 = adjusted_base1
-        # self.adjusted_base2 = adjusted_base2
-        # self.adjusted_base3 = adjusted_base3
 
     def to_dict(self):
         return {
@@ -203,6 +199,47 @@ class ScheduleJResultContainer:
             "elected_farm_qualified": self.elected_farm_qualified
             }
 
+class ScheduleJIncomeAllocator:
+    """
+    Helps distribute income across all years depending on if income was elected
+    """
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def allocate_all_years(self, years):
+        """
+        Distributes qualified income across all years
+        """
+        for year in years:
+            if year.is_electing:
+                self.allocate_income(election_year=year, other_years=years, elected_income=year.elected_farm_income, elected_qualified_income=year.qualified_farm_income)
+
+    def allocate_income(self, election_year, other_years, elected_income, elected_qualified_income):
+        """
+        Takes single election year and distributes 1/3 of farm income to 3 previous years
+
+        Arguments:
+            election_year (TaxYearData): Year that is electing and distributing income
+            other_years (list): List of all TaxYearDatas in dataset
+            elected_income (int)
+            elected_qualified_income (int)
+
+        Returns:
+            election_year (TaxYearData): Mutated year - taxable and qualified updated to subtract elected income.
+            three_prior_years (list): The three tax years that received elected income. Taxable and qualified updated
+        """
+        election_year.taxable_income -= elected_income
+        election_year.qualified_income -= elected_qualified_income
+
+        amount_to_distribute = elected_income / 3
+        amount_to_distribute_qualified = elected_qualified_income / 3
+        three_prior_years = other_years.pop(-3)
+        for year in three_prior_years:
+            year.taxable_income += amount_to_distribute
+            year.qualified_income += amount_to_distribute_qualified
+
+        return election_year, three_prior_years
+    
 
 class ScheduleJCalculation:
     """
@@ -211,7 +248,7 @@ class ScheduleJCalculation:
     Attributes:
         current_year (TaxYearData): The  current year tax data.
         base_years (dict[int, TaxYearData]): Mapping of base tax years (e.g., 2021-2023)
-            to their corresponding `TaxYearData` instances. Base includes three years, but can go up to 6 years.
+            to their corresponding TaxYearData instances. Base includes three years, but can go up to 6 years.
 
         Takes in all years as a list, extracts the first year and sets it to current_year
     """

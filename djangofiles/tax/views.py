@@ -173,7 +173,6 @@ class DataSetViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             serializer.save()
            
-           
             results = update_calculations(dataset)
             results_serializer = OutputSerializer(dataset, context={'results': results})
             print(results_serializer.data['inputs'])

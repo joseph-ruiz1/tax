@@ -62,6 +62,9 @@ class TaxYearStructure(models.Model):
     taxable_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
     qualified_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
     taxable_ordinary = models.DecimalField(decimal_places=2, max_digits=11, editable=False)
+    is_electing = models.BooleanField(default=False)
+    elected_farm_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
+    qualified_farm_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
 
     ordinary_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     lower_ordinary_bound = models.DecimalField(max_digits=12, decimal_places=2, default=0)
