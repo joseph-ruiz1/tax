@@ -208,12 +208,19 @@ class ScheduleJIncomeAllocator:
 
     def allocate_all_years(self, years):
         """
-        Distributes qualified income across all years
+        Distributes qualified income across all years.
+
+        Arguments:
+            years (list): List of all TaxYearDatas in dataset
         """
-        print(years)
-        for year in years:
+        for i, year in enumerate(years):
             if year.is_electing:
-                self.allocate_income(election_year=year, other_years=years, elected_income=year.elected_farm_income, elected_qualified_income=year.qualified_farm_income)
+                # Everything after current year
+                remaining_years = years[i+1:]
+                self.allocate_income(election_year=year,
+                                    other_years=remaining_years,
+                                    elected_income=year.elected_farm_income,
+                                    elected_qualified_income=year.qualified_farm_income)
         return years
 
     def allocate_income(self, election_year, other_years, elected_income, elected_qualified_income):
@@ -222,13 +229,15 @@ class ScheduleJIncomeAllocator:
 
         Arguments:
             election_year (TaxYearData): Year that is electing and distributing income
-            other_years (list): List of all TaxYearDatas in dataset
+            other_years (list): All years prior to previous year
             elected_income (int)
             elected_qualified_income (int)
 
         Returns:
             election_year (TaxYearData): Mutated year - taxable and qualified updated to subtract elected income.
             three_prior_years (list): The three tax years that received elected income. Taxable and qualified updated
+            
+            Think about how we can go about mutating the Adjusted Tax Years in function
         """
         election_year.taxable_income -= elected_income
         election_year.qualified_income -= elected_qualified_income
@@ -237,7 +246,7 @@ class ScheduleJIncomeAllocator:
         amount_to_distribute_qualified = elected_qualified_income / 3
 
         # Distribute to only the prior 3 years
-        three_prior_years = list(other_years)[-3:]
+        three_prior_years = list(other_years)[:3]
 
         for year in three_prior_years:
             year.taxable_income += amount_to_distribute

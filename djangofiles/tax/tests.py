@@ -357,8 +357,7 @@ class ElectedIncomeDistributionTest(TestCase):
         # List instead of queryset
         years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
         results = ScheduleJIncomeAllocator(dataset).allocate_all_years(years)
-
-           
+        print(results)           
 CREDENTIALS = [
             ('test1', 'testing123'), 
             ('test2', 'testing321'), 
@@ -431,6 +430,7 @@ SCHEDULE_J_ALLOCATION_TEST = [
             dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
             dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
             dict(year=2020, filing_status="MFJ", taxable_income=10000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+            dict(year=2019, filing_status="MFJ", taxable_income=50000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
         ],
         'outputs': [],
         'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0)
