@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from .models import TaxYearData, TaxDataSet, User
 from .utils import build_taxyear_formset_data, chunker
 from .serializers import  OutputSerializer
-from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, ScheduleJIncomeAllocator
+from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, allocate_all_years
 
 # HELPER FUNCTIONS
 def create_taxdataset(user, elected, elected_qualified):
@@ -356,8 +356,10 @@ class ElectedIncomeDistributionTest(TestCase):
         dataset = test_years[0]['dataset_instance']
         # List instead of queryset
         years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
-        results = ScheduleJIncomeAllocator(dataset).allocate_all_years(years)
+        results = allocate_all_years(years)
         print(results)           
+
+
 CREDENTIALS = [
             ('test1', 'testing123'), 
             ('test2', 'testing321'), 

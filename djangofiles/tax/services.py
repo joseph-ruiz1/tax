@@ -199,61 +199,58 @@ class ScheduleJResultContainer:
             "elected_farm_qualified": self.elected_farm_qualified
             }
 
-class ScheduleJIncomeAllocator:
+def allocate_all_years(years):
     """
-    Helps distribute income across all years depending on if income was elected
+    Distributes qualified income across all years.
+
+    Args:
+        years (list): List of all TaxYearDatas in dataset
+
+    Returns:
+        years(list): Objects are directly mutated
     """
-    def __init__(self, dataset):
-        self.dataset = dataset
+    for i, year in enumerate(years):
+        if year.is_electing:
+            remaining_years = years[i + 1:]
+            allocate_income(
+                election_year=year,
+                other_years=remaining_years,
+                elected_income=year.elected_farm_income,
+                elected_qualified_income=year.qualified_farm_income,
+            )
+    return years
 
-    def allocate_all_years(self, years):
-        """
-        Distributes qualified income across all years.
+def allocate_income(election_year, other_years, elected_income, elected_qualified_income):
+    """
+    Takes single election year and distributes 1/3 of farm income to 3 previous years
 
-        Arguments:
-            years (list): List of all TaxYearDatas in dataset
-        """
-        for i, year in enumerate(years):
-            if year.is_electing:
-                # Everything after current year
-                remaining_years = years[i+1:]
-                self.allocate_income(election_year=year,
-                                    other_years=remaining_years,
-                                    elected_income=year.elected_farm_income,
-                                    elected_qualified_income=year.qualified_farm_income)
-        return years
+    Arguments:
+        election_year (TaxYearData): Year that is electing and distributing income
+        other_years (list): All years prior to previous year
+        elected_income (int)
+        elected_qualified_income (int)
 
-    def allocate_income(self, election_year, other_years, elected_income, elected_qualified_income):
-        """
-        Takes single election year and distributes 1/3 of farm income to 3 previous years
+    Returns:
+        election_year (TaxYearData): Mutated year - taxable and qualified updated to subtract elected income.
+        three_prior_years (list): The three tax years that received elected income. Taxable and qualified updated
 
-        Arguments:
-            election_year (TaxYearData): Year that is electing and distributing income
-            other_years (list): All years prior to previous year
-            elected_income (int)
-            elected_qualified_income (int)
+        Think about how we can go about mutating the Adjusted Tax Years in function
+    """
+    election_year.taxable_income -= elected_income
+    election_year.qualified_income -= elected_qualified_income
 
-        Returns:
-            election_year (TaxYearData): Mutated year - taxable and qualified updated to subtract elected income.
-            three_prior_years (list): The three tax years that received elected income. Taxable and qualified updated
-            
-            Think about how we can go about mutating the Adjusted Tax Years in function
-        """
-        election_year.taxable_income -= elected_income
-        election_year.qualified_income -= elected_qualified_income
+    amount_to_distribute = elected_income / 3
+    amount_to_distribute_qualified = elected_qualified_income / 3
 
-        amount_to_distribute = elected_income / 3
-        amount_to_distribute_qualified = elected_qualified_income / 3
+    # Distribute to only the prior 3 years
+    three_prior_years = list(other_years)[:3]
 
-        # Distribute to only the prior 3 years
-        three_prior_years = list(other_years)[:3]
+    for year in three_prior_years:
+        year.taxable_income += amount_to_distribute
+        year.qualified_income += amount_to_distribute_qualified
 
-        for year in three_prior_years:
-            year.taxable_income += amount_to_distribute
-            year.qualified_income += amount_to_distribute_qualified
+    return election_year, three_prior_years
 
-        return election_year, three_prior_years
-    
 
 class ScheduleJCalculation:
     """
@@ -304,21 +301,23 @@ class ScheduleJCalculation:
         output.line_2b = elected_cap_gains
         output.line_3 = output.line_1 - output.line_2a
 
-        # Intitialize elected farm income amounts and find 1/3 of each
-        total_elected =  output.line_2a
-        elected_qualified = output.line_2b
-        elected_ordinary =  total_elected - elected_qualified
-        distribute_total_elected = total_elected / 3
-        distribute_farm_ordinary = elected_ordinary / 3
-        distribute_farm_qualified = elected_qualified / 3
+        # # Intitialize elected farm income amounts and find 1/3 of each
+        # total_elected =  output.line_2a
+        # elected_qualified = output.line_2b
+        # elected_ordinary =  total_elected - elected_qualified
+        # distribute_total_elected = total_elected / 3
+        # distribute_farm_ordinary = elected_ordinary / 3
+        # distribute_farm_qualified = elected_qualified / 3
 
-        output.line_6 = distribute_total_elected
-        output.line_10 = distribute_total_elected
-        output.line_14 = distribute_total_elected
-        # Copy 2024 numbers from baseline and decrease incomes by elected amounts
-        adjusted_current_year.taxable_income = self.current_year.taxable_income - total_elected
-        adjusted_current_year.qualified_income = self.current_year.qualified_income - elected_qualified
-        adjusted_current_year.taxable_ordinary = self.current_year.taxable_ordinary - elected_ordinary
+        # output.line_6 = distribute_total_elected
+        # output.line_10 = distribute_total_elected
+        # output.line_14 = distribute_total_elected
+        # # Copy 2024 numbers from baseline and decrease incomes by elected amounts
+        # adjusted_current_year.taxable_income = self.current_year.taxable_income - total_elected
+        # adjusted_current_year.qualified_income = self.current_year.qualified_income - elected_qualified
+        # adjusted_current_year.taxable_ordinary = self.current_year.taxable_ordinary - elected_ordinary
+
+        ScheduleJIncomeAllocator()
 
         # Find tax on 2024 taxable less elected farm income
         TaxCalculation(adjusted_current_year).calculate(save=False)
