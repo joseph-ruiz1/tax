@@ -97,7 +97,13 @@ class AdjustedTaxData():
     Attributes:
         Same as TaxYearStruct
     """
-    DEFAULT_FIELDS = ['year', 'filing_status', 'taxable_income', 'qualified_income']
+    DEFAULT_FIELDS = ['year', 
+                      'filing_status', 
+                      'taxable_income', 
+                      'qualified_income', 
+                      'is_electing', 
+                      'elected_farm_income', 
+                      'qualified_farm_income']
 
     def __init__(self,
                 year: str,
@@ -110,7 +116,10 @@ class AdjustedTaxData():
                 prior_ordinary_bracket_tax: Decimal = 0,
                 ordinary_tax: Decimal = 0,
                 qualified_tax: Decimal = 0,
-                total_tax: Decimal = 0):
+                total_tax: Decimal = 0,
+                is_electing: bool = False,
+                elected_farm_income: Decimal = 0,
+                qualified_farm_income: Decimal = 0,):
         self.year = year
         self.filing_status = filing_status
         self.taxable_income = taxable_income
@@ -123,11 +132,14 @@ class AdjustedTaxData():
         self.ordinary_tax = ordinary_tax
         self.qualified_tax = qualified_tax
         self.total_tax = total_tax
+        self.is_electing = is_electing
+        self.elected_farm_income = elected_farm_income
+        self.qualified_farm_income = qualified_farm_income
 
     @classmethod
     def from_model_instance(cls, model_instance, fields=None):
         """
-        Extract key fields from TaxYearData Model instance
+        Extract/copy key fields from TaxYearData Model instance to create the adjusted tax year
 
         Args: 
             model_instance: TaxYearData Model instance to extract from
@@ -251,26 +263,29 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
 
     return election_year, three_prior_years
 
+def find_taxable(years):
+    """
+    Calculates the taxable income that is applied to the Schedule J for each year
+
+    Args:
+        years (list): List of all TaxYearDatas in dataset
+
+    Returns:
+        
+    """
 
 class ScheduleJCalculation:
     """
     Represents a Schedule J tax computation for a given current year as well as prior years if electing Sch J.
     
     Attributes:
-        current_year (TaxYearData): The  current year tax data.
-        base_years (dict[int, TaxYearData]): Mapping of base tax years (e.g., 2021-2023)
-            to their corresponding TaxYearData instances. Base includes three years, but can go up to 6 years.
-
-        Takes in all years as a list, extracts the first year and sets it to current_year
+        years (list): List of all TaxYearData instances in descending order by year
     """
     
     def __init__(self, years: list):
-        # Organize years
-        self.years = sorted(years, key=lambda y: y.year)
-        # Current year is last
-        self.current_year = self.years.pop(-1)
-        # Structures like {2021: 2021 instance, 2022: 2022 instance}
-        self.base_years = {y.year: y for y in self.years}
+        # Create map of years
+        self.years = {y.year: y for y in years}
+        self.current_year = next(iter(self.years.values()))
 
     def schedule_j_calculation(self, elected_farm_income: Decimal, elected_cap_gains: Decimal) -> ScheduleJResultContainer:
         """
@@ -290,72 +305,40 @@ class ScheduleJCalculation:
             raise TypeError("Not a Decimal")
         if not isinstance(elected_cap_gains, Decimal):
             raise TypeError("Not a Decimal")
-
+        
         # Create instances for calculations
         output = ScheduleJForm()
-        adjusted_current_year = AdjustedTaxData.from_model_instance(self.current_year)
-        adjusted_bases = {year: AdjustedTaxData.from_model_instance(base) for year, base in self.base_years.items()}
+        all_adjusted_years = {year: AdjustedTaxData.from_model_instance(base) for year, base in self.years.items()}
+        adjusted_current_year = all_adjusted_years[max(self.years)]
 
         output.line_1 = self.current_year.taxable_income
         output.line_2a = elected_farm_income
         output.line_2b = elected_cap_gains
         output.line_3 = output.line_1 - output.line_2a
 
-        # # Intitialize elected farm income amounts and find 1/3 of each
-        # total_elected =  output.line_2a
-        # elected_qualified = output.line_2b
-        # elected_ordinary =  total_elected - elected_qualified
-        # distribute_total_elected = total_elected / 3
-        # distribute_farm_ordinary = elected_ordinary / 3
-        # distribute_farm_qualified = elected_qualified / 3
 
-        # output.line_6 = distribute_total_elected
-        # output.line_10 = distribute_total_elected
-        # output.line_14 = distribute_total_elected
-        # # Copy 2024 numbers from baseline and decrease incomes by elected amounts
-        # adjusted_current_year.taxable_income = self.current_year.taxable_income - total_elected
-        # adjusted_current_year.qualified_income = self.current_year.qualified_income - elected_qualified
-        # adjusted_current_year.taxable_ordinary = self.current_year.taxable_ordinary - elected_ordinary
-
-        ScheduleJIncomeAllocator()
+        distribute_elected = elected_farm_income / 3
+        output.line_6 = output.line_10 = output.line_14 = distribute_elected
+    
+        # Allocate elected farm income for all years
+        years_list = list(all_adjusted_years.values())
+        allocate_all_years(years_list)
 
         # Find tax on 2024 taxable less elected farm income
-        TaxCalculation(adjusted_current_year).calculate(save=False)
+        TaxCalculation(adjusted_current_year).calculate()
         output.line_4 = adjusted_current_year.total_tax
 
         # Distribute elected farm income to each year, calculate tax
         update_lines = {
-                '2021': ['line_5', 'line_7', 'line_8'],
-                '2022': ['line_9', 'line_11', 'line_12'],
-                '2023': ['line_13', 'line_15', 'line_16']
+                'third_prior_year': ['line_5', 'line_7', 'line_8'],
+                'second_prior_year': ['line_9', 'line_11', 'line_12'],
+                'first_prior_year': ['line_13', 'line_15', 'line_16']
             }
 
-        for year, (base_income, adjusted_income, calculate_tax) in update_lines.items():
-            base = self.base_years[year]
-            adjusted = adjusted_bases[year]
+        
 
-            # Pull base income from given tax info
-            base_ordinary_income =  int(base.taxable_ordinary)
-            base_qualified_income = int(base.qualified_income)
-            base_taxable_income = int(base.taxable_income)
-
-            setattr(output, base_income, base_taxable_income)
-
-            # Increase income by 1/3
-            adjusted_ordinary_income = base_ordinary_income + distribute_farm_ordinary
-            adjusted_qualified_income = base_qualified_income + distribute_farm_qualified
-            adjusted_taxable_income = base_taxable_income + distribute_total_elected
-
-            # Place increased income total taxable income into Sch J
-            setattr(output, adjusted_income, adjusted_taxable_income) 
-
-            # Increase ordinary, qualified, taxable income with respective elected farm incomes
-            adjusted.taxable_ordinary = adjusted_ordinary_income
-            adjusted.qualified_income = adjusted_qualified_income
-            adjusted.taxable_income = adjusted_taxable_income
-
-            TaxCalculation(adjusted).calculate(save=False)
-            setattr(output, calculate_tax, adjusted.total_tax)
+        TaxCalculation(adjusted).calculate(save=False)
+        
 
         output.line_17 = output.line_4 + output.line_8 + output.line_12 + output.line_16
         output.line_18 = output.line_17 

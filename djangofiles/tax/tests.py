@@ -83,6 +83,9 @@ def create_tax_year_data_list(test_cases, user, save=True):
         dataset = TaxDataSet(**dataset_fields, user=user)
         if save:
             dataset.save()
+            # Get the Decimal typing instead of int
+            dataset.refresh_from_db()
+
 
      # --- create TaxYearData instances linked to dataset ---
         raw_inputs = case.get("inputs", [])
@@ -269,20 +272,33 @@ class ScheduleJCalculationTest(TestCase):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
 
-    def test_sch_j_calculations(self):
-        for i, test in enumerate(SCHEDULE_J_TEST_CASES):
-            max_elected, qualified_elected = test["elected"]
-            dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, qualified_elected)
-            dataset.refresh_from_db()
+    def test_serializer_outputs(self):
+        test_years = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
+        # Get the dataset instance
+        dataset = test_years[0]['dataset_instance']
+        dataset.save()
 
-            # Base Calculations
-            for tax_year in TaxYearData.objects.filter(dataset=dataset):
-                TaxCalculation(tax_year).calculate()
+        # Convert queryset to a list
+        years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
+        
+        # Base Calculations
+        for year in years:
+            TaxCalculation(year).calculate()
 
-            #Schedule J calculation
-            tax_years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
-            sch_j_results = ScheduleJCalculation(tax_years).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
-            print(sch_j_results.schedule_j_form)
+        sch_j_results = ScheduleJCalculation(years).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+
+        # max_elected, qualified_elected = test["elected"]
+        # dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, qualified_elected)
+        # dataset.refresh_from_db()
+
+        # # Base Calculations
+        # for tax_year in TaxYearData.objects.filter(dataset=dataset):
+        #     TaxCalculation(tax_year).calculate()
+
+        # #Schedule J calculation
+        # tax_years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
+        # sch_j_results = ScheduleJCalculation(tax_years).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+        # print(sch_j_results.schedule_j_form)
             
             # Will need to update the following now that we're no longer using AdjustedTaxData model
 
