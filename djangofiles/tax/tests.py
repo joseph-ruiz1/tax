@@ -285,7 +285,9 @@ class ScheduleJCalculationTest(TestCase):
         for year in years:
             TaxCalculation(year).calculate()
 
-        sch_j_results = ScheduleJCalculation(years).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+        sch_j_results = ScheduleJCalculation(years, show_all_years=True, long_form=True).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+        form = sch_j_results.to_dict()
+        print(form['schedule_j_form'])
 
         # max_elected, qualified_elected = test["elected"]
         # dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, qualified_elected)
@@ -423,7 +425,6 @@ SCHEDULE_J_TEST_CASES = [
         'outputs': [143, 2812, 5683, 10092],
         'elected': [13624, 0],
     },
-    
 ]
 
 SCHEDULE_J_OPTIMIZATION_TEST = [
@@ -445,7 +446,7 @@ SCHEDULE_J_ALLOCATION_TEST = [
         'inputs': [
             dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
             dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
-            dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+            dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
             dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
             dict(year=2020, filing_status="MFJ", taxable_income=10000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
             dict(year=2019, filing_status="MFJ", taxable_income=50000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),

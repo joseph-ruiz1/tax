@@ -7,7 +7,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 import pickle
-from .services import CalculationIteration
 from .models import TaxDataSet
 from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer, UserRegistrationSerializer
 from .utils import update_calculations
