@@ -9,6 +9,8 @@ const router = useRouter()
 // const modelValue = defineModel('modelValue', { required: true, type: object })
 // const savedWorksheet = defineModel('savedWorksheet', { required: false, type: object})
 
+const electionYears = [2025, 2024]
+
 const props = defineProps({
     modelValue: {
         type: Object,
@@ -69,6 +71,25 @@ router.push('/')
 
       <div class="field-container">
         <div class="title-with-info">
+          <p class="title">Election Year:</p>
+        </div>
+        <div class="radio-group">
+          <div v-for="year in electionYears" :key="year" class="radio-option">
+            <input 
+              type="radio" 
+              :id="`year-${year}`"
+              v-model="form.election_year" 
+              :value="year"
+              name="election_year"
+              required
+            >
+            <label :for="`year-${year}`">{{ year }}</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-container">
+        <div class="title-with-info">
           <p class="title">Max Elected Farm Income</p>
           <button type="button" class="open-modal-btn" @click="openWorksheetModal" aria-label="Open worksheet">
             <img src="../../src/assets/modalIcon.png" alt="Open worksheet">
@@ -124,7 +145,7 @@ router.push('/')
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: .75rem;
 }
 
 .dataset-title h1 {
@@ -140,10 +161,10 @@ router.push('/')
   background: rgba(46, 39, 53, 0.1);
   border: 1px solid rgba(0, 0, 0, 0.2);
   color: #1a202c;
-  padding: 0.5rem 0.75rem;
+  padding: 0.3rem 0.5rem;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.7rem;
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
@@ -157,7 +178,7 @@ router.push('/')
 .dataset-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .field-container {
@@ -204,6 +225,32 @@ router.push('/')
 
 .field-container input::placeholder {
   color: #a0aec0;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.radio-option input[type="radio"] {
+  width: auto;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.radio-option label {
+  cursor: pointer;
+  margin: 0;
+  white-space: nowrap;
+  color: black;
 }
 
 .open-modal-btn {

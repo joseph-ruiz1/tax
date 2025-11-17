@@ -71,6 +71,43 @@
                           type="number"
                         >
                     </div>
+                    
+                    <div v-if="!form.tax_years[currentYearIndex].cannot_elect" class="field-container">
+                      <div class="title-with-info">
+                        <p class="title">Schedule J filed?</p>
+                        <input
+                          type="checkbox"
+                          v-model="form.tax_years[currentYearIndex].is_electing"
+                          required
+                          @click="handleYearIsElecting(form.tax_years[currentYearIndex].year)"
+                        >
+                      </div>
+                    </div>
+
+                    <div v-if="form.tax_years[currentYearIndex].is_electing" class="field-container">
+                      <div class="title-with-info">
+                        <p class="title">Elected Farm Income</p>
+                      </div>
+                        <input
+                          v-model.number="form.tax_years[currentYearIndex].elected_farm_income"
+                          required
+                          type="number"
+                          value=0
+                        >
+                    </div>
+
+                    <div v-if="form.tax_years[currentYearIndex].is_electing" class="field-container">
+                      <div class="title-with-info">
+                        <p class="title">Qualified Farm Income</p>
+                      </div>
+                        <input
+                          v-model.number="form.tax_years[currentYearIndex].qualified_farm_income"
+                          required
+                          type="number"
+                          value=0
+                        >
+                    </div>
+                    
                 </form>
           </div>
           <button @click="submitForm" class="submit-btn">Update Calculation</button>
@@ -81,7 +118,7 @@
           <!-- Chart Area -->
           <div class="chart-section">
             <div class="section-header">
-                <h3>Total 2024 tax</h3>
+                <h3>Total {{ form.election_year }} tax</h3>
             </div>
             <vue-apex-charts
                 id="tax-savings-chart"
@@ -112,7 +149,7 @@
 </template>
 
 <script setup>
-import {ref, onMounted, reactive} from 'vue'
+import {ref, onMounted, reactive, watch} from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRoute } from 'vue-router'
 import { filingStatusOptions } from '@/composables/filingstatusOptions'
@@ -126,17 +163,51 @@ const inputs = ref(null)
 const outputs = ref(null)
 const currentYearIndex = ref(0)
 
-
 const form = reactive({
     name: '',
+    election_year: 2024,
     max_elected_farm_income: 0,
     qualified_farm_income: 0,
     tax_years: [],
 })
-
 const farmIncomeEntryRef = ref(null)
 const savedWorksheet = ref(null)
 
+watch(() => form.election_year, (newYear, oldYear) => {
+  handleElectionYearChange(newYear, oldYear)
+  currentYearIndex.value = 0
+})
+
+function handleElectionYearChange(newYear, oldYear) {
+  const delta = newYear - oldYear
+  // Shift all existing year values based on delta
+  form.tax_years = form.tax_years.map(yearObj => ({
+    ...yearObj,
+    year: parseFloat(yearObj.year) + delta
+  })).filter(yearObj => yearObj.year >= 2018) // Remove years before 2018
+}
+
+function handleYearIsElecting(year) {
+  const year_electing = parseFloat(year)
+  const yearsToAdd = []
+
+  for (let i = 1; i <= 3; i++) {
+    const yearToCheck = year_electing - i
+
+    const exists = form.tax_years.some(ty => parseFloat(ty.year) === yearToCheck)
+
+    if (!exists && yearToCheck >= 2018) {
+      yearsToAdd.push({
+        year: yearToCheck.toString(),
+        filing_status: '',
+        taxable_income: null,
+        qualified_income: null,
+        cannot_elect: true,
+      })
+    }
+  }
+  form.tax_years.push(...yearsToAdd)
+}
 const series = ref([])
 const delta_series = ref([])
 const baseOptions = {
@@ -313,15 +384,18 @@ const fetchResults = async () => {
         inputs.value = data.form
         outputs.value = data.outputs
 
-        const taxYears = inputs.value?.tax_years?.map(year => ({
-          ...year
-        }))
-
         // Initilize form with API data
         form.name = inputs.value?.name || ''
         form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
         form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
-        form.tax_years = taxYears || []
+        form.tax_years = inputs.value?.tax_years?.map(year => ({
+          ...year
+        })) || []
+
+        // Search for current year to ensure we set cannot_elect on correct year
+        const current_year = form.tax_years.reduce((max, current) => 
+        parseFloat(current.year) > parseFloat(max.year) ? current : max)
+        current_year.cannot_elect = true
         
         // Load worksheet data if it exists
         if (inputs.value?.income_worksheet) {
@@ -361,6 +435,7 @@ const submitForm = async () => {
 onMounted(async () => {
     await fetchResults()
 })
+
 </script>
 
 <style scoped>
@@ -429,13 +504,13 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .dataset-title {
-  margin-bottom: 1.5rem;
+  margin-bottom: .75rem;
 }
 
 .dataset-title h1 {
@@ -449,7 +524,7 @@ onMounted(async () => {
 .year-form form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .field-container {
@@ -462,6 +537,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.title-with-info input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  border: none;
 }
 
 .title {
