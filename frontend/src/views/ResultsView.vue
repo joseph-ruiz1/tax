@@ -187,27 +187,27 @@ function handleElectionYearChange(newYear, oldYear) {
   })).filter(yearObj => yearObj.year >= 2018) // Remove years before 2018
 }
 
-function handleYearIsElecting(year) {
-  const year_electing = parseFloat(year)
-  const yearsToAdd = []
+// function handleYearIsElecting(year) {
+//   const year_electing = parseFloat(year)
+//   const yearsToAdd = []
 
-  for (let i = 1; i <= 3; i++) {
-    const yearToCheck = year_electing - i
+//   for (let i = 1; i <= 3; i++) {
+//     const yearToCheck = year_electing - i
 
-    const exists = form.tax_years.some(ty => parseFloat(ty.year) === yearToCheck)
+//     const exists = form.tax_years.some(ty => parseFloat(ty.year) === yearToCheck)
 
-    if (!exists && yearToCheck >= 2018) {
-      yearsToAdd.push({
-        year: yearToCheck.toString(),
-        filing_status: '',
-        taxable_income: null,
-        qualified_income: null,
-        cannot_elect: true,
-      })
-    }
-  }
-  form.tax_years.push(...yearsToAdd)
-}
+//     if (!exists && yearToCheck >= 2018) {
+//       yearsToAdd.push({
+//         year: yearToCheck.toString(),
+//         filing_status: '',
+//         taxable_income: null,
+//         qualified_income: null,
+//         cannot_elect: true,
+//       })
+//     }
+//   }
+//   form.tax_years.push(...yearsToAdd)
+// }
 const series = ref([])
 const delta_series = ref([])
 const baseOptions = {
@@ -421,6 +421,7 @@ const submitForm = async () => {
     max_elected_farm_income: form.max_elected_farm_income,
     income_worksheet: worksheetData,
     qualified_farm_income: form.qualified_farm_income,
+    election_year: form.election_year,
     tax_years: form.tax_years
   }
     try {

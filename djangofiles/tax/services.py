@@ -1,5 +1,5 @@
 from .calculations import tax_brackets
-from .models import TaxYearData, AdjustedTaxData, ScheduleJForm
+from .models import TaxYearData
 
 import copy
 from decimal import Decimal

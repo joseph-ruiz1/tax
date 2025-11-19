@@ -171,13 +171,17 @@ class DataSetViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-           
             results = update_calculations(dataset)
             results_serializer = OutputSerializer(dataset, context={'results': results})
-            print(results_serializer.data['inputs'])
+            
             return Response({
                 'success': True,
                 'message': 'Patch successful',
                 'form': results_serializer.data['inputs'],
                 'outputs': results_serializer.data['outputs'],
             })
+        
+        return Response({
+            'success': False,
+            'errors': serializer.errors,
+            }, status=status.HTTP_400_BAD_REQUEST)

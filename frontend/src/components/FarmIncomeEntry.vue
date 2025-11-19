@@ -9,7 +9,7 @@ const router = useRouter()
 // const modelValue = defineModel('modelValue', { required: true, type: object })
 // const savedWorksheet = defineModel('savedWorksheet', { required: false, type: object})
 
-const electionYears = [2025, 2024]
+const electionYears = [2025, 2024, 2023, 2022]
 
 const props = defineProps({
     modelValue: {
@@ -69,7 +69,7 @@ router.push('/')
         <input v-model="form.name" placeholder="Enter Calculation Name" required>
       </div>
 
-      <div class="field-container">
+      <div class="field-container-row">
         <div class="title-with-info">
           <p class="title">Election Year:</p>
         </div>
@@ -187,6 +187,14 @@ router.push('/')
   gap: 0.5rem;
 }
 
+.field-container-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .title {
   color: #1a202c;
   font-size: 0.95rem;
@@ -198,6 +206,8 @@ router.push('/')
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .field-container input {
@@ -229,14 +239,16 @@ router.push('/')
 
 .radio-group {
   display: flex;
-  gap: 1rem;
+  gap: .75rem;
   align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .radio-option {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .radio-option input[type="radio"] {
