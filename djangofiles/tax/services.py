@@ -209,7 +209,6 @@ class ScheduleJForm:
 
     def __str__(self):
         if self.long_form:
-            # Pretty print all lines
             lines = [
                 f"{attr}: {getattr(self, attr)}"
                 for attr in dir(self)
@@ -221,7 +220,6 @@ class ScheduleJForm:
 
     __repr__ = __str__  # Same output for debugging
 
-    
         
 class ScheduleJResultContainer:
     """

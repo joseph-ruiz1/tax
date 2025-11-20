@@ -66,7 +66,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
-
 class TaxYearDataDetailSerializer(serializers.ModelSerializer):
     """
     Need to include ID in returned value since years can change and we need to be able to lookup
@@ -188,6 +187,8 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
         """
         if data['max_elected_farm_income'] < 0 or data['qualified_farm_income'] < 0:
             raise serializers.ValidationError("Cannot have negative farm income")
+        if sum(data['income_worksheet'].values()) != data['max_elected_farm_income']:
+            raise serializers.ValidationError("Farm income worksheet total not equal to max elected")
         return data
 
     def update(self, instance, validated_data):
