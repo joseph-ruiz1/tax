@@ -73,7 +73,7 @@ class TaxYearDataDetailSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     class Meta:
         model = TaxYearData
-        fields = ["id", "year", "filing_status", "taxable_income", "qualified_income"]
+        fields = ["id", "year", "filing_status", "taxable_income", "qualified_income", "is_electing", "elected_farm_income", "qualified_farm_income"]
 
     def validate(self, data):
         """
@@ -194,6 +194,7 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         years_data = validated_data.pop('tax_years', [])
         income_worksheet = validated_data.pop('income_worksheet', None)
+        print(years_data)
 
         # Update TaxDataSet attributes
         for attr, value in validated_data.items():

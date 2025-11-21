@@ -250,7 +250,6 @@ class ScheduleJOptimizationTest(TestCase):
         results = optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
         print(results)
         
-        
 class TaxDataSetSerializerTest(APITestCase):
     """
     updated for on demand calculations
@@ -364,8 +363,6 @@ SCHEDULE_J_ALLOCATION_TEST = [
             dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
             dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
             dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
-            dict(year=2020, filing_status="MFJ", taxable_income=10000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
-            dict(year=2019, filing_status="MFJ", taxable_income=50000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
         ],
         'outputs': {
             'line_1': 120000.00,
@@ -403,9 +400,7 @@ SCHEDULE_J_ALLOCATION_TEST = [
                 dict(year=2022, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
                 dict(year=2021, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
                 dict(year=2020, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
-                dict(year=2019, filing_status="MFJ", taxable_income=10000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
-                dict(year=2018, filing_status="MFJ", taxable_income=50000, qualified_income=450, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
-            ],
+                ],
             'outputs': {
                 'line_1': 120000,
                 'line_10': 3333,
