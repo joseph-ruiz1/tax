@@ -346,7 +346,7 @@ class ScheduleJCalculation:
             raise TypeError("Not a Decimal")
         if not isinstance(elected_cap_gains, Decimal):
             raise TypeError("Not a Decimal")
-        
+
         # Create instances for calculations
         output = ScheduleJForm(long_form=self.long_form)
         all_adjusted_years = {year: AdjustedTaxData.from_model_instance(base) for year, base in self.years.items()}
@@ -421,12 +421,17 @@ class ScheduleJCalculation:
 class ScheduleJOptimization:
     """
     Represents a single Schedule J Optimization
+
+    Attributes:
+        years (list): List of TaxYearDatas in descending order
+        elected_farm_income (Decimal): Max amount of income that can be elected
+        elected_farm_qualifed (Decimal): Amount of elected income that is made up of cap gains
+
     """ 
-    def __init__(self, years, elected_farm_income: float, elected_farm_qualified: float, dataset: TaxYearData):
-        self.years = sorted(years, key=lambda y: y.year)
+    def __init__(self, years, elected_farm_income: Decimal, elected_farm_qualified: Decimal):
+        self.years = years
         self.elected_farm_income = elected_farm_income
         self.elected_farm_qualified = elected_farm_qualified
-        self.dataset = dataset
 
     def optimize_sch_j(self, elected_farm_income: Decimal, elected_farm_qualified: Decimal):
         """
@@ -439,10 +444,7 @@ class ScheduleJOptimization:
         Returns:
             results (list): A list of all ScheduleJForm objects that were calcualted
         """
-        # for sch j calculation, we need to know the years and how elected income flows. start from highest year so we know
-        # how that income flows down. also need to know how many sch j calcualtions we're doing in total.
-
-        forms = []
+        results = []
         all_adjusted_years = []
 
         current_total_elected = elected_farm_income
@@ -456,10 +458,10 @@ class ScheduleJOptimization:
         while current_total_elected >= 500:
             instance = (ScheduleJCalculation(self.years)
                         .schedule_j_calculation(current_total_elected, current_qualified_elected))
-            forms.append(instance.schedule_j_form)
+            results.append(instance.schedule_j_form)
 
             current_total_elected -= 500
             current_ordinary_elected -= 500 * ordinary_percentage
             current_qualified_elected -= 500 * qualified_percentage
             
-        return forms
+        return results

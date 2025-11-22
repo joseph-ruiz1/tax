@@ -101,6 +101,5 @@ def update_calculations(dataset):
     optimize = ScheduleJOptimization(years,
                                     elected_farm_income=dataset.max_elected_farm_income, 
                                     elected_farm_qualified=dataset.qualified_farm_income, 
-                                    dataset=dataset
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
     return optimize

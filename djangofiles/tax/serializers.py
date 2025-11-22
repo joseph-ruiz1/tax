@@ -194,7 +194,6 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         years_data = validated_data.pop('tax_years', [])
         income_worksheet = validated_data.pop('income_worksheet', None)
-        print(years_data)
 
         # Update TaxDataSet attributes
         for attr, value in validated_data.items():
@@ -224,7 +223,8 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
 
 class OutputSerializer(serializers.ModelSerializer):
     """
-    Prepare our inputs and outputs for results page
+    Prepare our inputs and outputs for results page. 
+    Context dict should be provided that includes results from utils.update_calculations
     """
     tax_years = TaxYearDataDetailSerializer(many=True, required=True)
     income_worksheet = FarmIncomeWorksheetSerializer(many=False, allow_null=True, required=False)

@@ -166,7 +166,6 @@ class DataSetViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['patch'], url_path='results-update')
     def results_patch(self, request, pk=None):
-        # Can refactor this into a single result method with separate actions for self.method = get/post
         dataset = self.get_object()
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
         if serializer.is_valid():

@@ -314,9 +314,9 @@ const deltaChartOptions = ref({
 })
 
 const updateChartData = (response = null) => {
-// Results will be null upon mount
+// response.outputs will only contain data upon update
   const data = response?.outputs || outputs.value
-
+  
   if (!data) return
   const sch_j_total = data.results.map(result => parseFloat(result.line_23))
   const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
@@ -367,7 +367,6 @@ const fetchResults = async () => {
         form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
         form.tax_years = inputs.value?.tax_years?.map(year => ({
           ...year,
-          is_electing: false
         })) || []
 
         // Search for current year to ensure we set cannot_elect on correct year
