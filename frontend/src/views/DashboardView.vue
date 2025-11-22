@@ -384,7 +384,6 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
 }
 
 .section-header h2 {
@@ -411,9 +410,10 @@ onMounted(async () => {
   transform: translateY(-1px);
 }
 
-.datasets-grid {
+.dataset-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  padding: 1.5rem;
   gap: 1.5rem;
 }
 
@@ -450,8 +450,8 @@ onMounted(async () => {
 .dataset-delete {
   background: rgba(11, 0, 0, 0.1);
   color: #ab223b;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  padding: .25rem .5rem;
+  border-radius: 5px;
   font-weight: 600;
 }
 

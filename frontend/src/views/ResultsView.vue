@@ -322,6 +322,7 @@ const updateChartData = (response = null) => {
   const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
   const elected = data.results.map(result => parseFloat(result.line_2a))
   const qualified_elected = data.results.map(result => parseFloat(result.line_2b))
+  console.log(tax_delta)
 
   chartOptions.value = {
     ...chartOptions.value,
@@ -401,7 +402,6 @@ const submitForm = async () => {
     election_year: form.election_year,
     tax_years: form.tax_years
   }
-  console.log(form.tax_years)
     try {
         const id = route.params.id
         const response = await apiService.updateDataset(id, submissionData)

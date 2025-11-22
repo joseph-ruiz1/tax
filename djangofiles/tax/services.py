@@ -445,7 +445,6 @@ class ScheduleJOptimization:
             results (list): A list of all ScheduleJForm objects that were calcualted
         """
         results = []
-        all_adjusted_years = []
 
         current_total_elected = elected_farm_income
         current_qualified_elected = elected_farm_qualified
