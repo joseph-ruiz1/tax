@@ -185,7 +185,7 @@ const handleSave = () => {
   font-size: 1rem;
   background: white;
   color: #1a202c;
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease;
   outline: none;
 }
 
@@ -242,7 +242,7 @@ const handleSave = () => {
   cursor: pointer;
   font-weight: 600;
   font-size: 0.95rem;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease;
   white-space: nowrap;
 }
 
@@ -254,16 +254,11 @@ const handleSave = () => {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 81, 191, 0.4);
-}
-
-.btn-secondary {
-  background: #e5e7eb;
-  color: #374151;
 }
 
 .btn-secondary:hover {
   background: #d1d5db;
+  transform: translateY(-2px);
 }
 
 /* Responsive adjustments */

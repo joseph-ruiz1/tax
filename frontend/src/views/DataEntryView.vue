@@ -156,7 +156,6 @@ const submitForm = async () => {
 /* Dataset Header Section */
 .dataset-header {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 1.5rem;
   margin: 0 auto 2rem auto;
@@ -211,8 +210,7 @@ const submitForm = async () => {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
+  transition: transform 0.2s ease, background .2s ease;
 }
 
 .year-tabs button:hover {
@@ -325,7 +323,7 @@ input::placeholder {
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease;
   box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
   margin: 0 auto;
   display: block;
@@ -336,7 +334,6 @@ input::placeholder {
   box-shadow: 0 6px 20px rgba(72, 187, 120, 0.5);
 }
 
-
 .info-btn {
   position: relative;
   background: rgba(59, 130, 246, 0.1);
@@ -346,7 +343,7 @@ input::placeholder {
   height: 20px;
   padding: 0;
   cursor: help;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background .2s ease;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -382,7 +379,7 @@ input::placeholder {
   width: max-content;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, visibility .2s ease;
   pointer-events: none;
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);

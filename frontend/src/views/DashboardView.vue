@@ -216,7 +216,6 @@ onMounted(async () => {
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   margin-bottom: 2rem;
   display: flex;
@@ -266,7 +265,7 @@ onMounted(async () => {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, background .3s ease;
 }
 
 .logout-btn:hover {
@@ -280,7 +279,6 @@ onMounted(async () => {
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   margin-bottom: 2rem;
 }
@@ -307,7 +305,7 @@ onMounted(async () => {
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease;
   box-shadow: 0 4px 15px rgba(76, 81, 191, 0.4);
   text-align: left;
   display: flex;
@@ -319,16 +317,10 @@ onMounted(async () => {
 
 .action-btn:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(76, 81, 191, 0.5);
 }
 
 .action-btn.success {
   background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
-}
-
-.action-btn.success:hover {
-  box-shadow: 0 6px 20px rgba(72, 187, 120, 0.5);
 }
 
 .action-icon {
@@ -376,7 +368,6 @@ onMounted(async () => {
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -401,7 +392,7 @@ onMounted(async () => {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, background .3s ease;
   text-decoration: none;
 }
 
@@ -422,7 +413,7 @@ onMounted(async () => {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 1.5rem;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, background .3s ease;
   cursor: pointer;
 }
 
