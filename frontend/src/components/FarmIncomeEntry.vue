@@ -57,7 +57,6 @@ router.push('/')
 </script>
 
 <template>
-  <div class="dataset-header">
     <div class="dataset-title">
       <button class="to-dashboard-btn" @click="toDashboard">← Back</button>
       <h1>General info</h1>
@@ -127,7 +126,6 @@ router.push('/')
       @close="closeWorksheetModal"
       @save="handleWorksheetSave"
     />
-  </div>
 </template>
 
 <style scoped>

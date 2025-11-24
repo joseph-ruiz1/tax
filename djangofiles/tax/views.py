@@ -6,8 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
-import pickle
-from .models import TaxDataSet
+from .models import TaxDataSet, TaxYearData
 from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer, UserRegistrationSerializer
 from .utils import update_calculations
 
@@ -118,9 +117,14 @@ class DataSetViewSet(viewsets.ModelViewSet):
         
     @action(detail=False, methods=['post'], url_path='create')
     def create_step(self, request):
+        """
+        Creates new TaxDataSet instance with 2024 as default election year.
+        Returns TaxYearData instances so we can access IDs
+        """
         serializer = self.get_serializer(data={})
         if serializer.is_valid():
             dataset = serializer.save(user=request.user)
+          
             return Response({
                 'success': True,
                 'dataset_id': dataset.id
@@ -134,6 +138,9 @@ class DataSetViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['patch'], url_path='new')
     def new_entry(self, request, pk=None):
+        """
+        Save initial information submitted from data entry screen
+        """
         dataset = self.get_object()
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
 
@@ -151,10 +158,11 @@ class DataSetViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'], url_path='results')
     def results_get(self, request, pk=None):
+        """
+        Fetch caulcation inputs and results
+        """
         dataset = self.get_object()
-
         results = update_calculations(dataset)
-
         serializer = self.get_serializer(dataset, context={'results': results})
      
         return Response({
@@ -166,6 +174,9 @@ class DataSetViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['patch'], url_path='results-update')
     def results_patch(self, request, pk=None):
+        """
+        Update inputs and regenerate Schedule J Calculation
+        """
         dataset = self.get_object()
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
         if serializer.is_valid():

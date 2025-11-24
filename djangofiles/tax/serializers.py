@@ -155,6 +155,7 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
     Creates new tax data set and four tax years, all of which are empty
     """
     tax_years = TaxYearDataDetailSerializer(many=True, required=False)
+
     class Meta:
         model = TaxDataSet
         fields = ["id", "tax_years"]
@@ -168,6 +169,7 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
         for _ in range(4):
             TaxYearData.objects.create(dataset=dataset, year=year)
             year -= 1
+        
         return dataset
 
 class CalculationEntrySerializer(serializers.ModelSerializer):
@@ -204,6 +206,7 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
         existing_years = {y.id: y for y in instance.tax_years.all()}
         for year_dict in years_data:
             year_id = year_dict.get("id")
+            print(year_id)
 
             if year_id not in existing_years:
                 raise serializers.ValidationError(f"Invalid TaxYearData ID {year_id}")

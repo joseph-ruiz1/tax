@@ -1,157 +1,85 @@
 <!-- ResultsView.vue -->
 <template>
-    <div class="results-container" v-if="!loading">
-        <!-- Left Panel - Form -->
-        <div class="form-panel">
-          <farm-income-entry
-          ref="farmIncomeEntryRef"
-          v-model="form"
-          :saved-worksheet="savedWorksheet"
-          />
+  <div class="results-container" v-if="!loading">
+    <!-- Left Panel - Form -->
+    <div class="form-panel">
 
-          <!-- Year Navigation-->
-          <div class="year-tabs" v-if="form.tax_years.length > 0">
-              <button
-                v-for="(year, index) in form.tax_years"
-                :key="year.year"
-                @click="currentYearIndex = index"
-                :class="{ active: index === currentYearIndex }"
-              >
-                  {{ year.year }}
-              </button>
-          </div>
-
-            <!-- Current Year Form -->
-            <div class="year-form" v-if="form.tax_years[currentYearIndex]">
-              <div class="dataset-title">
-                <h1>Tax Year {{ form.tax_years[currentYearIndex].year }}</h1>
-              </div>
-        
-                <form>
-                  <div class="field-container">
-                    <div class="title-with-info">
-                      <p class="title">Filing Status</p>
-                    </div>
-                      <select v-model="form.tax_years[currentYearIndex].filing_status" required>
-                        <option disabled value="">Filing Status</option>
-                        <option v-for="opt in filingStatusOptions" :key="opt.value" :value="opt.value">
-                          {{ opt.label }}
-                        </option>
-                      </select>
-                    </div>
-                    
-                    <div class="field-container">
-                      <div class="title-with-info">
-                        <p class="title">Taxable Income</p>
-                        <button type="button" class="info-btn" aria-label="More information">
-                          <span class="info-icon">i</span>
-                          <span class="tooltip">Taxable Income from the return. Adjustment for elected income not needed.</span>
-                        </button>
-                      </div>
-                        <input
-                          v-model.number="form.tax_years[currentYearIndex].taxable_income"
-                          placeholder="Taxable income"
-                          required
-                          type="number"
-                        >
-                    </div>
-                    
-                    <div class="field-container">
-                      <div class="title-with-info">
-                        <p class="title">Qualified Income</p>
-                        <button type="button" class="info-btn" aria-label="More information">
-                          <span class="info-icon">i</span>
-                          <span class="tooltip">Long term capital gains + qualified dividends</span>
-                        </button>
-                      </div>
-                        <input
-                          v-model.number="form.tax_years[currentYearIndex].qualified_income"
-                          placeholder="Qualified income"
-                          required
-                          type="number"
-                        >
-                    </div>
-                    
-                    <div v-if="!form.tax_years[currentYearIndex].cannot_elect" class="field-container">
-                      <div class="title-with-info">
-                        <p class="title">Schedule J filed?</p>
-                        <input
-                          type="checkbox"
-                          v-model="form.tax_years[currentYearIndex].is_electing"
-                        >
-                      </div>
-                    </div>
-
-                    <div v-if="form.tax_years[currentYearIndex].is_electing" class="field-container">
-                      <div class="title-with-info">
-                        <p class="title">Elected Farm Income</p>
-                      </div>
-                        <input
-                          v-model.number="form.tax_years[currentYearIndex].elected_farm_income"
-                          required
-                          type="number"
-                          value=0
-                        >
-                    </div>
-
-                    <div v-if="form.tax_years[currentYearIndex].is_electing" class="field-container">
-                      <div class="title-with-info">
-                        <p class="title">Qualified Farm Income</p>
-                      </div>
-                        <input
-                          v-model.number="form.tax_years[currentYearIndex].qualified_farm_income"
-                          required
-                          type="number"
-                          value=0
-                        >
-                    </div>
-                </form>
-          </div>
-          <button @click="submitForm" class="submit-btn">Update Calculation</button>
-        </div>
-
-        <!--Results -->
-        <div class="results-panel">
-          <!-- Chart Area -->
-          <div class="chart-section">
-            <div class="section-header">
-                <h3>Total {{ form.election_year }} tax</h3>
-            </div>
-            <vue-apex-charts
-                id="tax-savings-chart"
-                v-if="series.length > 0"
-                height="350"
-                :options="chartOptions"
-                :series="series"
-              ></vue-apex-charts>
-              <div v-else class="chart-placeholder">
-                <p>Loading chart data...</p>
-              </div>
-            <div class="section-header">
-              <h3>Net Tax Savings/Expense</h3>
-            </div>
-            <vue-apex-charts
-                id="tax-delta-chart"
-                v-if="series.length > 0"
-                height="350"
-                :options="deltaChartOptions"
-                :series="delta_series"
-            ></vue-apex-charts>
-          </div>
-        </div>
+      <!-- FarmIncomeEntry.vue -->
+      <div class="year-form">
+        <farm-income-entry
+        ref="farmIncomeEntryRef"
+        v-model="form"
+        :saved-worksheet="savedWorksheet"
+        />
       </div>
-    <div v-else>
-        loading...
+
+      <!-- Year Navigation-->
+      <div class="year-tabs" v-if="form.tax_years.length > 0">
+          <button
+            v-for="(year, index) in form.tax_years"
+            :key="year.year"
+            @click="currentYearIndex = index"
+            :class="{ active: index === currentYearIndex }"
+          >
+              {{ year.year }}
+          </button>
+      </div>
+      
+      <!-- YearsDataEntry.vue-->
+      <div class="year-form">
+        <years-data-entry 
+        v-model="form"
+        :currentYearIndex="currentYearIndex"
+        />
+      </div>
+      <button @click="submitForm" class="submit-btn">Update Calculation</button>
     </div>
+
+    <!--Results -->
+    <div class="results-panel">
+      <!-- Chart Area -->
+      <div class="chart-section">
+        <div class="section-header">
+            <h3>Total {{ form.election_year }} tax</h3>
+        </div>
+
+        <vue-apex-charts
+            id="tax-savings-chart"
+            v-if="series.length > 0"
+            height="350"
+            :options="chartOptions"
+            :series="series"
+          ></vue-apex-charts>
+
+        <div v-else class="chart-placeholder">
+            <p>Loading chart data...</p>
+        </div>
+        <div class="section-header">
+          <h3>Net Tax Savings/Expense</h3>
+        </div>
+        <vue-apex-charts
+            id="tax-delta-chart"
+            v-if="series.length > 0"
+            height="350"
+            :options="deltaChartOptions"
+            :series="delta_series"
+        ></vue-apex-charts>
+      </div>
+    </div>
+  </div>
+  <div v-else>
+      loading...
+  </div>
 </template>
 
 <script setup>
 import {ref, onMounted, reactive, watch} from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRoute } from 'vue-router'
-import { filingStatusOptions } from '@/composables/filingstatusOptions'
 import VueApexCharts from 'vue3-apexcharts'
+import { updateElectionYear } from '@/composables/updateElectionYear'
 import FarmIncomeEntry from '@/components/FarmIncomeEntry.vue'
+import YearsDataEntry from '@/components/YearsDataEntry.vue'
 
 const route = useRoute()
 const loading = ref(true)
@@ -159,30 +87,18 @@ const error = ref('')
 const inputs = ref(null)
 const outputs = ref(null)
 const currentYearIndex = ref(0)
-
-const form = reactive({
-    name: '',
-    election_year: 2024,
-    max_elected_farm_income: 0,
-    qualified_farm_income: 0,
-    tax_years: [],
-})
 const farmIncomeEntryRef = ref(null)
 const savedWorksheet = ref(null)
 
-watch(() => form.election_year, (newYear, oldYear) => {
-  handleElectionYearChange(newYear, oldYear)
-  currentYearIndex.value = 0
+const form = reactive({
+    name: '',
+    max_elected_farm_income: 0,
+    qualified_farm_income: 0,
+    election_year: 2024,
+    tax_years: [],
 })
 
-function handleElectionYearChange(newYear, oldYear) {
-  const delta = newYear - oldYear
-  // Shift all existing year values based on delta
-  form.tax_years = form.tax_years.map(yearObj => ({
-    ...yearObj,
-    year: parseFloat(yearObj.year) + delta
-  })).filter(yearObj => yearObj.year >= 2018) // Remove years before 2018
-}
+updateElectionYear(form, currentYearIndex)
 
 const series = ref([])
 const delta_series = ref([])
@@ -321,7 +237,6 @@ const updateChartData = (response = null) => {
   const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
   const elected = data.results.map(result => parseFloat(result.line_2a))
   const qualified_elected = data.results.map(result => parseFloat(result.line_2b))
-  console.log(tax_delta)
 
   chartOptions.value = {
     ...chartOptions.value,
@@ -441,6 +356,15 @@ onMounted(async () => {
 }
 
 /* Left Panel - Form */
+.dataset-header {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 0 auto 2rem auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .form-panel {
   display: flex;
   flex-direction: column;
@@ -549,72 +473,6 @@ onMounted(async () => {
 
 .field-container input::placeholder {
   color: #a0aec0;
-}
-
-.info-btn {
-  position: relative;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  cursor: help;
-  transition: transform 0.2s ease, background .2s ease;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.info-btn:hover {
-  background: rgba(59, 130, 246, 0.2);
-  transform: scale(1.1);
-}
-
-.info-icon {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #3b82f6;
-  font-style: italic;
-}
-
-.tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a202c;
-  color: white;
-  padding: 0.75rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  white-space: normal;
-  min-width: 200px;
-  max-width: 300px;
-  width: max-content;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s ease, visibility .2s ease;
-  pointer-events: none;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #1a202c;
-}
-
-.info-btn:hover .tooltip {
-  opacity: 1;
-  visibility: visible;
 }
 
 .submit-btn {
