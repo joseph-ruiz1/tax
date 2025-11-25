@@ -29,6 +29,7 @@ class TaxDataSet(models.Model):
     name = models.CharField(max_length=200, default="Created Set")
     max_elected_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     qualified_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    election_year = models.CharField(max_length=4, choices=VALID_YEARS, default='2024')
     ordinary_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     income_worksheet = models.JSONField(null=True, blank=True, default=dict)
 
@@ -61,7 +62,6 @@ class TaxYearStructure(models.Model):
     ordinary_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     qualified_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
 
     def save(self, *args, **kwargs):
         self.taxable_ordinary = self.taxable_income - self.qualified_income

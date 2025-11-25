@@ -10,7 +10,6 @@
           <p class="title">Filing Status</p>
       </div>
       <select v-model="form.tax_years[props.currentYearIndex].filing_status" required>
-        <option disabled value="">Filing Status</option>
         <option v-for="opt in filingStatusOptions" :key="opt.value" :value="opt.value">
             {{ opt.label }}
         </option>

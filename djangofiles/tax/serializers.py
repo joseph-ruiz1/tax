@@ -126,7 +126,7 @@ class TaxDataSetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaxDataSet
-        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "created_at"]
+        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "election_year", "created_at"]
 
 class TaxDataSetDetailSerializer(serializers.ModelSerializer):
     """
@@ -137,7 +137,7 @@ class TaxDataSetDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaxDataSet
-        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "tax_years"]
+        fields = ["id", "user", "name", "max_elected_farm_income", "qualified_farm_income", "election_year", "tax_years"]
 
     def validate(self, data):
         """
@@ -181,7 +181,7 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaxDataSet
-        fields = ["id", "name", "max_elected_farm_income", "qualified_farm_income", "income_worksheet", "tax_years"]
+        fields = ["id", "name", "max_elected_farm_income", "qualified_farm_income", "election_year", "income_worksheet", "tax_years"]
     
     def validate(self, data):
         """
@@ -236,7 +236,7 @@ class OutputSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaxDataSet
-        fields = ["name", "max_elected_farm_income", "qualified_farm_income", "income_worksheet", "tax_years", "inputs", "outputs"]
+        fields = ["name", "max_elected_farm_income", "qualified_farm_income", "election_year", "income_worksheet", "tax_years", "inputs", "outputs"]
 
     def get_inputs(self, instance):
         """
@@ -247,6 +247,7 @@ class OutputSerializer(serializers.ModelSerializer):
             "name": instance.name,
             "max_elected_farm_income": instance.max_elected_farm_income,
             "qualified_farm_income": instance.qualified_farm_income,
+            "election_year": instance.election_year,
             "income_worksheet": instance.income_worksheet,
             "tax_years": TaxYearDataDetailSerializer(instance.tax_years.all(), many=True).data
         }

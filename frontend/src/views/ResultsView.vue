@@ -94,7 +94,7 @@ const form = reactive({
     name: '',
     max_elected_farm_income: 0,
     qualified_farm_income: 0,
-    election_year: 2024,
+    election_year: null,
     tax_years: [],
 })
 
@@ -280,6 +280,7 @@ const fetchResults = async () => {
         form.name = inputs.value?.name || ''
         form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
         form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
+        form.election_year = parseFloat(inputs.value?.election_year) || null
         form.tax_years = inputs.value?.tax_years?.map(year => ({
           ...year,
         })) || []
