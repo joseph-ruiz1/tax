@@ -184,7 +184,7 @@ const formatDate = (dateString) => {
 
 const navigateToDataset = async (id) => {
   try {
-    const response = await apiService.getResults(id)
+    await apiService.getResults(id)
     router.push(`/datasets/${id}/results`)
   } catch (err) {
     error.value = 'Failed to load results'
@@ -205,15 +205,11 @@ onMounted(async () => {
 .dashboard-container {
   margin: 0 auto;
   padding: 2rem;
-  background: linear-gradient(135deg, #434b6f 0%, #2e2735 100%);
-  min-height: 20vh;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Header */
 .dashboard-header {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.2);

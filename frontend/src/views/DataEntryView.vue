@@ -129,7 +129,6 @@ onMounted(async () => {
 .form-container {
   margin: 0 auto;
   padding: 2rem;
-  background: linear-gradient(135deg, #434b6f 0%, #2e2735 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

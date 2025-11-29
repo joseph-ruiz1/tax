@@ -14,14 +14,12 @@
     <!-- Show app once auth is verified -->
     <router-view v-else />
   </main>
-
 </template>
 
 <script setup>
 // check auth
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth.js'
 import { apiService } from './services/api'
 
 const router = useRouter()
@@ -54,11 +52,16 @@ const checkAuth = async () => {
 </script>
 
 <style>
+#app {
+  flex: 1;
+  width: 100%;
+  min-height: 100vh;
+}
+
 .loading-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
   font-size: 18px;
 }
 
@@ -66,24 +69,7 @@ const checkAuth = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
   font-size: 18px;
   color: #ef4444;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  width: 100%;
-  height: 100%;
-}
-
-#app {
-  width: 100%;
-  min-height: 100vh;
 }
 </style>

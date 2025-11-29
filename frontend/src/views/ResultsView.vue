@@ -80,6 +80,7 @@ import VueApexCharts from 'vue3-apexcharts'
 import { updateElectionYear } from '@/composables/updateElectionYear'
 import FarmIncomeEntry from '@/components/FarmIncomeEntry.vue'
 import YearsDataEntry from '@/components/YearsDataEntry.vue'
+import { correctTaxYears } from '@/composables/correctTaxYears'
 
 const route = useRoute()
 const loading = ref(true)
@@ -270,39 +271,43 @@ const updateChartData = (response = null) => {
 }
 
 const fetchResults = async () => {
-    try {
-        const id = route.params.id
-        const data = await apiService.getResults(id)
-        inputs.value = data.form
-        outputs.value = data.outputs
+  try {
+    const id = route.params.id
+    const data = await apiService.getResults(id)
+    inputs.value = data.form
+    outputs.value = data.outputs
 
-        // Initilize form with API data
-        form.name = inputs.value?.name || ''
-        form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
-        form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
-        form.election_year = inputs.value?.election_year || null
-        form.tax_years = inputs.value?.tax_years?.map(year => ({
-          ...year,
-        })) || []
-        
-        // Search for current year to ensure we set cannot_elect on correct year
-        const current_year = form.tax_years.reduce((max, current) => 
-        parseFloat(current.year) > parseFloat(max.year) ? current : max)
-        current_year.cannot_elect = true
-        
-        // Load worksheet data if it exists
-        if (inputs.value?.income_worksheet) {
-          savedWorksheet.value = { ...inputs.value.income_worksheet }
-        }
-
-        updateChartData()
-
-    } catch (err) {
-        error.value = 'Failed to fetch results'
-        console.error('Error fetching Results', err)
-    } finally {
-        loading.value = false
+    // Initilize form with API data
+    form.name = inputs.value?.name || ''
+    form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
+    form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
+    form.election_year = inputs.value?.election_year || null
+    form.tax_years = inputs.value?.tax_years?.map(year => ({
+      ...year,
+    })) || []
+    
+    // Search for current year to ensure we set cannot_elect on correct year
+    const current_year = form.tax_years.reduce((max, current) => 
+    parseFloat(current.year) > parseFloat(max.year) ? current : max)
+    current_year.cannot_elect = true
+    
+    // Load worksheet data if it exists
+    if (inputs.value?.income_worksheet) {
+      savedWorksheet.value = { ...inputs.value.income_worksheet }
     }
+
+    // Ensure election year aligns with first year in tax_years array, correct if off
+    if (form.election_year != parseInt(form.tax_years[0].year)) {
+      correctTaxYears(form.election_year, form.tax_years)
+    }
+
+    updateChartData()
+  } catch (err) {
+      error.value = 'Failed to fetch results'
+      console.error('Error fetching Results', err)
+  } finally {
+      loading.value = false
+  }
 }
 
 const submitForm = async () => {
