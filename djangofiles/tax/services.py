@@ -297,6 +297,7 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
     """
     election_year.taxable_income -= elected_income
     election_year.qualified_income -= elected_qualified_income
+    
 
     amount_to_distribute = elected_income / 3
     amount_to_distribute_qualified = elected_qualified_income / 3
@@ -306,6 +307,7 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
 
     for year in three_prior_years:
         year.taxable_income += amount_to_distribute
+        print(f"{year.year}: {year.taxable_income}")
         year.qualified_income += amount_to_distribute_qualified
 
     return election_year, three_prior_years
@@ -366,8 +368,14 @@ class ScheduleJCalculation:
         allocate_all_years(years_list)
 
         # Find tax on 2024 taxable less elected farm income
+        adjusted_current_year.taxable_income -= distribute_elected
+        adjusted_current_year.qualified_income -= distribute_cap_gains
         TaxCalculation(adjusted_current_year).calculate()
         output.line_4 = adjusted_current_year.total_tax
+
+        # add back income so we dont double subtarct in allocator
+        adjusted_current_year.taxable_income += distribute_elected
+        adjusted_current_year.qualified_income += distribute_cap_gains
 
         # Update form for prior years
         update_lines = [
@@ -407,6 +415,7 @@ class ScheduleJCalculation:
 
         # Tax savings/expense compared to not using Sch J
         output.tax_delta = self.current_year.total_tax - output.line_23
+        # print(f"current_year: {self.current_year.total_tax} - line_23: {output.line_23} = {output.tax_delta}")
 
         return ScheduleJResultContainer(
             schedule_j_form=output,
@@ -452,7 +461,7 @@ class ScheduleJOptimization:
 
         # Find percentage so we can decrease proportionally
         ordinary_percentage = current_ordinary_elected / current_total_elected
-        qualified_percentage = current_qualified_elected / current_total_elected        
+        qualified_percentage = current_qualified_elected / current_total_elected
 
         while current_total_elected >= 500:
             instance = (ScheduleJCalculation(self.years)
@@ -462,5 +471,8 @@ class ScheduleJOptimization:
             current_total_elected -= 500
             current_ordinary_elected -= 500 * ordinary_percentage
             current_qualified_elected -= 500 * qualified_percentage
+            self.years[0].elected_farm_income -= 500 * ordinary_percentage
+            self.years[0].qualified_farm_income -= 500 * qualified_percentage
+            # print(self.years[0].elected_farm_income)
             
         return results

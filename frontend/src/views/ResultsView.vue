@@ -256,7 +256,6 @@ const updateChartData = (response = null) => {
     const elected = data.results.map(result => parseFloat(result.line_2a))
     const qualified_elected = data.results.map(result => parseFloat(result.line_2b))
 
-    // Wait a bit to show loading, then update
     chartOptions.value = {
       ...chartOptions.value,
       xaxis: {
@@ -286,8 +285,8 @@ const updateChartData = (response = null) => {
         data: tax_delta
       }
     ]
-    loading.value = false
-    
+  
+    loading.value = false  
     // Transition delay
     chartTransitioning.value = true
     setTimeout(() => {
@@ -313,10 +312,13 @@ const fetchResults = async () => {
     form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
     form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
     form.election_year = inputs.value?.election_year || null
-    form.tax_years = inputs.value?.tax_years?.map(year => ({
-      ...year,
-    })) || []
     
+    form.tax_years = inputs.value?.tax_years?.map((year, index) => ({
+      ...year,
+      is_electing: index === 0 ? true : year.is_electing,
+      cannot_elect: index === 0 ? true : year.cannot_elect
+    })) || []
+
     // Search for current year to ensure we set cannot_elect on correct year
     const current_year = form.tax_years.reduce((max, current) => 
     parseFloat(current.year) > parseFloat(max.year) ? current : max)
@@ -351,7 +353,15 @@ const submitForm = async () => {
     income_worksheet: worksheetData,
     qualified_farm_income: form.qualified_farm_income,
     election_year: form.election_year,
-    tax_years: form.tax_years
+      tax_years: form.tax_years.map((year, index) => 
+      index === 0 
+        ? {
+            ...year,
+            elected_farm_income: form.max_elected_farm_income,
+            qualified_farm_income: form.qualified_farm_income
+          }
+        : year
+    )
   }
     try {
         const id = route.params.id

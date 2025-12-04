@@ -206,7 +206,6 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
         existing_years = {y.id: y for y in instance.tax_years.all()}
         for year_dict in years_data:
             year_id = year_dict.get("id")
-            print(year_id)
 
             if year_id not in existing_years:
                 raise serializers.ValidationError(f"Invalid TaxYearData ID {year_id}")

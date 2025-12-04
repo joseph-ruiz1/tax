@@ -58,7 +58,7 @@
         </div>
     </div>
 
-    <div v-if="form.tax_years[props.currentYearIndex].is_electing" class="field-container">
+    <div v-if="form.tax_years[props.currentYearIndex].is_electing && !form.tax_years[props.currentYearIndex].cannot_elect" class="field-container">
         <div class="title-with-info">
         <p class="title">Elected Farm Income</p>
         </div>
@@ -70,7 +70,7 @@
         >
     </div>
 
-    <div v-if="form.tax_years[props.currentYearIndex].is_electing" class="field-container">
+    <div v-if="form.tax_years[props.currentYearIndex].is_electing && !form.tax_years[props.currentYearIndex].cannot_elect" class="field-container">
         <div class="title-with-info">
         <p class="title">Qualified Farm Income</p>
         </div>

@@ -86,7 +86,16 @@ const submitForm = async () => {
     max_elected_farm_income: form.max_elected_farm_income,
     income_worksheet: worksheetData,
     qualified_farm_income: form.qualified_farm_income,
-    tax_years: form.tax_years
+    tax_years: form.tax_years.map((year, index) => 
+      index === 0 
+        ? {
+            ...year,
+            is_electing: true,
+            elected_farm_income: form.max_elected_farm_income,
+            qualified_farm_income: form.qualified_farm_income
+          }
+        : year
+    )
   }
 
   const filingstatusMapping = {
