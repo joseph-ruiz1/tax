@@ -43,28 +43,41 @@
             <h3>Total {{ form.election_year }} tax</h3>
         </div>
 
-        <vue-apex-charts
+        <div class="chart-container">
+          <div v-if="loading || chartTransitioning" class="chart-loading-overlay" key="loading">
+            <div class="loading-text">Updating chart...</div>
+          </div>
+
+          <vue-apex-charts
             id="tax-savings-chart"
-            v-if="series.length > 0"
+            key="chart"
+            v-if="series.length > 0 && !chartTransitioning"
             height="350"
             :options="chartOptions"
             :series="series"
           ></vue-apex-charts>
-
-        <div v-else class="chart-placeholder">
-            <p>Loading chart data...</p>
         </div>
+        
         <div class="section-header">
           <h3>Net Tax Savings/Expense</h3>
         </div>
-        <vue-apex-charts
-            id="tax-delta-chart"
-            v-if="series.length > 0"
-            height="350"
-            :options="deltaChartOptions"
-            :series="delta_series"
-        ></vue-apex-charts>
+
+        <div class="chart-container">
+          <div v-if="loading || chartTransitioning" class="chart-loading-overlay" key="loading-delta">
+            <div class="loading-text">Updating chart...</div>
+          </div>
+
+          <vue-apex-charts
+              id="tax-delta-chart"
+              v-if="series.length > 0 && !chartTransitioning"
+              height="350"
+              :options="deltaChartOptions"
+              :series="delta_series"
+          ></vue-apex-charts>
+        </div>
       </div>
+        
+       
     </div>
   </div>
   <div v-else>
@@ -84,6 +97,7 @@ import { correctTaxYears } from '@/composables/correctTaxYears'
 
 const route = useRoute()
 const loading = ref(true)
+const chartTransitioning = ref(false)
 const error = ref('')
 const inputs = ref(null)
 const outputs = ref(null)
@@ -123,15 +137,15 @@ const baseOptions = {
     },
     animations: {
       enabled: true,
-      easing: 'easeinout',
-      speed: 800,
+      easing: 'easeout',
+      speed: 150,
       animateGradually: {
         enabled: true,
-        delay: 150,
+        delay: 800,
       },
       dynamicAnimation: {
         enabled: true,
-        speed: 350,
+        speed: 800,
       },
     },
     zoom: {
@@ -179,7 +193,7 @@ const baseOptions = {
         fontSize: '14px',
         fontWeight: 600,
       }
-    }
+    },
   },
   legend: {
     position: 'top',
@@ -232,42 +246,59 @@ const deltaChartOptions = ref({
 const updateChartData = (response = null) => {
 // response.outputs will only contain data upon update
   const data = response?.outputs || outputs.value
+
+  try {
+    loading.value = true
   
-  if (!data) return
-  const sch_j_total = data.results.map(result => parseFloat(result.line_23))
-  const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
-  const elected = data.results.map(result => parseFloat(result.line_2a))
-  const qualified_elected = data.results.map(result => parseFloat(result.line_2b))
+    if (!data) return
+    const sch_j_total = data.results.map(result => parseFloat(result.line_23))
+    const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
+    const elected = data.results.map(result => parseFloat(result.line_2a))
+    const qualified_elected = data.results.map(result => parseFloat(result.line_2b))
 
-  chartOptions.value = {
-    ...chartOptions.value,
-    xaxis: {
-      ...chartOptions.value.xaxis,
-      categories: elected
+    // Wait a bit to show loading, then update
+    chartOptions.value = {
+      ...chartOptions.value,
+      xaxis: {
+        ...chartOptions.value.xaxis,
+        categories: elected
+      }
     }
+
+    deltaChartOptions.value = {
+      ...deltaChartOptions.value,
+      xaxis: {
+        ...deltaChartOptions.value.xaxis,
+        categories: elected
+      }
+    }
+
+    series.value = [
+      {
+        name: 'Total 2024 tax',
+        data: sch_j_total
+      }
+    ]
+
+    delta_series.value = [
+      {
+        name: 'Total 2024 tax savings/expense',
+        data: tax_delta
+      }
+    ]
+    loading.value = false
+    
+    // Transition delay
+    chartTransitioning.value = true
+    setTimeout(() => {
+      chartTransitioning.value = false
+    }, 100)
+
+  } catch (err) {
+    error.value = 'Failed to update results'
+  } finally {
+    loading.value = false
   }
-
-  deltaChartOptions.value = {
-    ...deltaChartOptions.value,
-    xaxis: {
-      ...deltaChartOptions.value.xaxis,
-      categories: elected
-    }
-  }
-
-  series.value = [
-    {
-      name: 'Total 2024 tax',
-      data: sch_j_total
-    }
-  ]
-
-  delta_series.value = [
-    {
-      name: 'Total 2024 tax savings/expense',
-      data: tax_delta
-    }
-  ]
 }
 
 const fetchResults = async () => {
@@ -528,18 +559,28 @@ onMounted(async () => {
   margin: 0;
 }
 
-.chart-placeholder {
-  background: #f7fafc;
-  border: 2px dashed #e2e8f0;
-  border-radius: 12px;
-  padding: 3rem 2rem;
-  text-align: center;
-  color: #718096;
-  min-height: 350px;
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 350px
+}
+
+.chart-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.95);
+  z-index: 10;
+}
+
+.loading-text {
+  font-size: 16px;
+  color: #666;
 }
 
 /* Responsive Design */
