@@ -331,7 +331,7 @@ const fetchResults = async () => {
 
     // Ensure election year aligns with first year in tax_years array, correct if off
     if (form.election_year != parseInt(form.tax_years[0].year)) {
-      correctTaxYears(form.election_year, form.tax_years)
+      form.tax_years = correctTaxYears(form.election_year, form.tax_years)
     }
 
     updateChartData()

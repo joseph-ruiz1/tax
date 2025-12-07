@@ -17,7 +17,7 @@ export function updateElectionYear(form, currentYearIndex) {
     
     // Correct all tax years if election year doesn't match first tax year
     if (form.election_year != parseInt(form.tax_years[0].year)) {
-      correctTaxYears(form.election_year, form.tax_years)
+      form.tax_years = correctTaxYears(form.election_year, form.tax_years)
     }
   }
  
