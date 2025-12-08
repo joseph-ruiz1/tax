@@ -165,11 +165,9 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         dataset = TaxDataSet.objects.create(**validated_data)
         # Create 4 blank years
-        year = 2024
-        for _ in range(4):
-            TaxYearData.objects.create(dataset=dataset, year=year)
-            year -= 1
-        
+        new_year_obj_list = [TaxYearData.objects.create(dataset=dataset, year=2024-i) for i in range(4)]
+        # First year has is_electing = True
+        new_year_obj_list[0].is_electing = True
         return dataset
 
 class CalculationEntrySerializer(serializers.ModelSerializer):

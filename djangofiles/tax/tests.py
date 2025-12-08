@@ -235,20 +235,27 @@ class ScheduleJOptimizationTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_optimization(self):
-        for i, test in enumerate(SCHEDULE_J_OPTIMIZATION_TEST):
-                max_elected, max_qualified_elected = test["elected"]
-                dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], max_elected, max_qualified_elected)
-                dataset.refresh_from_db()
+        test_years = create_tax_year_data_list(SCHEDULE_J_OPTIMIZATION_TEST, user=self.test_user, save=True)
 
-                years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
+        for test_set in test_years:
+            # Get the dataset instance
+            dataset = test_set['dataset_instance']
+            dataset.save()
 
-                # Base Calculations
-                for year in years:
-                    TaxCalculation(year).calculate()
+            # Convert queryset to a list
+            years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
+            
+            # Base Calculations
+            for year in years:
+                TaxCalculation(year).calculate()
+                print(f"total base tax for {year.year}: {year.total_tax}")
+            optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, long_form=True)
+            results = optimize.optimize_sch_j(elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income)
 
-        optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, dataset=dataset)
-        results = optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
-        print(results)
+            for calc in results:
+                if calc.line_2a == 30000:
+                    print(calc)
+
         
 class TaxDataSetSerializerTest(APITestCase):
     """
@@ -345,14 +352,13 @@ SCHEDULE_J_TEST_CASES = [
 SCHEDULE_J_OPTIMIZATION_TEST = [
     {
         'inputs': [
-            [2024, "MFJ", 120000, 105000, True, 10000, 0],
-            [2023, "MFJ", 85000, 70000, True, 20000, 1000],
-            [2022, "single", 55000, 40000, 0, 0, 0],
-            [2021, "MFJ", 96000, 45000, 0, 0, 0],
-            [2020, "MFJ", 10000, 450, 0, 0, 0],
+            dict(year=2022, filing_status="MFJ", taxable_income=110000, qualified_income=0, is_electing=True, elected_farm_income=30000, qualified_farm_income=0),
+            dict(year=2021, filing_status="MFJ", taxable_income=70000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+            dict(year=2020, filing_status="MFJ", taxable_income=65000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+            dict(year=2019, filing_status="MFJ", taxable_income=72000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
         ],
         'outputs': [143, 2812, 5683, 10092],
-        'elected': [25000, 4000],
+        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=30000, qualified_farm_income=0, election_year='2022')
     },
 ]
 

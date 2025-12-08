@@ -56,7 +56,7 @@ const form = reactive({
     qualified_farm_income: 0,
     election_year: 2024,
     tax_years: [
-        { year: 2024, filing_status: null, taxable_income: 0, qualified_income: 0, cannot_elect: true},
+        { year: 2024, filing_status: null, taxable_income: 0, qualified_income: 0, cannot_elect: true, is_electing: true},
         { year: 2023, filing_status: null, taxable_income: 0, qualified_income: 0 },
         { year: 2022, filing_status: null, taxable_income: 0, qualified_income: 0 },
         { year: 2021, filing_status: null, taxable_income: 0, qualified_income: 0 },
@@ -126,6 +126,7 @@ onMounted(async () => {
         ...year,
         id: response?.tax_years?.[index]?.id
   }))
+  console.log(form.tax_years)
 } catch (err) {
         error.value = 'Failed to fetch tax years'
         console.error('Error fetching tax years', err)

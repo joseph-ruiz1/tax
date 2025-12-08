@@ -298,7 +298,6 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
     election_year.taxable_income -= elected_income
     election_year.qualified_income -= elected_qualified_income
     
-
     amount_to_distribute = elected_income / 3
     amount_to_distribute_qualified = elected_qualified_income / 3
 
@@ -307,7 +306,6 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
 
     for year in three_prior_years:
         year.taxable_income += amount_to_distribute
-        print(f"{year.year}: {year.taxable_income}")
         year.qualified_income += amount_to_distribute_qualified
 
     return election_year, three_prior_years
@@ -368,12 +366,10 @@ class ScheduleJCalculation:
         allocate_all_years(years_list)
 
         # Find tax on 2024 taxable less elected farm income
-        adjusted_current_year.taxable_income -= distribute_elected
-        adjusted_current_year.qualified_income -= distribute_cap_gains
         TaxCalculation(adjusted_current_year).calculate()
         output.line_4 = adjusted_current_year.total_tax
 
-        # add back income so we dont double subtarct in allocator
+        # add back income so we dont double subtract in allocator
         adjusted_current_year.taxable_income += distribute_elected
         adjusted_current_year.qualified_income += distribute_cap_gains
 
@@ -437,10 +433,12 @@ class ScheduleJOptimization:
         elected_farm_qualifed (Decimal): Amount of elected income that is made up of cap gains
 
     """ 
-    def __init__(self, years, elected_farm_income: Decimal, elected_farm_qualified: Decimal):
+    def __init__(self, years, elected_farm_income: Decimal, elected_farm_qualified: Decimal, show_all_years=False, long_form=False):
         self.years = years
         self.elected_farm_income = elected_farm_income
         self.elected_farm_qualified = elected_farm_qualified
+        self.show_all_years = show_all_years
+        self.long_form = long_form
 
     def optimize_sch_j(self, elected_farm_income: Decimal, elected_farm_qualified: Decimal):
         """
@@ -448,11 +446,17 @@ class ScheduleJOptimization:
 
         Args:
             elected_farm_income (Decimal): The maximum amount of farm income that can be elected to average
-            elected_cap_gains (Decimal): The amount of elected income made up of capital gains
+            elected_farm_qualified (Decimal): The amount of elected income made up of capital gains
+            show_all_years (bool): True if you want ScheduleJResultContainer to return all AdjustedTaxData instances. Default is False.
+            long_form (bool): True if you want ScheduleJResultContainer to return all lines on ScheduleJForm. Default is False.
 
         Returns:
             results (list): A list of all ScheduleJForm objects that were calcualted
         """
+        if not isinstance(elected_farm_income, Decimal):
+            raise TypeError("Not a Decimal")
+        if not isinstance(elected_farm_qualified, Decimal):
+            raise TypeError("Not a Decimal")
         results = []
 
         current_total_elected = elected_farm_income
@@ -464,7 +468,7 @@ class ScheduleJOptimization:
         qualified_percentage = current_qualified_elected / current_total_elected
 
         while current_total_elected >= 500:
-            instance = (ScheduleJCalculation(self.years)
+            instance = (ScheduleJCalculation(self.years, show_all_years=self.show_all_years, long_form=self.long_form)
                         .schedule_j_calculation(current_total_elected, current_qualified_elected))
             results.append(instance.schedule_j_form)
 
