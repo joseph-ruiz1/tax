@@ -315,11 +315,13 @@ const fetchResults = async () => {
     
     form.tax_years = inputs.value?.tax_years?.map((year, index) => ({
       ...year,
+      // Ensure first year has election set and cannot_elect so the Sch J election section doesn't show
       is_electing: index === 0 ? true : year.is_electing,
       cannot_elect: index === 0 ? true : year.cannot_elect
     })) || []
 
     // Search for current year to ensure we set cannot_elect on correct year
+    // not sure if this is still needed
     const current_year = form.tax_years.reduce((max, current) => 
     parseFloat(current.year) > parseFloat(max.year) ? current : max)
     current_year.cannot_elect = true
