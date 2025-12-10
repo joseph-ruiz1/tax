@@ -4,7 +4,6 @@ from .models import TaxYearData
 import copy
 from decimal import Decimal
 
-# CONSIDER MAKING SAVE FIELD AN ARGUMENT TO SCH J CALC FOR TESTING PURPOSES
 class TaxCalculation:
     def __init__(self, tax_data: TaxYearData):
         self.tax_data = tax_data
@@ -310,6 +309,24 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
 
     return election_year, three_prior_years
 
+def find_bracket_thresholds(year: str, filing_status: str):
+    """
+    Returns the upper bracket thresholds based on the year and filing status
+    
+    Arguments:
+        year (String): year we want to find brackets for
+        filing_status (String): filing status that was clamed
+    
+    Returns:
+        bracket_thresholds (dict): the marginal rate as key and upper threshold as value
+
+    Notes:
+        The bracket values are being converted to floats here so we don't need to serialize the Decimals
+    """
+    bracket_thresholds = tax_brackets.ORDINARY_TAX_TABLES[str(year)][filing_status]
+    single_year_bracket = {year: {rate: float(threshold[0]) for rate, threshold in bracket_thresholds.items()}}
+    
+    return single_year_bracket
 
 class ScheduleJCalculation:
     """
@@ -384,7 +401,7 @@ class ScheduleJCalculation:
             # Subtract out current year's elected farm income since that gets added in allocate_income
             setattr(output, base_income, year_data.taxable_income - distribute_elected)
             
-            # Place increased income total taxable income into Sch J
+            # Place taxable income plus 1/3 current year elected into Sch J
             setattr(output, adjusted_income, year_data.taxable_income) 
 
             # Tax including current year elected amount
@@ -411,7 +428,6 @@ class ScheduleJCalculation:
 
         # Tax savings/expense compared to not using Sch J
         output.tax_delta = self.current_year.total_tax - output.line_23
-        # print(f"current_year: {self.current_year.total_tax} - line_23: {output.line_23} = {output.tax_delta}")
 
         return ScheduleJResultContainer(
             schedule_j_form=output,
@@ -431,7 +447,6 @@ class ScheduleJOptimization:
         years (list): List of TaxYearDatas in descending order
         elected_farm_income (Decimal): Max amount of income that can be elected
         elected_farm_qualifed (Decimal): Amount of elected income that is made up of cap gains
-
     """ 
     def __init__(self, years, elected_farm_income: Decimal, elected_farm_qualified: Decimal, show_all_years=False, long_form=False):
         self.years = years
@@ -478,5 +493,5 @@ class ScheduleJOptimization:
             self.years[0].elected_farm_income -= 500 * ordinary_percentage
             self.years[0].qualified_farm_income -= 500 * qualified_percentage
             # print(self.years[0].elected_farm_income)
-            
+
         return results

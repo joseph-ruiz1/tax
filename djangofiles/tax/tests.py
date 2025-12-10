@@ -1,13 +1,12 @@
 from decimal import Decimal
 from django.test import TestCase
-from django.urls import reverse
 from rest_framework.test import APITestCase
 
-
+from .calculations import tax_brackets
 from .models import TaxYearData, TaxDataSet, User
 from .utils import build_taxyear_formset_data, chunker
 from .serializers import  OutputSerializer
-from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, allocate_all_years
+from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, allocate_all_years, find_bracket_thresholds
 
 # HELPER FUNCTIONS
 def create_taxdataset(user, elected, elected_qualified):
@@ -251,11 +250,6 @@ class ScheduleJOptimizationTest(TestCase):
                 print(f"total base tax for {year.year}: {year.total_tax}")
             optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, long_form=True)
             results = optimize.optimize_sch_j(elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income)
-
-            for calc in results:
-                if calc.line_2a == 30000:
-                    print(calc)
-
         
 class TaxDataSetSerializerTest(APITestCase):
     """
@@ -299,6 +293,19 @@ class ElectedIncomeDistributionTest(TestCase):
         years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
         results = allocate_all_years(years)
 
+class FindTaxBracketThresholdsTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_bracket_thresholds(self):
+        test_cases = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
+        test_years = test_cases[0]['inputs']
+
+        brackets = []
+        for year in test_years:
+            brackets.append(find_bracket_thresholds(year.year, year.filing_status))
+        print(brackets)
 
 CREDENTIALS = [
             ('test1', 'testing123'), 

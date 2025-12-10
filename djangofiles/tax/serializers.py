@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import serializers
 from decimal import Decimal
 from django.db import transaction
@@ -120,7 +122,7 @@ class FarmIncomeWorksheetSerializer(serializers.Serializer):
             key: float(value) if isinstance(value, Decimal) and value is not None else value
             for key, value in validated.items()
         }
-
+    
 class TaxDataSetSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.username')
 
@@ -237,7 +239,7 @@ class OutputSerializer(serializers.ModelSerializer):
 
     def get_inputs(self, instance):
         """
-        Form for our general info, years, and income worksheet
+        Form for the general info, years, and income worksheet
         """
         validate_tax_years(instance)
         return {
