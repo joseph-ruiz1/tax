@@ -1,3 +1,4 @@
+from.models import TaxDataSet
 from itertools import islice
 from django.urls import reverse
 from django.db import models
@@ -75,7 +76,7 @@ def validate_tax_years(dataset: object):
         raise serializers.ValidationError("Number of tax year instances not equal to 4")
     return dataset
 
-def update_calculations(dataset):
+def update_calculations(dataset: TaxDataSet):
     """
     Helper function to run Schedule J optimization
 
@@ -90,17 +91,18 @@ def update_calculations(dataset):
 
     years = dataset.tax_years.all().order_by('-year')
     
-    bracket_thresholds = []
     # Base Calculations and bracket finder
     for tax_year in years:
         TaxCalculation(tax_year).calculate()
         tax_year.save()
-        bracket_thresholds.append(find_bracket_thresholds(tax_year.year, tax_year.filing_status)) 
 
     optimize = ScheduleJOptimization(years,
                                     elected_farm_income=dataset.max_elected_farm_income, 
                                     elected_farm_qualified=dataset.qualified_farm_income, 
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+    
+
+    print(optimize)
     return {
         'optimization': optimize,
         'bracket_thresholds': bracket_thresholds

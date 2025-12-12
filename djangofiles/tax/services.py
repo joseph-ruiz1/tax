@@ -136,6 +136,7 @@ class AdjustedTaxData:
         self.is_electing = is_electing
         self.elected_farm_income = elected_farm_income
         self.qualified_farm_income = qualified_farm_income
+        self.taxable_ordinary = max(self.taxable_income - self.qualified_income, 0)
 
     @classmethod
     def from_model_instance(cls, model_instance, fields=None):
@@ -309,7 +310,6 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
         year.qualified_income += amount_to_distribute_qualified
 
     return election_year, three_prior_years
-
 def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest: str, ordinary_rate_highest: str):
     """
     Returns the bracket thresholds for the lowest and highest income possible
@@ -326,6 +326,7 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
 
     Notes:
         The bracket values are being converted to ints here so we don't need to serialize the Decimals
+
         Returns one bracket below the lowest ordinary income amount and one bracket above the highest income amount
         Example: With $0 of elected income, we are in the 24% bracket, and with the max elected income we are in the 32% bracket
                 The 22% and 35% brackets will be returned and displayed on the ordinary income graph
@@ -358,7 +359,6 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
             highest_rate: int(highest_threshold)
         }
     }
-    
     return bracket_thresholds
 
 class ScheduleJCalculation:

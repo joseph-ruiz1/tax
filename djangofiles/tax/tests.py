@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 
 from .calculations import tax_brackets
 from .models import TaxYearData, TaxDataSet, User
-from .utils import build_taxyear_formset_data, chunker
+from .utils import update_calculations
 from .serializers import  OutputSerializer
 from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, allocate_all_years, find_bracket_thresholds
 
@@ -303,7 +303,7 @@ class FindTaxBracketThresholdsTest(TestCase):
             # Get the dataset instance
             dataset = test_set['dataset_instance']
             dataset.save()
-
+            update_calculations(dataset)
             # Convert queryset to a list
             years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
             
@@ -372,7 +372,7 @@ BRACKET_THRESHOLDS_TEST_CASES = [
     {
         'inputs': [
             dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
-            dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
+            dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=10000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
             dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
             dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
         ],
