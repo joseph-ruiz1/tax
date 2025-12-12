@@ -298,10 +298,24 @@ class FindTaxBracketThresholdsTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_bracket_thresholds(self):
-        test_cases = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
-        test_years = test_cases[0]['inputs']
+        test_cases = create_tax_year_data_list(BRACKET_THRESHOLDS_TEST_CASES, user=self.test_user, save=True)
+        for test_set in test_cases:
+            # Get the dataset instance
+            dataset = test_set['dataset_instance']
+            dataset.save()
 
-        
+            # Convert queryset to a list
+            years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
+            
+            # Base Calculations
+            for year in years:
+                TaxCalculation(year).calculate()
+
+            results_container = ScheduleJCalculation(years, show_all_years=True).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+            adjusted_years = results_container.tax_years
+            for adjusted_year in adjusted_years.values():
+                test = find_bracket_thresholds(adjusted_year.year, adjusted_year.filing_status, str(adjusted_year.ordinary_rate), str(adjusted_year.ordinary_rate))
+                print(test)
 
         
 

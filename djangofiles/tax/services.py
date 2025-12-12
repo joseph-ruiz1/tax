@@ -99,11 +99,12 @@ class AdjustedTaxData:
     """
     DEFAULT_FIELDS = ['year', 
                       'filing_status', 
-                      'taxable_income', 
+                      'taxable_income',
                       'qualified_income', 
                       'is_electing', 
                       'elected_farm_income', 
-                      'qualified_farm_income']
+                      'qualified_farm_income',
+                      'ordinary_rate']
 
     def __init__(self,
                 year: str,
@@ -320,7 +321,8 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
         highest_taxable_ordinary (String): Ordinary income rate for the year with max elected income
     
     Returns:
-        bracket_thresholds (dict): the marginal rate as key and upper threshold as value
+        bracket_thresholds (dict): dict with year as key, the marginal rate (str) as key and upper threshold (int) as value
+        ex: {2024: {0.22: 80521}}
 
     Notes:
         The bracket values are being converted to ints here so we don't need to serialize the Decimals
@@ -329,24 +331,32 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
                 The 22% and 35% brackets will be returned and displayed on the ordinary income graph
     """
     applicable_brackets = list(tax_brackets.ORDINARY_TAX_TABLES[str(year)][filing_status].items())
-    
     # Find the lowest rate's position
     current_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_lowest)
 
-    # Get lowest bracket
+    # Get lowest bracket if not in lowest bracket
     if current_index > 0:
         lowest_rate, (lowest_threshold, _, _) = applicable_brackets[current_index - 1]
+    else:
+        # Already in lowest bracket
+        lowest_rate = ordinary_rate_lowest
+        lowest_threshold = 0
 
     # Find the highest rate's position
     current_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_highest)
 
-    # Get highest bracket
+    # Get highest bracket if not in highest bracket
     if current_index < len(applicable_brackets) - 1:
         highest_rate, (highest_threshold, _, _) = applicable_brackets[current_index + 1]
+    else:
+        highest_rate = ordinary_rate_highest
+        highest_threshold = applicable_brackets[len(applicable_brackets) - 1][1][0]
 
     bracket_thresholds = {
-        lowest_rate: int(lowest_threshold),
-        highest_rate: int(highest_threshold)
+        year: {
+            lowest_rate: int(lowest_threshold),
+            highest_rate: int(highest_threshold)
+        }
     }
     
     return bracket_thresholds
