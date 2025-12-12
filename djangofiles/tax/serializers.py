@@ -94,9 +94,12 @@ class SchJFormSerializer(serializers.Serializer):
     Show total tax and the associated elected farm incomes. 
     Eventually I should build where all Sch J lines can be serialized. Maybe have an arg for it
     """
-    line_23 = serializers.DecimalField(max_digits=12, decimal_places=2)
+    line_23 = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     line_2a = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     line_2b = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
+    line_7 = serializers.DecimalField(max_digits=12, decimal_places=2)
+    line_11 = serializers.DecimalField(max_digits=12, decimal_places=2)
+    line_15 = serializers.DecimalField(max_digits=12, decimal_places=2)
     tax_delta = serializers.DecimalField(max_digits=12, decimal_places=2)
 
 class FarmIncomeWorksheetSerializer(serializers.Serializer):
@@ -258,7 +261,9 @@ class OutputSerializer(serializers.ModelSerializer):
         """
         results = self.context.get('results')
         iterations = SchJFormSerializer(results, many=True).data
+        bracket_thresholds = self.context.get('bracket_thresholds')
     
         return {
             'results': iterations,
+            'bracket_threholds': bracket_thresholds
         }

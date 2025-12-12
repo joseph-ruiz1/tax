@@ -227,7 +227,6 @@ class ScheduleJCalculationTest(TestCase):
                 if val1 != val2:
                     print(f"Mismatch on key '{key}': calcualtions returned {val1}, correct is {val2}")
 
-
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
@@ -247,9 +246,9 @@ class ScheduleJOptimizationTest(TestCase):
             # Base Calculations
             for year in years:
                 TaxCalculation(year).calculate()
-                print(f"total base tax for {year.year}: {year.total_tax}")
-            optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, long_form=True)
+            optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, long_form=False)
             results = optimize.optimize_sch_j(elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income)
+            print(results)
         
 class TaxDataSetSerializerTest(APITestCase):
     """
@@ -302,10 +301,9 @@ class FindTaxBracketThresholdsTest(TestCase):
         test_cases = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
         test_years = test_cases[0]['inputs']
 
-        brackets = []
-        for year in test_years:
-            brackets.append(find_bracket_thresholds(year.year, year.filing_status))
-        print(brackets)
+        
+
+        
 
 CREDENTIALS = [
             ('test1', 'testing123'), 
@@ -354,6 +352,27 @@ SCHEDULE_J_TEST_CASES = [
         'outputs': [143, 2812, 5683, 10092],
         'elected': [13624, 0],
     },
+]
+
+BRACKET_THRESHOLDS_TEST_CASES = [
+    {
+        'inputs': [
+            dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
+            dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
+            dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+            dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+        ],
+        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0)
+    },
+    {
+        'inputs': [
+                dict(year=2023, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
+                dict(year=2022, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
+                dict(year=2021, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+                dict(year=2020, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+                ],
+        'dataset': dict(name='Allocation Test Case 2', max_elected_farm_income=10000, qualified_farm_income=0)
+    }
 ]
 
 SCHEDULE_J_OPTIMIZATION_TEST = [

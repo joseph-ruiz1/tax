@@ -163,13 +163,12 @@ class DataSetViewSet(viewsets.ModelViewSet):
         """
         dataset = self.get_object()
         results = update_calculations(dataset)
-        serializer = self.get_serializer(dataset, context={'results': results['optimization']})
+        serializer = self.get_serializer(dataset, context={'results': results['optimization'], 'bracket_thresholds': results['bracket_thresholds']})
         return Response({
             'success': True,
             'message': 'Get Successful',
             'form': serializer.data['inputs'],
             'outputs': serializer.data['outputs'],
-            'bracket_thresholds': results['thresholds']
         })
     
     @action(detail=True, methods=['patch'], url_path='results-update')

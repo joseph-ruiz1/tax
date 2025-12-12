@@ -117,6 +117,7 @@ updateElectionYear(form, currentYearIndex)
 
 const series = ref([])
 const delta_series = ref([])
+const threshold_series = ref([])
 const baseOptions = {
   chart: {
     type: 'area',
@@ -243,6 +244,106 @@ const deltaChartOptions = ref({
   },
 })
 
+const taxBracketChart = {
+  chart: {
+    type: 'line',
+    toolbar: {
+      show: true,
+      offsetX: 0,
+      offsetY: 0,
+      autoSelected: '',
+      tools: {
+        download: false,
+        zoom: true,
+        zoomin: true,
+        zoomout: true,
+        pan: true,
+        reset: true,
+      },
+      reset: 'Reset Zoom',
+    },
+    animations: {
+      enabled: true,
+      easing: 'easeout',
+      speed: 150,
+      animateGradually: {
+        enabled: true,
+        delay: 800,
+      },
+      dynamicAnimation: {
+        enabled: true,
+        speed: 800,
+      },
+    },
+    zoom: {
+      allowMouseWheelZoom: false,
+    },
+  },
+  dataLabels: {
+    enabled: false,
+  },
+  stroke: {
+    curve: 'straight',
+    width: 2,
+  },
+  grid: {
+    padding: {
+      bottom: 30,
+    },
+  },
+  xaxis: {
+    type: 'numeric',
+    labels: {
+      formatter: function (val) {
+        val = val | 0
+        return '$' + val.toLocaleString()
+      },
+    },
+    title: {
+      text: 'Amount Elected',
+      offsetY: 15
+    },
+    categories: [],
+    tickAmount: 10,
+  },
+  yaxis: {
+    type: 'numeric',
+    labels: {
+      formatter: function (val) {
+        return '$' + val.toLocaleString()
+      },
+    },
+    title: {
+      offsetX: -1,
+      offsetY: 5,
+      style: {
+        fontSize: '14px',
+        fontWeight: 600,
+      }
+    },
+  },
+  legend: {
+    position: 'top',
+  },
+  colors: ['#4c51bf', '#48bb78', '#f56565'],
+  tooltip: {
+    x: {
+      show: false,
+      format: 'numeric',
+      formatter: function (val) {
+        return '$' + val.toLocaleString()
+      },
+    },
+    y: {
+      format: 'numeric',
+      formatter: function (val) {
+        return '$' + val.toLocaleString()
+      },
+    },
+    theme: 'dark',
+  },
+}
+
 const updateChartData = (response = null) => {
 // response.outputs will only contain data upon update
   const data = response?.outputs || outputs.value
@@ -254,6 +355,8 @@ const updateChartData = (response = null) => {
     const sch_j_total = data.results.map(result => parseFloat(result.line_23))
     const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
     const elected = data.results.map(result => parseFloat(result.line_2a))
+    const year_1_thresholds = data.bracket_threshold.map(year => parseFloat(year))
+
     const qualified_elected = data.results.map(result => parseFloat(result.line_2b))
 
     chartOptions.value = {
@@ -283,6 +386,13 @@ const updateChartData = (response = null) => {
       {
         name: 'Total 2024 tax savings/expense',
         data: tax_delta
+      }
+    ]
+
+    threshold_series.value = [
+      {
+        name: 'Taxable income',
+        data: null
       }
     ]
   

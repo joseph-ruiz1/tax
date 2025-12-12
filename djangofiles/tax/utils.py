@@ -55,7 +55,6 @@ def load_tax_dataset_and_years(self, years: list, sets: int):
 
         response = self.client.post(input_url, formset_data, follow=True)
 
-
 def create_schedulej_fields():
     fields = {}
     for n in range(1, 24):
@@ -63,7 +62,6 @@ def create_schedulej_fields():
     for ch in 'abc':
         fields[f'line_2{ch}'] = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     return fields
-
 
 def validate_tax_years(dataset: object):
     """
@@ -76,8 +74,6 @@ def validate_tax_years(dataset: object):
     if years.count() != 4:
         raise serializers.ValidationError("Number of tax year instances not equal to 4")
     return dataset
-
-
 
 def update_calculations(dataset):
     """
@@ -107,5 +103,5 @@ def update_calculations(dataset):
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
     return {
         'optimization': optimize,
-        'thresholds': bracket_thresholds
+        'bracket_thresholds': bracket_thresholds
     }
