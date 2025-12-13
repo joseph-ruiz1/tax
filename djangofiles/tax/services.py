@@ -310,6 +310,7 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
         year.qualified_income += amount_to_distribute_qualified
 
     return election_year, three_prior_years
+
 def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest: str, ordinary_rate_highest: str):
     """
     Returns the bracket thresholds for the lowest and highest income possible
@@ -341,6 +342,7 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
     else:
         # Already in lowest bracket
         lowest_rate = ordinary_rate_lowest
+        # Lowest bracket threshold will always be zero
         lowest_threshold = 0
 
     # Find the highest rate's position
@@ -350,6 +352,7 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
     if current_index < len(applicable_brackets) - 1:
         highest_rate, (highest_threshold, _, _) = applicable_brackets[current_index + 1]
     else:
+        # Already in highest bracket
         highest_rate = ordinary_rate_highest
         highest_threshold = applicable_brackets[len(applicable_brackets) - 1][1][0]
 

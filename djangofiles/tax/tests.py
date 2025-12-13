@@ -16,7 +16,6 @@ def create_taxyeardata(year, filing_status, taxable_income, qualified_income, da
     return TaxYearData.objects.create(year=year, filing_status=filing_status, taxable_income=taxable_income, \
                                   qualified_income=qualified_income, dataset=dataset)
 
-
 def create_dataset_with_tax_years(user, tax_year_inputs: tuple, elected, elected_qualified):
     dataset = create_taxdataset(user, elected, elected_qualified)
     for tax_year in tax_year_inputs:
@@ -74,7 +73,7 @@ def create_tax_year_data_list(test_cases, user, save=True):
 
     processed_cases = []
     for i, case in enumerate(test_cases, start=1):
-        # --- create dataset ---
+        # Create dataset
         dataset_info = case.get("dataset", {})
         dataset_name = dataset_info.get("name", f"Test Dataset {i}")
         dataset_fields = dataset_info.copy()
@@ -86,7 +85,7 @@ def create_tax_year_data_list(test_cases, user, save=True):
             # Get the Decimal typing instead of int
             dataset.refresh_from_db()
 
-     # --- create TaxYearData instances linked to dataset ---
+        # Create TaxYearData instances linked to dataset
         raw_inputs = case.get("inputs", [])
         instances = []
 
@@ -303,7 +302,7 @@ class FindTaxBracketThresholdsTest(TestCase):
             # Get the dataset instance
             dataset = test_set['dataset_instance']
             dataset.save()
-            update_calculations(dataset)
+            # update_calculations(dataset)
             # Convert queryset to a list
             years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
             
@@ -313,11 +312,15 @@ class FindTaxBracketThresholdsTest(TestCase):
 
             results_container = ScheduleJCalculation(years, show_all_years=True).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
             adjusted_years = results_container.tax_years
+            # Test each year to see if 1 bracket below and above are returned based on taxable ordinary
             for adjusted_year in adjusted_years.values():
-                test = find_bracket_thresholds(adjusted_year.year, adjusted_year.filing_status, str(adjusted_year.ordinary_rate), str(adjusted_year.ordinary_rate))
-                print(test)
+                bracket_threshold_test = find_bracket_thresholds(adjusted_year.year, adjusted_year.filing_status, str(adjusted_year.ordinary_rate), str(adjusted_year.ordinary_rate))
+                year = adjusted_year.year
+                expected_rates = set(test_set['results'][year])
+                actual_rates = set(bracket_threshold_test[year].keys())
 
-        
+                if expected_rates != actual_rates:
+                    print(f"Set: {dataset.name}: Rates failed at year {year}: expected {expected_rates}, got {actual_rates}")
 
 CREDENTIALS = [
             ('test1', 'testing123'), 
@@ -371,21 +374,35 @@ SCHEDULE_J_TEST_CASES = [
 BRACKET_THRESHOLDS_TEST_CASES = [
     {
         'inputs': [
-            dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
+            dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=15000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
             dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=10000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
-            dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
-            dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+            dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=4000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+            dict(year=2021, filing_status="MFJ", taxable_income=496000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
         ],
-        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0)
+        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0),
+        # 1 bracket below, 1 bracket above
+        'results': {
+            '2024': ['0.12', '0.24'],
+            '2023': ['0.10', '0.22'],
+            '2022': ['0.12', '0.24'],
+            '2021': ['0.32', '0.37']
+        }
     },
     {
         'inputs': [
-                dict(year=2023, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
-                dict(year=2022, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
-                dict(year=2021, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
-                dict(year=2020, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+                dict(year=2023, filing_status="MFJ", taxable_income=120000, qualified_income=1000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
+                dict(year=2022, filing_status="MFJ", taxable_income=185000, qualified_income=5000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
+                dict(year=2021, filing_status="single", taxable_income=355000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+                dict(year=2020, filing_status="MFJ", taxable_income=96000, qualified_income=5000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
                 ],
-        'dataset': dict(name='Allocation Test Case 2', max_elected_farm_income=10000, qualified_farm_income=0)
+        'dataset': dict(name='Allocation Test Case 2', max_elected_farm_income=10000, qualified_farm_income=0),
+        'results': {
+            # 1 bracket below, 1 bracket above
+            '2023': ['0.12', '0.24'],
+            '2022': ['0.12', '0.24'],
+            '2021': ['0.32', '0.37'],
+            '2020': ['0.12', '0.24']
+        }
     }
 ]
 
