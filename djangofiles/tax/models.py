@@ -50,7 +50,6 @@ class TaxYearStructure(models.Model):
     filing_status = models.CharField(max_length=6, choices=FILING_STATUS)
     taxable_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
     qualified_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
-    taxable_ordinary = models.DecimalField(decimal_places=2, max_digits=11, editable=False)
     is_electing = models.BooleanField(default=False)
     elected_farm_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
     qualified_farm_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
@@ -63,9 +62,12 @@ class TaxYearStructure(models.Model):
     qualified_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
-    def save(self, *args, **kwargs):
-        self.taxable_ordinary = self.taxable_income - self.qualified_income
-        super().save(*args, **kwargs)
+    @property
+    def taxable_ordinary(self):
+        """
+        Computed property: Returns taxable ordinary income on demand.
+        """
+        return max(self.taxable_income - self.qualified_income, 0)
 
     def __str__(self):
         return '{}  {}  {}  {}'.format(self.year, self.filing_status, self.taxable_income, self.qualified_income)
@@ -91,3 +93,5 @@ class TaxYearStructure(models.Model):
 
 class TaxYearData(TaxYearStructure):
     dataset = models.ForeignKey(TaxDataSet, on_delete=models.CASCADE, related_name="tax_years")
+
+    

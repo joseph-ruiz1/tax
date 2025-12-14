@@ -96,14 +96,23 @@ def update_calculations(dataset: TaxDataSet):
         TaxCalculation(tax_year).calculate()
         tax_year.save()
 
-    optimize = ScheduleJOptimization(years,
+    optimization_results = ScheduleJOptimization(years,
                                     elected_farm_income=dataset.max_elected_farm_income, 
                                     elected_farm_qualified=dataset.qualified_farm_income, 
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
     
+    all_elected_optimization_instance = optimization_results['all_elected']
+    none_elected_optimization_instance = optimization_results['none_elected']
 
-    print(optimize)
+    brackets = {
+        year: (
+            none_elected_optimization_instance.tax_years[year].taxable_income,
+            all_elected_optimization_instance.tax_years[year].taxable_income
+        )
+        for year in all_elected_optimization_instance.tax_years.keys()
+    }
+    print(brackets)
+    
     return {
-        'optimization': optimize,
-        'bracket_thresholds': bracket_thresholds
+        'optimization': optimization_results['optimization_results'],
     }

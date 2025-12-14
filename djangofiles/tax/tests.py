@@ -141,7 +141,6 @@ class TestUserModel(TestCase):
         actual_ids = [user.id for user in users]
         self.assertEqual(actual_ids, expected_ids)
 
-
 class BaseTaxCalculationsTest(TestCase):
     """
     Run base TaxCalculation and compare to outputs in TEST_CASES
@@ -247,8 +246,8 @@ class ScheduleJOptimizationTest(TestCase):
                 TaxCalculation(year).calculate()
             optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, long_form=False)
             results = optimize.optimize_sch_j(elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income)
-            print(results)
-        
+            print(results[0].taxable_ordinary_all_years)
+
 class TaxDataSetSerializerTest(APITestCase):
     """
     updated for on demand calculations
@@ -292,6 +291,9 @@ class ElectedIncomeDistributionTest(TestCase):
         results = allocate_all_years(years)
 
 class FindTaxBracketThresholdsTest(TestCase):
+    """
+    Test find_bracket_thresholds to ensure 1 bracket below and above is returned based on adjusted_year taxable ordiary income"
+    """
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
@@ -409,13 +411,13 @@ BRACKET_THRESHOLDS_TEST_CASES = [
 SCHEDULE_J_OPTIMIZATION_TEST = [
     {
         'inputs': [
-            dict(year=2022, filing_status="MFJ", taxable_income=110000, qualified_income=0, is_electing=True, elected_farm_income=30000, qualified_farm_income=0),
+            dict(year=2022, filing_status="MFJ", taxable_income=110000, qualified_income=0, is_electing=True, elected_farm_income=500, qualified_farm_income=0),
             dict(year=2021, filing_status="MFJ", taxable_income=70000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
             dict(year=2020, filing_status="MFJ", taxable_income=65000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
             dict(year=2019, filing_status="MFJ", taxable_income=72000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
         ],
         'outputs': [143, 2812, 5683, 10092],
-        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=30000, qualified_farm_income=0, election_year='2022')
+        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=500, qualified_farm_income=0, election_year='2022')
     },
 ]
 

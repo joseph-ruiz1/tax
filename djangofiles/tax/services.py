@@ -125,7 +125,6 @@ class AdjustedTaxData:
         self.filing_status = filing_status
         self.taxable_income = taxable_income
         self.qualified_income = qualified_income
-        self.taxable_ordinary = self.taxable_income - self.qualified_income
         self.ordinary_rate = ordinary_rate
         self.lower_ordinary_bound = lower_ordinary_bound
         self.upper_ordinary_bound = upper_ordinary_bound
@@ -136,7 +135,6 @@ class AdjustedTaxData:
         self.is_electing = is_electing
         self.elected_farm_income = elected_farm_income
         self.qualified_farm_income = qualified_farm_income
-        self.taxable_ordinary = max(self.taxable_income - self.qualified_income, 0)
 
     @classmethod
     def from_model_instance(cls, model_instance, fields=None):
@@ -159,6 +157,13 @@ class AdjustedTaxData:
             kwargs[field_name] = getattr(model_instance, field_name)
         
         return cls(**kwargs)
+    
+    @property
+    def taxable_ordinary(self):
+        """
+        Copmuted property: Returns taxable ordinary income on demand.
+        """
+        return max(self.taxable_income - self.qualified_income, 0)
     
     def to_dict(self):
         return {
@@ -227,7 +232,7 @@ class ScheduleJResultContainer:
     Contains results from Schedule J Calculation.
 
     Attributes:
-        schedule_j_form (ScheduleJForm): Filled out Schedule J Form
+        schedule_j_form (ScheduleJForm): Filled out Schedule J Form with tax delta and ordinary incomes
         elected_farm_income (int): Amount we elected
         elected_farm_qualified (int): Total elected made up of qualified income
         long_form (boolean): All Sch J values or only key values (Default)
@@ -296,18 +301,33 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
         election_year (TaxYearData): Mutated year - taxable and qualified updated to subtract elected income.
         three_prior_years (list): The three tax years that received elected income. Taxable and qualified updated
     """
+    print(f"\n=== BEFORE ===")
+    print(f"elected_income: {elected_income}, elected_qualified: {elected_qualified_income}")
+    print(f"taxable: {election_year.taxable_income}, {election_year.year}")
+    print(f"qual: {election_year.qualified_income}, {election_year.year}")
+    print(f"ord: {election_year.taxable_ordinary}, {election_year.year}")
+    print(f"ord calculated manually: {election_year.taxable_income - election_year.qualified_income}")
+
     election_year.taxable_income -= elected_income
     election_year.qualified_income -= elected_qualified_income
-    
+    print(f"\n=== AFTER SUBTRACTION ===")
+    print(f"taxable: {election_year.taxable_income}, {election_year.year}")
+    print(f"qual: {election_year.qualified_income}, {election_year.year}")
+    print(f"ord: {election_year.taxable_ordinary}, {election_year.year}")
+    print(f"ord calculated manually: {election_year.taxable_income - election_year.qualified_income}")
+    print(f"Type of election_year: {type(election_year)}")
+    print(f"Has taxable_ordinary property? {hasattr(type(election_year), 'taxable_ordinary')}")
+    print(f"Is it a property? {isinstance(getattr(type(election_year), 'taxable_ordinary', None), property)}")
     amount_to_distribute = elected_income / 3
     amount_to_distribute_qualified = elected_qualified_income / 3
-
     # Distribute to only the prior 3 years
     three_prior_years = list(other_years)[:3]
 
     for year in three_prior_years:
         year.taxable_income += amount_to_distribute
         year.qualified_income += amount_to_distribute_qualified
+
+ 
 
     return election_year, three_prior_years
 
@@ -464,6 +484,9 @@ class ScheduleJCalculation:
         # Tax savings/expense compared to not using Sch J
         output.tax_delta = self.current_year.total_tax - output.line_23
 
+        # Get ordinary income for each year for bracket threshold graph
+        output.taxable_ordinary_all_years = {year: int(y.taxable_ordinary) for year, y in all_adjusted_years.items()}
+        
         return ScheduleJResultContainer(
             schedule_j_form=output,
             elected_farm_income=elected_farm_income,
@@ -472,7 +495,6 @@ class ScheduleJCalculation:
             all_years=self.show_all_years,
             **({"tax_years": all_adjusted_years} if self.show_all_years else {})
             )
-
 
 class ScheduleJOptimization:
     """
@@ -502,6 +524,8 @@ class ScheduleJOptimization:
 
         Returns:
             results (list): A list of all ScheduleJForm objects that were calcualted
+            first instance (ScheduleJResultsContainer): Sch J instance with no elected farm income
+            last_instance (ScheduleJResultsContainer): Sch J instance with max elected farm income
         """
         if not isinstance(elected_farm_income, Decimal):
             raise TypeError("Not a Decimal")
@@ -517,9 +541,27 @@ class ScheduleJOptimization:
         ordinary_percentage = current_ordinary_elected / current_total_elected
         qualified_percentage = current_qualified_elected / current_total_elected
 
+        iteration = 0
+        all_elected_instance = None
+        none_elected_instance = None
         while current_total_elected >= 500:
-            instance = (ScheduleJCalculation(self.years, show_all_years=self.show_all_years, long_form=self.long_form)
+            is_first = (iteration == 0)
+            is_last = (current_total_elected - 500 < 500)
+
+            # Compute with show_all_years = True on first and last iterations only
+            if is_first or is_last:
+                instance = (ScheduleJCalculation(self.years, show_all_years=True, long_form=self.long_form)
                         .schedule_j_calculation(current_total_elected, current_qualified_elected))
+                if is_first:
+                    all_elected_instance = instance
+                if is_last:
+                   none_elected_instance = instance
+
+            else:
+                # Truncated data show_all_years = False
+                instance = (ScheduleJCalculation(self.years, show_all_years=self.show_all_years, long_form=self.long_form)
+                            .schedule_j_calculation(current_total_elected, current_qualified_elected))
+                
             results.append(instance.schedule_j_form)
 
             current_total_elected -= 500
@@ -527,5 +569,10 @@ class ScheduleJOptimization:
             current_qualified_elected -= 500 * qualified_percentage
             self.years[0].elected_farm_income -= 500 * ordinary_percentage
             self.years[0].qualified_farm_income -= 500 * qualified_percentage
+            iteration += 1
 
-        return results
+        return {
+            'optimization_results': results,
+            'all_elected': all_elected_instance,
+            'none_elected': none_elected_instance
+        }

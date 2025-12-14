@@ -97,9 +97,6 @@ class SchJFormSerializer(serializers.Serializer):
     line_23 = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     line_2a = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     line_2b = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
-    line_7 = serializers.DecimalField(max_digits=12, decimal_places=2)
-    line_11 = serializers.DecimalField(max_digits=12, decimal_places=2)
-    line_15 = serializers.DecimalField(max_digits=12, decimal_places=2)
     tax_delta = serializers.DecimalField(max_digits=12, decimal_places=2)
 
 class FarmIncomeWorksheetSerializer(serializers.Serializer):
