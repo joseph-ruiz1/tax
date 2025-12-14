@@ -10,7 +10,6 @@ class TaxCalculation:
 
     def find_ordinary_bracket(self):
         for rate, (lower, upper, prior_tax) in tax_brackets.ORDINARY_TAX_TABLES[self.tax_data.year][self.tax_data.filing_status].items():
-            self.tax_data.taxable_ordinary = max(self.tax_data.taxable_income - self.tax_data.qualified_income, 0)
 
             if lower <= self.tax_data.taxable_ordinary <= upper:
                 self.tax_data.ordinary_rate = Decimal(rate)
@@ -161,7 +160,7 @@ class AdjustedTaxData:
     @property
     def taxable_ordinary(self):
         """
-        Copmuted property: Returns taxable ordinary income on demand.
+        Computed property: Returns taxable ordinary income on demand.
         """
         return max(self.taxable_income - self.qualified_income, 0)
     
@@ -301,23 +300,9 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
         election_year (TaxYearData): Mutated year - taxable and qualified updated to subtract elected income.
         three_prior_years (list): The three tax years that received elected income. Taxable and qualified updated
     """
-    print(f"\n=== BEFORE ===")
-    print(f"elected_income: {elected_income}, elected_qualified: {elected_qualified_income}")
-    print(f"taxable: {election_year.taxable_income}, {election_year.year}")
-    print(f"qual: {election_year.qualified_income}, {election_year.year}")
-    print(f"ord: {election_year.taxable_ordinary}, {election_year.year}")
-    print(f"ord calculated manually: {election_year.taxable_income - election_year.qualified_income}")
-
     election_year.taxable_income -= elected_income
     election_year.qualified_income -= elected_qualified_income
-    print(f"\n=== AFTER SUBTRACTION ===")
-    print(f"taxable: {election_year.taxable_income}, {election_year.year}")
-    print(f"qual: {election_year.qualified_income}, {election_year.year}")
-    print(f"ord: {election_year.taxable_ordinary}, {election_year.year}")
-    print(f"ord calculated manually: {election_year.taxable_income - election_year.qualified_income}")
-    print(f"Type of election_year: {type(election_year)}")
-    print(f"Has taxable_ordinary property? {hasattr(type(election_year), 'taxable_ordinary')}")
-    print(f"Is it a property? {isinstance(getattr(type(election_year), 'taxable_ordinary', None), property)}")
+
     amount_to_distribute = elected_income / 3
     amount_to_distribute_qualified = elected_qualified_income / 3
     # Distribute to only the prior 3 years
@@ -326,8 +311,6 @@ def allocate_income(election_year, other_years, elected_income, elected_qualifie
     for year in three_prior_years:
         year.taxable_income += amount_to_distribute
         year.qualified_income += amount_to_distribute_qualified
-
- 
 
     return election_year, three_prior_years
 
