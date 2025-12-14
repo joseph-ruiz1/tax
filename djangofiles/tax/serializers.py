@@ -98,6 +98,7 @@ class SchJFormSerializer(serializers.Serializer):
     line_2a = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     line_2b = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     tax_delta = serializers.DecimalField(max_digits=12, decimal_places=2)
+    taxable_ordinary_all_years = serializers.JSONField()
 
 class FarmIncomeWorksheetSerializer(serializers.Serializer):
     sch_f = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
@@ -258,7 +259,9 @@ class OutputSerializer(serializers.ModelSerializer):
         """
         results = self.context.get('results')
         iterations = SchJFormSerializer(results, many=True).data
+        bracket_thresholds = self.context.get('bracket_thresholds')
     
         return {
             'results': iterations,
+            'bracket_thresholds': bracket_thresholds
         }
