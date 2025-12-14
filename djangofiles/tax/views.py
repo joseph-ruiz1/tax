@@ -169,6 +169,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
             'message': 'Get Successful',
             'form': serializer.data['inputs'],
             'outputs': serializer.data['outputs'],
+            'bracket_thresholds': results['bracket_thresholds']
         })
     
     @action(detail=True, methods=['patch'], url_path='results-update')
@@ -188,7 +189,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
                 'message': 'Patch successful',
                 'form': results_serializer.data['inputs'],
                 'outputs': results_serializer.data['outputs'],
-                'bracket_thresholds': results['thresholds']
+                'bracket_thresholds': results['bracket_thresholds']
             })
         
         return Response({

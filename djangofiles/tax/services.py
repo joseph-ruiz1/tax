@@ -336,6 +336,7 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
                 The 22% and 35% brackets will be returned and displayed on the ordinary income graph
     """
     applicable_brackets = list(tax_brackets.ORDINARY_TAX_TABLES[str(year)][filing_status].items())
+
     # Find the lowest rate's position
     current_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_lowest)
 
@@ -360,10 +361,8 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
         highest_threshold = applicable_brackets[len(applicable_brackets) - 1][1][0]
 
     bracket_thresholds = {
-        year: {
             lowest_rate: int(lowest_threshold),
             highest_rate: int(highest_threshold)
-        }
     }
     return bracket_thresholds
 
@@ -424,10 +423,6 @@ class ScheduleJCalculation:
         TaxCalculation(adjusted_current_year).calculate()
         output.line_4 = adjusted_current_year.total_tax
 
-        # add back income so we dont double subtract in allocator
-        adjusted_current_year.taxable_income += distribute_elected
-        adjusted_current_year.qualified_income += distribute_cap_gains
-
         # Update form for prior years
         update_lines = [
                 ['line_13', 'line_15', 'line_16', 'line_21'], # current year - 1
@@ -469,7 +464,7 @@ class ScheduleJCalculation:
 
         # Get ordinary income for each year for bracket threshold graph
         output.taxable_ordinary_all_years = {year: int(y.taxable_ordinary) for year, y in all_adjusted_years.items()}
-        
+
         return ScheduleJResultContainer(
             schedule_j_form=output,
             elected_farm_income=elected_farm_income,
@@ -553,6 +548,8 @@ class ScheduleJOptimization:
             self.years[0].elected_farm_income -= 500 * ordinary_percentage
             self.years[0].qualified_farm_income -= 500 * qualified_percentage
             iteration += 1
+
+        
 
         return {
             'optimization_results': results,

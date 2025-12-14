@@ -258,9 +258,7 @@ class OutputSerializer(serializers.ModelSerializer):
         """
         results = self.context.get('results')
         iterations = SchJFormSerializer(results, many=True).data
-        bracket_thresholds = self.context.get('bracket_thresholds')
     
         return {
             'results': iterations,
-            'bracket_threholds': bracket_thresholds
         }

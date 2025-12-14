@@ -101,18 +101,24 @@ def update_calculations(dataset: TaxDataSet):
                                     elected_farm_qualified=dataset.qualified_farm_income, 
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
     
-    all_elected_optimization_instance = optimization_results['all_elected']
-    none_elected_optimization_instance = optimization_results['none_elected']
+    tax_years_with_max_elected = optimization_results['all_elected'].tax_years
+    tax_years_with_none_elected = optimization_results['none_elected'].tax_years
 
-    brackets = {
-        year: (
-            none_elected_optimization_instance.tax_years[year].taxable_income,
-            all_elected_optimization_instance.tax_years[year].taxable_income
+    bracket_thresholds = {}
+    # Set up structure for find_bracket_thresholds() and iterate through each year
+    for year, none_elected_tax_year in tax_years_with_none_elected.items():
+        all_elected_tax_year = tax_years_with_max_elected[year]
+
+        rates = [none_elected_tax_year.ordinary_rate, all_elected_tax_year.ordinary_rate]
+
+        bracket_thresholds[year] = find_bracket_thresholds(
+            year=year,
+            filing_status=none_elected_tax_year.filing_status,
+            ordinary_rate_lowest=str(min(rates)),
+            ordinary_rate_highest=str(max(rates)),
         )
-        for year in all_elected_optimization_instance.tax_years.keys()
-    }
-    print(brackets)
-    
+
     return {
         'optimization': optimization_results['optimization_results'],
+        'bracket_thresholds': bracket_thresholds
     }
