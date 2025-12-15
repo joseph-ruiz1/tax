@@ -53,7 +53,7 @@
             key="chart"
             v-if="series.length > 0 && !chartTransitioning"
             height="350"
-            :options="chartOptions"
+            :options="totalTaxChartOptions"
             :series="series"
           ></vue-apex-charts>
         </div>
@@ -75,6 +75,20 @@
               :series="delta_series"
           ></vue-apex-charts>
         </div>
+
+        <div class="chart-container">
+          <div v-if="loading || chartTransitioning" class="chart-loading-overlay" key="loading-delta">
+            <div class="loading-text">Updating chart...</div>
+          </div>
+
+          <vue-apex-charts
+              id="tax-bracket-chart"
+              v-if="series.length > 0 && !chartTransitioning"
+              height="350"
+              :options="taxBracketChartOptions"
+              :series="threshold_series"
+          ></vue-apex-charts>
+        </div>
       </div>
         
        
@@ -86,7 +100,7 @@
 </template>
 
 <script setup>
-import {ref, onMounted, reactive, watch} from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRoute } from 'vue-router'
 import VueApexCharts from 'vue3-apexcharts'
@@ -94,6 +108,7 @@ import { updateElectionYear } from '@/composables/updateElectionYear'
 import FarmIncomeEntry from '@/components/FarmIncomeEntry.vue'
 import YearsDataEntry from '@/components/YearsDataEntry.vue'
 import { correctTaxYears } from '@/composables/correctTaxYears'
+import { useChartData } from '@/composables/createChart'
 
 const route = useRoute()
 const loading = ref(true)
@@ -115,238 +130,84 @@ const form = reactive({
 
 updateElectionYear(form, currentYearIndex)
 
+const {
+  createChartOptions,
+  extractField,
+  extractOrdinaryIncomeByYears,
+  buildTaxBracketSeries,
+  buildSimpleSeries,
+  updateChartCategories,
+  processChartData
+} = useChartData()
+
 const series = ref([])
 const delta_series = ref([])
 const threshold_series = ref([])
-const baseOptions = {
-  chart: {
-    type: 'area',
-    toolbar: {
-      show: true,
-      offsetX: 0,
-      offsetY: 0,
-      autoSelected: '',
-      tools: {
-        download: false,
-        zoom: true,
-        zoomin: true,
-        zoomout: true,
-        pan: true,
-        reset: true,
-      },
-      reset: 'Reset Zoom',
-    },
-    animations: {
-      enabled: true,
-      easing: 'easeout',
-      speed: 150,
-      animateGradually: {
-        enabled: true,
-        delay: 800,
-      },
-      dynamicAnimation: {
-        enabled: true,
-        speed: 800,
-      },
-    },
-    zoom: {
-      allowMouseWheelZoom: false,
-    },
-  },
-  dataLabels: {
-    enabled: false,
-  },
-  stroke: {
-    curve: 'straight',
-    width: 2,
-  },
-  grid: {
-    padding: {
-      bottom: 30,
-    },
-  },
-  xaxis: {
-    type: 'numeric',
-    labels: {
-      formatter: function (val) {
-        val = val | 0
-        return '$' + val.toLocaleString()
-      },
-    },
-    title: {
-      text: 'Amount Elected',
-      offsetY: 15
-    },
-    categories: [],
-    tickAmount: 10,
-  },
-  yaxis: {
-    type: 'numeric',
-    labels: {
-      formatter: function (val) {
-        return '$' + val.toLocaleString()
-      },
-    },
-    title: {
-      offsetX: -1,
-      offsetY: 5,
-      style: {
-        fontSize: '14px',
-        fontWeight: 600,
-      }
-    },
-  },
-  legend: {
-    position: 'top',
-  },
-  colors: ['#4c51bf', '#48bb78', '#f56565'],
-  tooltip: {
-    x: {
-      show: false,
-      format: 'numeric',
-      formatter: function (val) {
-        return '$' + val.toLocaleString()
-      },
-    },
-    y: {
-      format: 'numeric',
-      formatter: function (val) {
-        return '$' + val.toLocaleString()
-      },
-    },
-    theme: 'dark',
-  },
-}
 
-const chartOptions = ref({
-  ...baseOptions,
-  chart: {
-    ...baseOptions.chart,
-    id: 'tax-savings-chart',
-    },
-  yaxis: {
-    ...baseOptions.yaxis,
-    title: { ...baseOptions.yaxis.title, 
-    text: 'Total Tax' },
-  },
-})
+const totalTaxChartOptions = ref(createChartOptions({
+  chartType: 'area',
+  xAxisTitle: 'Amount elected',
+  yAxisTitle: 'Total Tax'
+}))
 
-const deltaChartOptions = ref({
-  ...baseOptions,
-  chart: {
-    ...baseOptions.chart,
-    id: 'delta-tax-savings-chart',
-  },
-  yaxis: {
-    ...baseOptions.yaxis,
-    title: { ...baseOptions.yaxis.title, 
-    text: 'Total Tax Savings/Expense' },
-  },
-})
+const deltaChartOptions = ref(createChartOptions({
+  chartType: 'area',
+  xAxisTitle: 'Amount Elected',
+  yAxisTitle: 'Total Tax Savings/Expense',
+}))
 
-const taxBracketChart = {
-  chart: {
-    type: 'line',
-    toolbar: {
-      show: true,
-      offsetX: 0,
-      offsetY: 0,
-      autoSelected: '',
-      tools: {
-        download: false,
-        zoom: true,
-        zoomin: true,
-        zoomout: true,
-        pan: true,
-        reset: true,
-      },
-      reset: 'Reset Zoom',
-    },
-    animations: {
-      enabled: true,
-      easing: 'easeout',
-      speed: 150,
-      animateGradually: {
-        enabled: true,
-        delay: 800,
-      },
-      dynamicAnimation: {
-        enabled: true,
-        speed: 800,
-      },
-    },
-    zoom: {
-      allowMouseWheelZoom: false,
-    },
-  },
-  dataLabels: {
-    enabled: false,
-  },
-  stroke: {
-    curve: 'straight',
-    width: 2,
-  },
-  grid: {
-    padding: {
-      bottom: 30,
-    },
-  },
-  xaxis: {
-    type: 'numeric',
-    labels: {
-      formatter: function (val) {
-        val = val | 0
-        return '$' + val.toLocaleString()
-      },
-    },
-    title: {
-      text: 'Amount Elected',
-      offsetY: 15
-    },
-    categories: [],
-    tickAmount: 10,
-  },
-  yaxis: {
-    type: 'numeric',
-    labels: {
-      formatter: function (val) {
-        return '$' + val.toLocaleString()
-      },
-    },
-    title: {
-      offsetX: -1,
-      offsetY: 5,
-      style: {
-        fontSize: '14px',
-        fontWeight: 600,
-      }
-    },
-  },
-  legend: {
-    position: 'top',
-  },
-  colors: ['#4c51bf', '#48bb78', '#f56565'],
-  tooltip: {
-    x: {
-      show: false,
-      format: 'numeric',
-      formatter: function (val) {
-        return '$' + val.toLocaleString()
-      },
-    },
-    y: {
-      format: 'numeric',
-      formatter: function (val) {
-        return '$' + val.toLocaleString()
-      },
-    },
-    theme: 'dark',
-  },
-}
+const taxBracketChartOptions = ref(createChartOptions({
+  chartType: 'line',
+  xAxisTitle: 'Amount Elected',
+  yAxisTitle: 'Taxable Ordinary Income',
+  fillType: ['gradient', 'solid', 'solid', 'solid'],
+  fillOpacity: [0.35, 1, 1, 1],
+  strokeWidth: [0, 2, 2, 2],
+}))
 
 const updateChartData = (response = null) => {
 // response.outputs will only contain data upon update
   const data = response?.outputs || outputs.value
+  const years = ['2024']
+  
+  // Extract all needed info
+  const elected = extractField(data.results, 'line_2a')
+  const sch_j_total = extractField(data.results, 'line_23')
+  const tax_delta = extractField(data.results, 'tax_delta')
+
+  const ordinaryIncomeByYear = extractOrdinaryIncomeByYears(data.results, years)
+
+  // Update total tax chart
+  totalTaxChartOptions.value = updateChartCategories(totalTaxChartOptions.value, elected)
+  series.value = buildSimpleSeries([
+    {name: 'Total 2024 Tax',
+    data: sch_j_total
+    }
+  ])
+
+  // Update delta chart
+  deltaChartOptions.value = updateChartCategories(deltaChartOptions.value, elected)
+  delta_series.value = buildSimpleSeries([
+    {name: 'Total Tax Savings/Expense',
+    data: tax_delta
+    }
+  ])
+    
+  const taxBrackets = {
+    '2024': [
+      {rate: '0.10', threshold: 10000},
+      {rate: '0.12', threshold: 275000}
+    ]
+  }
+
+  // Update first tax bracket chart
+  taxBracketChartOptions.value = updateChartCategories(taxBracketChartOptions.value, elected)
+  threshold_series.value = buildTaxBracketSeries({
+    years,
+    ordinaryIncomeByYear,
+    taxBrackets,
+    elected
+  })
 
   try {
     loading.value = true
@@ -355,9 +216,18 @@ const updateChartData = (response = null) => {
     const sch_j_total = data.results.map(result => parseFloat(result.line_23))
     const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
     const elected = data.results.map(result => parseFloat(result.line_2a))
-    const year_1_thresholds = data.bracket_threshold.map(year => parseFloat(year))
 
-    const qualified_elected = data.results.map(result => parseFloat(result.line_2b))
+    const first_year_ordinary = data.results.map(result => {
+      const year = '2024'
+      return parseFloat(result.taxable_ordinary_all_years[year])
+    })
+
+    const second_year_ordinary = data.results.map(result => {
+      const year = '2023'
+      return parseFloat(result.taxable_ordinary_all_years[year])
+    })
+
+    const first_bracket = elected.map(() => 10000)
 
     chartOptions.value = {
       ...chartOptions.value,
@@ -388,11 +258,18 @@ const updateChartData = (response = null) => {
         data: tax_delta
       }
     ]
+    taxBracketChartOptions.value = {
+      ...taxBracketChartOptions.value,
+      xaxis: {
+        ...taxBracketChartOptions.value.xaxis,
+        categories: elected
+      }
+    }
 
     threshold_series.value = [
       {
-        name: 'Taxable income',
-        data: null
+        name: 'Taxable ordinary Income',
+        data: first_year_ordinary
       }
     ]
   
@@ -419,8 +296,8 @@ const fetchResults = async () => {
 
     // Initilize form with API data
     form.name = inputs.value?.name || ''
-    form.max_elected_farm_income = inputs.value?.max_elected_farm_income || 0
-    form.qualified_farm_income = inputs.value?.qualified_farm_income || 0
+    form.max_elected_farm_income = Number(inputs.value?.max_elected_farm_income)
+    form.qualified_farm_income = Number(inputs.value?.qualified_farm_income)
     form.election_year = inputs.value?.election_year || null
     
     form.tax_years = inputs.value?.tax_years?.map((year, index) => ({
