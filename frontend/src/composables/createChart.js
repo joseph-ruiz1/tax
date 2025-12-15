@@ -165,24 +165,41 @@ export function useChartData() {
     }
 
     /**
-   * Creates a constant threshold array
-   * @param {Number} length - Length of array
-   * @param {Number} value - Threshold value
-   * @returns {Array} - Array filled with threshold value
-   */
-  const createThresholdArray = (length, value) => {
-    return new Array(length).fill(value)
-  }
+     * Creates a constant threshold array
+     * @param {Number} length - Length of array
+     * @param {Number} value - Threshold value
+     * @returns {Array} - Array filled with threshold value
+     */
+    const createThresholdArray = (length, value) => {
+        return new Array(length).fill(value)
+    }
 
     /**
-     * Builds tax bracket series
-     * @param {Object} config - Config object
-     * @returns {Array} - Series array for chart
+     * Extracts tax bracket thresholds
+     * @param {Object} brackets - Array of tax bracket objects
+     * @param {Array} years - Array of year strings
+     * @returns {Array} - Array of arrays, one per year
      */
-    const buildTaxBracketSeries = (config) => {
+    const extractTaxBracketsByYears = (brackets, years) => {
+        return years.map(year =>
+                brackets.map(bracket => parseFloat(bracket[year]))                
+        )
+    }
+
+    /**
+    * Builds tax bracket series for a single year
+    * @param {Object} config - Config object
+    * @param {String} config.year - The year for this chart (e.g., '2024')
+    * @param {Array} config.ordinaryIncome - Array of ordinary income values for this year
+    * @param {Object} config.taxBrackets - Tax brackets object with year keys
+    * @param {Array} config.elected - Array of elected amounts (x-axis values)
+    * @param {Boolean} config.includeBrackets - Whether to include bracket lines
+    * @returns {Array} - Series array for ApexCharts (1 area + N lines)
+    */
+    const buildTaxBracketSeriesForYear = (config) => {
         const {
-            years,
-            ordinaryIncomeByYear,
+            year,
+            ordinaryIncome,
             taxBrackets,
             elected,
             includeBrackets = true
@@ -190,28 +207,23 @@ export function useChartData() {
 
         const seriesArray = []
 
-        // Add area charts for each year's ordinary income
-        years.forEach((year, index) => {
-            seriesArray.push({
-                name: `${year} Taxable Ordinary Income`,
-                type: 'area',
-                data: ordinaryIncomeByYear[index]
-            })
+        // Add area charts for year's ordinary income
+        seriesArray.push({
+            name: `Taxable Ordinary Income`,
+            type: 'area',
+            data: ordinaryIncome
         })
 
-        // Add line charts for each bracket in each year
-        if (includeBrackets) {
-            years.forEach(year => {
-                taxBrackets[year].forEach(bracket => {
+        // Add line charts for each bracket in year
+        if (includeBrackets && taxBrackets[year]) {
+            Object.entries(taxBrackets[year]).forEach(([bracketRate, bracketValue]) => {
                 seriesArray.push({
-                    name: `${year} - ${bracket.rate} Bracket`,
+                    name: `${bracketRate} Bracket`,
                     type: 'line',
-                    data: elected.map(() => bracket.threshold)
+                    data: elected.map(() => bracketValue)
                 })
             })
-        })
         }
-
         return seriesArray
     }
 
@@ -288,7 +300,8 @@ export function useChartData() {
     extractField,
     extractOrdinaryIncomeByYears,
     createThresholdArray,
-    buildTaxBracketSeries,
+    extractTaxBracketsByYears,
+    buildTaxBracketSeriesForYear,
     buildSimpleSeries,
     updateChartCategories,
     processChartData

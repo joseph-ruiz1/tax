@@ -81,17 +81,16 @@
             <div class="loading-text">Updating chart...</div>
           </div>
 
-          <vue-apex-charts
-              id="tax-bracket-chart"
-              v-if="series.length > 0 && !chartTransitioning"
-              height="350"
-              :options="taxBracketChartOptions"
-              :series="threshold_series"
-          ></vue-apex-charts>
+          <div v-for="(chart, index) in taxBracketCharts" :key="chart.year">
+            <h3>Tax Brackets</h3>
+            <apexchart
+              :options="chart.options"
+              :series="chart.series"
+              height="400"
+            />
+          </div>
         </div>
-      </div>
-        
-       
+      </div>       
     </div>
   </div>
   <div v-else>
@@ -119,7 +118,6 @@ const outputs = ref(null)
 const currentYearIndex = ref(0)
 const farmIncomeEntryRef = ref(null)
 const savedWorksheet = ref(null)
-
 const form = reactive({
     name: '',
     max_elected_farm_income: 0,
@@ -134,7 +132,8 @@ const {
   createChartOptions,
   extractField,
   extractOrdinaryIncomeByYears,
-  buildTaxBracketSeries,
+  extractTaxBracketsByYears,
+  buildTaxBracketSeriesForYear,
   buildSimpleSeries,
   updateChartCategories,
   processChartData
@@ -142,8 +141,6 @@ const {
 
 const series = ref([])
 const delta_series = ref([])
-const threshold_series = ref([])
-
 const totalTaxChartOptions = ref(createChartOptions({
   chartType: 'area',
   xAxisTitle: 'Amount elected',
@@ -156,26 +153,53 @@ const deltaChartOptions = ref(createChartOptions({
   yAxisTitle: 'Total Tax Savings/Expense',
 }))
 
-const taxBracketChartOptions = ref(createChartOptions({
-  chartType: 'line',
-  xAxisTitle: 'Amount Elected',
-  yAxisTitle: 'Taxable Ordinary Income',
-  fillType: ['gradient', 'solid', 'solid', 'solid'],
-  fillOpacity: [0.35, 1, 1, 1],
-  strokeWidth: [0, 2, 2, 2],
-}))
+const taxBracketCharts = ref([])
+const initializeCharts = (taxYears) => {
+  taxBracketCharts.value = taxYears.map(year => ({
+    year: year,
+    options: createChartOptions({
+      chartType: 'line',
+      xAxisTitle: 'Amount Elected',
+      yAxisTitle: `${year} Taxable Ordinary Income`,
+      fillType: ['gradient', 'solid', 'solid', 'solid', 'solid'],
+      fillOpacity: [0.35, 1, 1, 1, 1],
+      strokeWidth: [0, 2, 2, 2, 2],
+      colors: ['#4c51bf', '#f56565', '#48bb78', '#ed8936', '#9f7aea']
+    }),
+    series: []
+  }))
+}
 
 const updateChartData = (response = null) => {
 // response.outputs will only contain data upon update
   const data = response?.outputs || outputs.value
-  const years = ['2024']
-  
+  const years = form.tax_years.map(year => year.year)
+
   // Extract all needed info
   const elected = extractField(data.results, 'line_2a')
   const sch_j_total = extractField(data.results, 'line_23')
   const tax_delta = extractField(data.results, 'tax_delta')
+  const taxBrackets = data.bracket_thresholds
 
   const ordinaryIncomeByYear = extractOrdinaryIncomeByYears(data.results, years)
+  console.log(ordinaryIncomeByYear)
+
+  // Update each chart - iterates through years
+    years.forEach((year, index) => {
+      const chart = taxBracketCharts.value[index]
+
+      // Update chart options with elected values as categories
+      chart.options = updateChartCategories(chart.options, elected)
+      
+      // Build series for this year
+      chart.series = buildTaxBracketSeriesForYear({
+        year,
+        ordinaryIncome: ordinaryIncomeByYear[index],
+        taxBrackets,
+        elected,
+        includeBrackets: true
+      })
+    })
 
   // Update total tax chart
   totalTaxChartOptions.value = updateChartCategories(totalTaxChartOptions.value, elected)
@@ -192,99 +216,22 @@ const updateChartData = (response = null) => {
     data: tax_delta
     }
   ])
-    
-  const taxBrackets = {
-    '2024': [
-      {rate: '0.10', threshold: 10000},
-      {rate: '0.12', threshold: 275000}
-    ]
-  }
 
-  // Update first tax bracket chart
-  taxBracketChartOptions.value = updateChartCategories(taxBracketChartOptions.value, elected)
-  threshold_series.value = buildTaxBracketSeries({
-    years,
-    ordinaryIncomeByYear,
-    taxBrackets,
-    elected
-  })
+  // Need all 4 graphs created
+  // Create an object of the 4 objects containing the data for the charts (year, ordinaryIncome, taxBrackets, elected)
+  // data_for_ordinary_graphs = {'2024': []}
+  // function to create all graphs 
 
-  try {
-    loading.value = true
-  
-    if (!data) return
-    const sch_j_total = data.results.map(result => parseFloat(result.line_23))
-    const tax_delta = data.results.map(result => parseFloat(result.tax_delta))
-    const elected = data.results.map(result => parseFloat(result.line_2a))
+  // firstTaxBracketCharOptions.value = updateChartCategories(firstTaxBracketCharOptions, elected)
+  // firstThresholdSeries.value = buildTaxBracketSeries({
 
-    const first_year_ordinary = data.results.map(result => {
-      const year = '2024'
-      return parseFloat(result.taxable_ordinary_all_years[year])
-    })
+  // })
 
-    const second_year_ordinary = data.results.map(result => {
-      const year = '2023'
-      return parseFloat(result.taxable_ordinary_all_years[year])
-    })
-
-    const first_bracket = elected.map(() => 10000)
-
-    chartOptions.value = {
-      ...chartOptions.value,
-      xaxis: {
-        ...chartOptions.value.xaxis,
-        categories: elected
-      }
-    }
-
-    deltaChartOptions.value = {
-      ...deltaChartOptions.value,
-      xaxis: {
-        ...deltaChartOptions.value.xaxis,
-        categories: elected
-      }
-    }
-
-    series.value = [
-      {
-        name: 'Total 2024 tax',
-        data: sch_j_total
-      }
-    ]
-
-    delta_series.value = [
-      {
-        name: 'Total 2024 tax savings/expense',
-        data: tax_delta
-      }
-    ]
-    taxBracketChartOptions.value = {
-      ...taxBracketChartOptions.value,
-      xaxis: {
-        ...taxBracketChartOptions.value.xaxis,
-        categories: elected
-      }
-    }
-
-    threshold_series.value = [
-      {
-        name: 'Taxable ordinary Income',
-        data: first_year_ordinary
-      }
-    ]
-  
-    loading.value = false  
     // Transition delay
     chartTransitioning.value = true
     setTimeout(() => {
       chartTransitioning.value = false
     }, 100)
-
-  } catch (err) {
-    error.value = 'Failed to update results'
-  } finally {
-    loading.value = false
-  }
 }
 
 const fetchResults = async () => {
@@ -321,6 +268,7 @@ const fetchResults = async () => {
       form.tax_years = correctTaxYears(form.election_year, form.tax_years)
     }
 
+    initializeCharts(form.tax_years)
     updateChartData()
   } catch (err) {
       error.value = 'Failed to fetch results'
