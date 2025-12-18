@@ -81,11 +81,23 @@
             <div class="loading-text">Updating chart...</div>
           </div>
 
-          <div v-for="(chart, index) in taxBracketCharts" :key="chart.year">
+          <!-- Year Navigation-->
+          <div class="year-tabs" v-if="taxBracketCharts.length > 0">
+              <button
+                v-for="(year, index) in taxYears"
+                :key="year"
+                @click="taxBracketYearIndex = index"
+                :class="{ active: index === taxBracketYearIndex }"
+              >
+                  {{ year }}
+              </button>
+          </div>
+
+          <div>
             <h3>Tax Brackets</h3>
             <apexchart
-              :options="chart.options"
-              :series="chart.series"
+              :options="taxBracketCharts[taxBracketYearIndex].options"
+              :series="taxBracketCharts[taxBracketYearIndex].series"
               height="400"
             />
           </div>
@@ -99,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { apiService } from '@/services/api.js'
 import { useRoute } from 'vue-router'
 import VueApexCharts from 'vue3-apexcharts'
@@ -116,6 +128,7 @@ const error = ref('')
 const inputs = ref(null)
 const outputs = ref(null)
 const currentYearIndex = ref(0)
+const taxBracketYearIndex = ref(0)
 const farmIncomeEntryRef = ref(null)
 const savedWorksheet = ref(null)
 const form = reactive({
@@ -125,6 +138,7 @@ const form = reactive({
     election_year: null,
     tax_years: [],
 })
+const taxYears = computed(() => form.tax_years.map(year => year.year))
 
 updateElectionYear(form, currentYearIndex)
 
@@ -132,7 +146,6 @@ const {
   createChartOptions,
   extractField,
   extractOrdinaryIncomeByYears,
-  extractTaxBracketsByYears,
   buildTaxBracketSeriesForYear,
   buildSimpleSeries,
   updateChartCategories,
@@ -155,12 +168,12 @@ const deltaChartOptions = ref(createChartOptions({
 
 const taxBracketCharts = ref([])
 const initializeCharts = (taxYears) => {
-  taxBracketCharts.value = taxYears.map(year => ({
-    year: year,
+  taxBracketCharts.value = taxYears.map(taxYearObj => ({
+    year: taxYearObj.year,
     options: createChartOptions({
       chartType: 'line',
       xAxisTitle: 'Amount Elected',
-      yAxisTitle: `${year} Taxable Ordinary Income`,
+      yAxisTitle: `Taxable Ordinary Income`,
       fillType: ['gradient', 'solid', 'solid', 'solid', 'solid'],
       fillOpacity: [0.35, 1, 1, 1, 1],
       strokeWidth: [0, 2, 2, 2, 2],
@@ -173,7 +186,6 @@ const initializeCharts = (taxYears) => {
 const updateChartData = (response = null) => {
 // response.outputs will only contain data upon update
   const data = response?.outputs || outputs.value
-  const years = form.tax_years.map(year => year.year)
 
   // Extract all needed info
   const elected = extractField(data.results, 'line_2a')
@@ -181,25 +193,24 @@ const updateChartData = (response = null) => {
   const tax_delta = extractField(data.results, 'tax_delta')
   const taxBrackets = data.bracket_thresholds
 
-  const ordinaryIncomeByYear = extractOrdinaryIncomeByYears(data.results, years)
-  console.log(ordinaryIncomeByYear)
+  const ordinaryIncomeByYear = extractOrdinaryIncomeByYears(data.results, taxYears.value)
 
   // Update each chart - iterates through years
-    years.forEach((year, index) => {
-      const chart = taxBracketCharts.value[index]
+  taxYears.value.forEach((year, index) => {
+    const chart = taxBracketCharts.value[index]
 
-      // Update chart options with elected values as categories
-      chart.options = updateChartCategories(chart.options, elected)
-      
-      // Build series for this year
-      chart.series = buildTaxBracketSeriesForYear({
-        year,
-        ordinaryIncome: ordinaryIncomeByYear[index],
-        taxBrackets,
-        elected,
-        includeBrackets: true
-      })
+    // Update chart options with elected values as categories
+    chart.options = updateChartCategories(chart.options, elected)
+    
+    // Build series for this year
+    chart.series = buildTaxBracketSeriesForYear({
+      year,
+      ordinaryIncome: ordinaryIncomeByYear[index],
+      taxBrackets,
+      elected,
+      includeBrackets: true
     })
+  })
 
   // Update total tax chart
   totalTaxChartOptions.value = updateChartCategories(totalTaxChartOptions.value, elected)
@@ -216,16 +227,6 @@ const updateChartData = (response = null) => {
     data: tax_delta
     }
   ])
-
-  // Need all 4 graphs created
-  // Create an object of the 4 objects containing the data for the charts (year, ordinaryIncome, taxBrackets, elected)
-  // data_for_ordinary_graphs = {'2024': []}
-  // function to create all graphs 
-
-  // firstTaxBracketCharOptions.value = updateChartCategories(firstTaxBracketCharOptions, elected)
-  // firstThresholdSeries.value = buildTaxBracketSeries({
-
-  // })
 
     // Transition delay
     chartTransitioning.value = true
@@ -267,7 +268,6 @@ const fetchResults = async () => {
     if (form.election_year != parseInt(form.tax_years[0].year)) {
       form.tax_years = correctTaxYears(form.election_year, form.tax_years)
     }
-
     initializeCharts(form.tax_years)
     updateChartData()
   } catch (err) {
