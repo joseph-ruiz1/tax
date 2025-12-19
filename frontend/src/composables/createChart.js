@@ -83,7 +83,7 @@ export function useChartData() {
             ...(fillType && {
                 fill: {
                 type: fillType,
-                opacity: fillOpacity || [0.35, 1, 1, 1],
+                opacity: fillOpacity || [1, 1, 1, 1],
                 gradient: {
                     shade: 'light',
                     type: 'vertical',

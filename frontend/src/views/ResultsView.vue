@@ -81,20 +81,23 @@
             <div class="loading-text">Updating chart...</div>
           </div>
 
-          <!-- Year Navigation-->
-          <div class="year-tabs" v-if="taxBracketCharts.length > 0">
-              <button
-                v-for="(year, index) in taxYears"
-                :key="year"
-                @click="taxBracketYearIndex = index"
-                :class="{ active: index === taxBracketYearIndex }"
-              >
-                  {{ year }}
-              </button>
-          </div>
-
+          
           <div>
-            <h3>Tax Brackets</h3>
+            <div class="section-header">
+              <h3>Taxable Ordinary Income</h3>
+              <!-- Year Navigation-->
+              <div class="year-tabs-bracket-chart" v-if="taxBracketCharts.length > 0">
+                  <button
+                    v-for="(year, index) in taxYears"
+                    :key="year"
+                    @click="taxBracketYearIndex = index"
+                    :class="{ active: index === taxBracketYearIndex }"
+                  >
+                      {{ year }}
+                  </button>
+              </div>
+
+            </div>
             <apexchart
               :options="taxBracketCharts[taxBracketYearIndex].options"
               :series="taxBracketCharts[taxBracketYearIndex].series"
@@ -485,7 +488,7 @@ onMounted(async () => {
 .chart-section {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
-  padding: 3rem;
+  padding: 1.5rem 3rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -494,7 +497,7 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: .5rem;
 }
 
 .section-header h3 {
@@ -508,6 +511,36 @@ onMounted(async () => {
   position: relative;
   width: 100%;
   height: 350px
+}
+
+.year-tabs-bracket-chart {
+  display: flex;
+  gap: 0.5rem;
+  position: absolute;
+  left: 0;
+}
+
+.year-tabs-bracket-chart button {
+  padding: 0.5rem .5rem;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  color: #333;
+  font-weight: 500;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.3s ease, background .2s ease;
+}
+
+.year-tabs-bracket-chart button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.year-tabs-bracket-chart button.active {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .chart-loading-overlay {
