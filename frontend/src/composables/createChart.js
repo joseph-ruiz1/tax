@@ -95,7 +95,7 @@ export function useChartData() {
             }),
             grid: {
                 padding: {
-                bottom: 30,
+                bottom: 15,
                 },
             },
             xaxis: {
@@ -131,8 +131,7 @@ export function useChartData() {
             colors: colors,
             tooltip: {
                 x: {
-                show: true,
-                formatter: tooltipXFormatter,
+                show: false,
                 },
                 y: {
                 formatter: tooltipYFormatter,

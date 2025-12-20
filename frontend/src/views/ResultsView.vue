@@ -37,8 +37,6 @@
 
     <!--Results -->
     <div class="results-panel">
-      <!-- Chart Area -->
-      <div class="chart-section">
         <div class="section-header">
             <h3>Total {{ form.election_year }} tax</h3>
         </div>
@@ -107,7 +105,6 @@
         </div>
       </div>       
     </div>
-  </div>
   <div v-else>
       loading...
   </div>
@@ -479,18 +476,15 @@ onMounted(async () => {
 
 /* Right Panel - Results */
 .results-panel {
+  flex: 1;
+  background: white;
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-}
-
-/* Chart Section */
-.chart-section {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  padding: 1.5rem 3rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .section-header {
@@ -510,7 +504,6 @@ onMounted(async () => {
 .chart-container {
   position: relative;
   width: 100%;
-  height: 350px
 }
 
 .year-tabs-bracket-chart {
