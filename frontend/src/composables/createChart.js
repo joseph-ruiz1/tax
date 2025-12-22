@@ -19,8 +19,8 @@ export function useChartData() {
             strokeCurve = 'straight',
             colors = ['#4c51bf', '#48bb78', '#f56565', '#ed8936'],
             legendPosition = 'top',
-            fillType = null,
-            fillOpacity = null,
+            fillType = 'solid',
+            fillOpacity = 1,
             strokeDashArray = null,
             xAxisFormatter = (val) => {
                 val = val | 0
@@ -41,35 +41,35 @@ export function useChartData() {
             chart: {
                 type: chartType,
                 toolbar: {
-                show: true,
-                offsetX: 0,
-                offsetY: 0,
-                autoSelected: '',
-                tools: {
-                    download: enableDownload,
-                    zoom: enableZoom,
-                    zoomin: enableZoom,
-                    zoomout: enableZoom,
-                    pan: enableZoom,
-                    reset: enableZoom,
-                },
-                reset: 'Reset Zoom',
+                    show: true,
+                    offsetX: 0,
+                    offsetY: 0,
+                    autoSelected: '',
+                    tools: {
+                        download: enableDownload,
+                        zoom: enableZoom,
+                        zoomin: enableZoom,
+                        zoomout: enableZoom,
+                        pan: enableZoom,
+                        reset: enableZoom,
+                    },
+                    reset: 'Reset Zoom',
                 },
                 animations: {
-                enabled: true,
-                easing: 'easeout',
-                speed: 150,
-                animateGradually: {
                     enabled: true,
-                    delay: 800,
-                },
-                dynamicAnimation: {
-                    enabled: true,
-                    speed: 800,
-                },
+                    easing: 'easeout',
+                    speed: 150,
+                    animateGradually: {
+                        enabled: true,
+                        delay: 800,
+                    },
+                    dynamicAnimation: {
+                        enabled: true,
+                        speed: 800,
+                    },
                 },
                 zoom: {
-                allowMouseWheelZoom: false,
+                    allowMouseWheelZoom: false,
                 },
             },
             dataLabels: {
@@ -80,19 +80,11 @@ export function useChartData() {
                 width: strokeWidth,
                 ...(strokeDashArray && { dashArray: strokeDashArray })
             },
-            ...(fillType && {
-                fill: {
+            fill: {
                 type: fillType,
-                opacity: fillOpacity || [1, 1, 1, 1],
-                gradient: {
-                    shade: 'light',
-                    type: 'vertical',
-                    shadeIntensity: 0.5,
-                    opacityFrom: 0.7,
-                    opacityTo: 0.2,
-                }
-                }
-            }),
+                opacity: fillOpacity
+            }
+            ,
             grid: {
                 padding: {
                 bottom: 15,

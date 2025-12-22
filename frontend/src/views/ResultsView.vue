@@ -49,10 +49,10 @@
           <vue-apex-charts
             id="tax-savings-chart"
             key="chart"
-            v-if="series.length > 0 && !chartTransitioning"
+            v-if="totalTaxSeries.length > 0 && !chartTransitioning"
             height="350"
             :options="totalTaxChartOptions"
-            :series="series"
+            :series="totalTaxSeries"
           ></vue-apex-charts>
         </div>
         
@@ -67,10 +67,10 @@
 
           <vue-apex-charts
               id="tax-delta-chart"
-              v-if="series.length > 0 && !chartTransitioning"
+              v-if="deltaSeries.length > 0 && !chartTransitioning"
               height="350"
               :options="deltaChartOptions"
-              :series="delta_series"
+              :series="deltaSeries"
           ></vue-apex-charts>
         </div>
 
@@ -78,8 +78,8 @@
           <div v-if="loading || chartTransitioning" class="chart-loading-overlay" key="loading-delta">
             <div class="loading-text">Updating chart...</div>
           </div>
-
           
+          <!-- Ordinary Income Charts -->
           <div>
             <div class="section-header">
               <h3>Taxable Ordinary Income</h3>
@@ -152,12 +152,12 @@ const {
   processChartData
 } = useChartData()
 
-const series = ref([])
-const delta_series = ref([])
+const totalTaxSeries = ref([])
+const deltaSeries = ref([])
 const totalTaxChartOptions = ref(createChartOptions({
   chartType: 'area',
   xAxisTitle: 'Amount elected',
-  yAxisTitle: 'Total Tax'
+  yAxisTitle: 'Total Tax',
 }))
 
 const deltaChartOptions = ref(createChartOptions({
@@ -174,7 +174,6 @@ const initializeCharts = (taxYears) => {
       chartType: 'line',
       xAxisTitle: 'Amount Elected',
       yAxisTitle: `Taxable Ordinary Income`,
-      fillType: ['gradient', 'solid', 'solid', 'solid', 'solid'],
       fillOpacity: [0.35, 1, 1, 1, 1],
       strokeWidth: [0, 2, 2, 2, 2],
       colors: ['#4c51bf', '#f56565', '#48bb78', '#ed8936', '#9f7aea']
@@ -192,8 +191,23 @@ const updateChartData = (response = null) => {
   const sch_j_total = extractField(data.results, 'line_23')
   const tax_delta = extractField(data.results, 'tax_delta')
   const taxBrackets = data.bracket_thresholds
-
   const ordinaryIncomeByYear = extractOrdinaryIncomeByYears(data.results, taxYears.value)
+
+  // Update total tax chart
+  totalTaxChartOptions.value = updateChartCategories(totalTaxChartOptions.value, elected)
+  totalTaxSeries.value = buildSimpleSeries([
+    {name: 'Total 2024 Tax',
+    data: sch_j_total
+    }
+  ])
+
+  // Update delta chart
+  deltaChartOptions.value = updateChartCategories(deltaChartOptions.value, elected)
+  deltaSeries.value = buildSimpleSeries([
+    {name: 'Total Tax Savings/Expense',
+    data: tax_delta
+    }
+  ])
 
   // Update each chart - iterates through years
   taxYears.value.forEach((year, index) => {
@@ -211,22 +225,6 @@ const updateChartData = (response = null) => {
       includeBrackets: true
     })
   })
-
-  // Update total tax chart
-  totalTaxChartOptions.value = updateChartCategories(totalTaxChartOptions.value, elected)
-  series.value = buildSimpleSeries([
-    {name: 'Total 2024 Tax',
-    data: sch_j_total
-    }
-  ])
-
-  // Update delta chart
-  deltaChartOptions.value = updateChartCategories(deltaChartOptions.value, elected)
-  delta_series.value = buildSimpleSeries([
-    {name: 'Total Tax Savings/Expense',
-    data: tax_delta
-    }
-  ])
 
     // Transition delay
     chartTransitioning.value = true
