@@ -174,13 +174,15 @@ const initializeCharts = (taxYears) => {
       chartType: 'line',
       xAxisTitle: 'Amount Elected',
       yAxisTitle: `Taxable Ordinary Income`,
-      fillOpacity: [0.35, 1, 1, 1, 1],
       strokeWidth: [0, 2, 2, 2, 2],
-      colors: ['#4c51bf', '#f56565', '#48bb78', '#ed8936', '#9f7aea']
+      colors: ['#4c51bf', '#f56565', '#48bb78', '#ed8936', '#9f7aea'],
+      fillOpacity: [0.35, 1, 1, 1, 1],
+      fillType: 'solid'
     }),
     series: []
   }))
 }
+
 
 const updateChartData = (response = null) => {
 // response.outputs will only contain data upon update
@@ -197,7 +199,8 @@ const updateChartData = (response = null) => {
   totalTaxChartOptions.value = updateChartCategories(totalTaxChartOptions.value, elected)
   totalTaxSeries.value = buildSimpleSeries([
     {name: 'Total 2024 Tax',
-    data: sch_j_total
+    data: sch_j_total,
+    type: 'area'
     }
   ])
 
@@ -205,7 +208,8 @@ const updateChartData = (response = null) => {
   deltaChartOptions.value = updateChartCategories(deltaChartOptions.value, elected)
   deltaSeries.value = buildSimpleSeries([
     {name: 'Total Tax Savings/Expense',
-    data: tax_delta
+    data: tax_delta,
+      type: 'area'
     }
   ])
 

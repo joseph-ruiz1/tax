@@ -15,12 +15,12 @@ export function useChartData() {
             yAxisTitle = '',
             enableZoom = true,
             enableDownload = false,
-            strokeWidth = 2,
+            strokeWidth = 1,
             strokeCurve = 'straight',
             colors = ['#4c51bf', '#48bb78', '#f56565', '#ed8936'],
             legendPosition = 'top',
-            fillType = 'solid',
-            fillOpacity = 1,
+            fillType = 'gradient',
+            fillOpacity = null,
             strokeDashArray = null,
             xAxisFormatter = (val) => {
                 val = val | 0
@@ -82,9 +82,15 @@ export function useChartData() {
             },
             fill: {
                 type: fillType,
-                opacity: fillOpacity
+                opacity: fillOpacity,
+                gradient: {
+                    shade: 'light',
+                    type: 'vertical',
+                    shadeIntensity: 0.5,
+                    opacityFrom: 0.7,
+                    opacityTo: 0.5,
             }
-            ,
+            },
             grid: {
                 padding: {
                 bottom: 15,
