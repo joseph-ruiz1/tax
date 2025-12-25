@@ -304,7 +304,7 @@ class FindTaxBracketThresholdsTest(TestCase):
             # Get the dataset instance
             dataset = test_set['dataset_instance']
             dataset.save()
-            # update_calculations(dataset)
+
             # Convert queryset to a list
             years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
             
@@ -316,10 +316,13 @@ class FindTaxBracketThresholdsTest(TestCase):
             adjusted_years = results_container.tax_years
             # Test each year to see if 1 bracket below and above are returned based on taxable ordinary
             for adjusted_year in adjusted_years.values():
-                bracket_threshold_test = find_bracket_thresholds(adjusted_year.year, adjusted_year.filing_status, str(adjusted_year.ordinary_rate), str(adjusted_year.ordinary_rate))
+                bracket_threshold_results = find_bracket_thresholds(adjusted_year.year, adjusted_year.filing_status, str(adjusted_year.ordinary_rate), str(adjusted_year.ordinary_rate))
                 year = adjusted_year.year
-                expected_rates = set(test_set['results'][year])
-                actual_rates = set(bracket_threshold_test[year].keys())
+                
+                expected_rates = test_set['results'][year]
+                # NEED TO FIGURE OUT HOW TO ONLY RETRIEVE KEYS FROM BRACKET_THRESHOLD_TEST
+                # PROB A BETTER WAY TO DO THAT CONVERTING TO LIST
+                actual_rates = list(bracket_threshold_results.keys())
 
                 if expected_rates != actual_rates:
                     print(f"Set: {dataset.name}: Rates failed at year {year}: expected {expected_rates}, got {actual_rates}")
@@ -384,10 +387,10 @@ BRACKET_THRESHOLDS_TEST_CASES = [
         'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0),
         # 1 bracket below, 1 bracket above
         'results': {
-            '2024': ['0.12', '0.24'],
-            '2023': ['0.10', '0.22'],
-            '2022': ['0.12', '0.24'],
-            '2021': ['0.32', '0.37']
+            '2024': ['0.12', '0.22', '0.24'],
+            '2023': ['0.10', '0.12', '0.22'],
+            '2022': ['0.12', '0.22', '0.24'],
+            '2021': ['0.32', '0.35', '0.37']
         }
     },
     {
@@ -400,10 +403,10 @@ BRACKET_THRESHOLDS_TEST_CASES = [
         'dataset': dict(name='Allocation Test Case 2', max_elected_farm_income=10000, qualified_farm_income=0),
         'results': {
             # 1 bracket below, 1 bracket above
-            '2023': ['0.12', '0.24'],
-            '2022': ['0.12', '0.24'],
-            '2021': ['0.32', '0.37'],
-            '2020': ['0.12', '0.24']
+            '2023': ['0.12', '0.22', '0.24'],
+            '2022': ['0.12', '0.22', '0.24'],
+            '2021': ['0.32', '0.35', '0.37'],
+            '2020': ['0.12', '0.22', '0.24']
         }
     }
 ]
