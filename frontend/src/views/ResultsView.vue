@@ -174,10 +174,10 @@ const initializeCharts = (taxYears) => {
       chartType: 'line',
       xAxisTitle: 'Amount Elected',
       yAxisTitle: `Taxable Ordinary Income`,
-      strokeWidth: [0, 2, 2, 2, 2],
+      strokeWidth: [0, 2, 2, 2, 2, 2, 2],
       colors: ['#4c51bf', '#f56565', '#48bb78', '#ed8936', '#9f7aea'],
-      fillOpacity: [0.35, 1, 1, 1, 1],
-      fillType: 'solid'
+      fillOpacity: [0.35, 1, 1, 1, 1, 1, 1],
+      fillType: 'solid',
     }),
     series: []
   }))

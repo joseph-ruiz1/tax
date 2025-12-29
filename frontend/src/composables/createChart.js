@@ -29,9 +29,6 @@ export function useChartData() {
             yAxisFormatter = (val) => {
                 return '$' + val.toLocaleString()
             },
-            tooltipXFormatter = (val) => {
-                return 'Elected: $' + val.toLocaleString()
-            },
             tooltipYFormatter = (val) => {
                 return '$' + val.toLocaleString()
             }
@@ -99,11 +96,11 @@ export function useChartData() {
             xaxis: {
                 type: 'numeric',
                 labels: {
-                formatter: xAxisFormatter,
+                    formatter: xAxisFormatter,
                 },
                 title: {
-                text: xAxisTitle,
-                offsetY: 15
+                    text: xAxisTitle,
+                    offsetY: 15
                 },
                 categories: [],
                 tickAmount: 10,
@@ -209,13 +206,14 @@ export function useChartData() {
             name: `Taxable Ordinary Income`,
             type: 'area',
             data: ordinaryIncome
-        })
+            })
 
         // Add line charts for each bracket in year
         if (includeBrackets && taxBrackets[year]) {
             Object.entries(taxBrackets[year]).forEach(([bracketRate, bracketValue]) => {
+                const percentageRate = (parseFloat(bracketRate) * 100).toFixed(0)
                 seriesArray.push({
-                    name: `${bracketRate} Bracket`,
+                    name: `${percentageRate}%`,
                     type: 'line',
                     data: elected.map(() => bracketValue)
                 })
