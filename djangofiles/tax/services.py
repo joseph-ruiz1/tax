@@ -1,8 +1,30 @@
+import copy
+from decimal import Decimal
+
 from .calculations import tax_brackets
 from .models import TaxYearData
 
-import copy
-from decimal import Decimal
+
+class TaxCalculationResult:
+    def __init__(self, ordinary_tax: Decimal, qualified_tax: Decimal,
+                 total_tax: Decimal, ordinary_rate: Decimal, lower_ordinary_bound: Decimal,
+                 upper_ordinary_bound: Decimal, tax_on_prior_brackets: Decimal):
+        self.ordinary_tax = ordinary_tax
+        self.qualified_tax = qualified_tax
+        self.total_tax = total_tax
+        self.ordinary_rate = ordinary_rate
+        self.lower_ordinary_bound = lower_ordinary_bound
+        self.upper_ordinary_bound = upper_ordinary_bound
+        self.tax_on_prior_brackets = tax_on_prior_brackets
+
+    def to_dict(self):
+        return {
+        "ordinary_tax": self.ordinary_tax,
+        "qualified_tax": self.qualified_tax,
+        "total_tax": self.total_tax,
+        "ordinary_rate": self.ordinary_rate,
+    }
+
 
 class TaxCalculation:
     def __init__(self, tax_data: TaxYearData):
@@ -12,42 +34,55 @@ class TaxCalculation:
         self.taxable_income = self.tax_data.taxable_income
         self.qualified_income = self.tax_data.qualified_income
         self.taxable_ordinary = self.tax_data.taxable_ordinary
-    
-    def find_ordinary_bracket(self):
+
+    def calculate_total_tax(self) -> TaxCalculationResult:
+        bracket_info = self._find_ordinary_bracket()
+        ordinary_tax = self._calculate_ordinary_tax(bracket_info)
+        qualified_tax = self._calculate_qualified_tax()
+        total_tax = self._find_total_tax(ordinary_tax, qualified_tax)
+
+        calculation_results = TaxCalculationResult(ordinary_tax=ordinary_tax,
+                                                   qualified_tax=qualified_tax,
+                                                   total_tax=total_tax,
+                                                   **bracket_info,
+                                                   )
+        return calculation_results
+
+    def _find_ordinary_bracket(self) -> dict[str, Decimal]:
         for rate, (lower, upper, prior_tax) in tax_brackets.ORDINARY_TAX_TABLES[self.year][self.filing_status].items():
             if lower <= self.taxable_ordinary <= upper:
-                self.tax_data.ordinary_rate = Decimal(rate)
-                self.tax_data.lower_ordinary_bound = lower
-                self.tax_data.upper_ordinary_bound = upper
-                self.tax_data.prior_ordinary_bracket_tax = prior_tax
-                return
-            
-        raise ValueError("Income too large or negative")
+                return {
+                    "ordinary_rate": Decimal(rate),
+                    "lower_ordinary_bound": lower,
+                    "upper_ordinary_bound": upper,
+                    "tax_on_prior_brackets": prior_tax,
+                }
+        raise ValueError("Income too high or negative")
 
-    def find_ordinary_tax(self):
-        self.tax_data.ordinary_tax = ((self.taxable_ordinary - self.tax_data.lower_ordinary_bound) * self.tax_data.ordinary_rate) + self.tax_data.prior_ordinary_bracket_tax     
-        return
-        
-    def find_qualified_tax(self):
+    def _calculate_ordinary_tax(self, bracket_info):
+        ordinary_tax = ((self.taxable_ordinary - bracket_info["lower_ordinary_bound"]) * bracket_info["ordinary_rate"] + bracket_info["tax_on_prior_brackets"])
+        return ordinary_tax
+
+    def _calculate_qualified_tax(self):
         # If taxable income than 0% bracket, all at 0%
-        if self.taxable_income <= tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1]:            
+        if self.taxable_income <= tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1]:
             qualified_tax = tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1] * 0
 
-        # See if taxable exceeds 15% bracket                                  
+        # See if taxable exceeds 15% bracket
         elif self.taxable_income < tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status][".15"][1]:
-            
+
             # Edge case where more qualified income than ordinary income. Taxable income falls within 15% bracket.
             if self.qualified_income >= self.taxable_income:
                 qualified_tax = (self.taxable_income - tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1]) * Decimal(.15)
-                
+
             else:
-            # Tax at 0% = 0% bracket - ordinary          
+            # Tax at 0% = 0% bracket - ordinary
                 zero_bracket = max((tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1] - self.taxable_ordinary), 0)
-                #tax at 15% = qualified - 0% tax        
+                # Tax at 15% = qualified - 0% tax
                 fifteen_bracket = self.qualified_income - zero_bracket
                 qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15))
 
-        # taxable above 15% bracket, should be minimum 15%
+        # Taxable above 15% bracket, should be minimum 15%
         elif self.taxable_ordinary >= self.taxable_income:
             # 0% bracket - ordinary: cases where high taxable and high qualified
             zero_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1] - self.taxable_ordinary, 0)
@@ -55,44 +90,39 @@ class TaxCalculation:
             # 15% bracket - tax at zero (if any) - ordinary  
             fifteen_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status][".15"][1] - zero_bracket - self.taxable_ordinary, 0)
 
-            #find amount at 20%
-            twenty_bracket = self.qualified_income - fifteen_bracket - zero_bracket                                          
+            # Find amount at 20%
+            twenty_bracket = self.qualified_income - fifteen_bracket - zero_bracket
             qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15)) + (twenty_bracket * Decimal(.20))
 
         # Edge case where more qualified income than ordinary income and Taxable Income falls beyond 20%.
         else:
-            # Fill 0 bracket
+            # Fill 0% bracket
             zero_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1], 0)
 
-            # Fill 15 bracket
+            # Fill 15% bracket
             fifteen_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status][".15"][1] - zero_bracket, 0)
 
-            # taxable income - prior brackets
-            twenty_bracket = self.taxable_income - fifteen_bracket - zero_bracket                                          
+            # Taxable income - prior brackets
+            twenty_bracket = self.taxable_income - fifteen_bracket - zero_bracket
             qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15)) + (twenty_bracket * Decimal(.20))
-        
-        self.tax_data.qualified_tax = max(qualified_tax, 0)
- 
-    def find_total_tax(self):
-        self.tax_data.total_tax = max(self.tax_data.ordinary_tax + self.tax_data.qualified_tax, 0) 
 
-    def calculate(self, save=False): 
-        self.find_ordinary_bracket()
-        self.find_ordinary_tax()
-        self.find_qualified_tax()
-        self.find_total_tax()
-        if save:
-            self.tax_data.save()
+        return max(qualified_tax, 0)
+
+    def _find_total_tax(self, ordinary_tax, qualified_tax):
+        total_tax = max(ordinary_tax + qualified_tax, 0)
+        return total_tax
 
 class AdjustedTaxData:
     """
     Represents a single tax year that has been allocated elected farm income. Separate from TaxYearData so
     instances don't get stored to DB, but keeps the same struct for calculation consistency and ease of use.
     Results of this calculation are internally only; API uses ScheduleJResultsContainer instead.
-    
+
     Attributes:
         Same as TaxYearStruct
+
     """
+
     DEFAULT_FIELDS = ['year', 
                       'filing_status', 
                       'taxable_income',
@@ -101,6 +131,22 @@ class AdjustedTaxData:
                       'elected_farm_income', 
                       'qualified_farm_income',
                       'ordinary_rate']
+    
+    _DEFAULTS = {
+        "taxable_income": Decimal(0),
+        "qualified_income": Decimal(0),
+        "ordinary_rate": Decimal(0),
+        "lower_ordinary_bound": Decimal(0),
+        "upper_ordinary_bound": Decimal(0),
+        "prior_ordinary_bracket_tax": Decimal(0),
+        "ordinary_tax": Decimal(0),
+        "qualified_tax": Decimal(0),
+        "total_tax": Decimal(0),
+        "is_electing": False,
+        "elected_farm_income": Decimal(0),
+        "qualified_farm_income": Decimal(0),
+    }
+
 
     def __init__(self,
                 year: str,
@@ -135,14 +181,15 @@ class AdjustedTaxData:
     @classmethod
     def from_model_instance(cls, model_instance, fields=None):
         """
-        Extract/copy key fields from TaxYearData Model instance to create the adjusted tax year
+        Extract/copy key fields from TaxYearData Model instance to create the adjusted tax year.
 
-        Args: 
+        Args:
             model_instance: TaxYearData Model instance to extract from
             fields: List of field names to extract or None for DEFAULT_FIELDS
 
         Returns:
             Instance of AdjustedTaxData
+
         """
         if fields is None:
             fields=cls.DEFAULT_FIELDS
@@ -151,16 +198,14 @@ class AdjustedTaxData:
         # Read fields we want to extract to create instance with
         for field_name in fields:
             kwargs[field_name] = getattr(model_instance, field_name)
-        
+
         return cls(**kwargs)
-    
+
     @property
     def taxable_ordinary(self):
-        """
-        Computed property: Returns taxable ordinary income on demand.
-        """
+        """Computed property: Returns taxable ordinary income on demand."""
         return max(self.taxable_income - self.qualified_income, 0)
-    
+
     def to_dict(self):
         return {
             "year": self.year,
@@ -222,7 +267,6 @@ class ScheduleJForm:
 
     __repr__ = __str__  # Same output for debugging
 
-        
 class ScheduleJResultContainer:
     """
     Contains results from Schedule J Calculation.
@@ -234,8 +278,11 @@ class ScheduleJResultContainer:
         long_form (boolean): All Sch J values or only key values (Default)
         all_years (boolean): All AdjustedTaxData or none (Default)
         tax_year (dict): Map of all Adjusted Years (Default is blank)
+
     """
-    def __init__(self, schedule_j_form: ScheduleJForm,
+
+    def __init__(self,
+                 schedule_j_form: ScheduleJForm,
                  elected_farm_income,
                  elected_farm_qualified,
                  long_form=False,
@@ -255,7 +302,7 @@ class ScheduleJResultContainer:
             "elected_farm_income": self.elected_farm_income,
             "elected_farm_qualified": self.elected_farm_qualified,
             }
-        
+
         if self.all_years:
             result["tax_years"] = {
                 year: data.to_dict() for year, data in self.tax_years.items()
@@ -351,26 +398,27 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
 
     return bracket_thresholds
 
-
 class ScheduleJCalculation:
     """
     Represents a Schedule J tax computation for a given current year as well as prior years if electing Sch J.
     
     Attributes:
-        years (list): List of all TaxYearData instances in descending order by year
+        tax_years (list): List of all TaxYearData instances in descending order by year
         show_all_years (bool): True if you want ScheduleJResultContainer to return all AdjustedTaxData instances. Default is False.
         long_form (bool): True if you want ScheduleJResultContainer to return all lines on ScheduleJForm. Default is False.
     """ 
-    def __init__(self, years: list, show_all_years=False, long_form=False):
+    def __init__(self, years: list):
         # Create map of years
-        self.years = {y.year: y for y in years}
-        self.current_year = next(iter(self.years.values()))
-        self.show_all_years = show_all_years
-        self.long_form = long_form
+        self.tax_years = {y.year: y for y in years}
+        self.current_year = next(iter(self.tax_years.values()))
+        # self.config = config
 
-    def schedule_j_calculation(self, elected_farm_income: Decimal, elected_cap_gains: Decimal) -> ScheduleJResultContainer:
+        self.ScheduleJForm = ScheduleJForm(long_form=self.config['long_form'])
+
+
+    def schedule_j_calculation(self) -> ScheduleJResultContainer:
         """
-        Runs a single Schedule J calculation based on the elected income values
+        Runs a single Schedule J calculation based on the elected income values.
 
         Args:
             elected_farm_income (Decimal): The amount of farm income elected for averaging
@@ -379,8 +427,9 @@ class ScheduleJCalculation:
         Returns:
             ScheduleJResultContainer: An object containing the computed Sch J results, which includes
             total tax for each year
-        
+
         Raises: TypeError: If arguments are not a Decimal 
+
         """
         if not isinstance(elected_farm_income, Decimal):
             raise TypeError("Not a Decimal")
@@ -389,42 +438,39 @@ class ScheduleJCalculation:
 
         # Create instances for calculations
         output = ScheduleJForm(long_form=self.long_form)
-        all_adjusted_years = {year: AdjustedTaxData.from_model_instance(base) for year, base in self.years.items()}
-        adjusted_current_year = all_adjusted_years[max(self.years)]
+        all_adjusted_years = self.create_adjusted_years() 
+        adjusted_current_year = all_adjusted_years[max(self.tax_years)]
 
-        output.line_1 = self.current_year.taxable_income
-        output.line_2a = elected_farm_income
-        output.line_2b = elected_cap_gains
-        output.line_3 = output.line_1 - output.line_2a
+        self.fillScheduleJWithInitialValues(elected_farm_income, elected_cap_gains, output)
 
         distribute_elected = elected_farm_income / 3
         distribute_cap_gains = elected_cap_gains / 3
         output.line_6 = output.line_10 = output.line_14 = distribute_elected
-    
+
         # Allocate elected farm income for all years
         years_list = list(all_adjusted_years.values())
         allocate_all_years(years_list)
 
         # Find tax on 2024 taxable less elected farm income
-        TaxCalculation(adjusted_current_year).calculate()
+        TaxCalculation(adjusted_current_year).calculate_total_tax()
         output.line_4 = adjusted_current_year.total_tax
 
         # Update form for prior years
         update_lines = [
-                ['line_13', 'line_15', 'line_16', 'line_21'], # current year - 1
+                ["line_13", "line_15", "line_16", 'line_21'], # current year - 1
                 ['line_9', 'line_11', 'line_12', 'line_20'], # current year - 2
-                ['line_5', 'line_7', 'line_8', 'line_19'], # current year - 3
+                ['line_5', 'line_7', 'line_8', "line_19"], # current year - 3
         ]
         for i, (base_income, adjusted_income, tax, tax_not_including_elected) in enumerate(update_lines, start=1):
             year_data = all_adjusted_years[str(int(adjusted_current_year.year) - i)]
             # Subtract out current year's elected farm income since that gets added in allocate_income
             setattr(output, base_income, year_data.taxable_income - distribute_elected)
-            
+
             # Place taxable income plus 1/3 current year elected into Sch J
             setattr(output, adjusted_income, year_data.taxable_income) 
 
             # Tax including current year elected amount
-            TaxCalculation(year_data).calculate(save=False)
+            TaxCalculation(year_data).calculate_total_tax(save=False)
             setattr(output, tax, year_data.total_tax)
 
             # Tax not including current year elected amount
@@ -433,7 +479,7 @@ class ScheduleJCalculation:
             year_data_not_including_elected.taxable_income -= distribute_elected
             year_data_not_including_elected.qualified_income -= distribute_cap_gains
 
-            TaxCalculation(year_data_not_including_elected).calculate(save=False)
+            TaxCalculation(year_data_not_including_elected).calculate_total_tax(save=False)
             setattr(output, tax_not_including_elected, year_data_not_including_elected.total_tax)
 
         output.line_17 = output.line_4 + output.line_8 + output.line_12 + output.line_16
@@ -460,15 +506,29 @@ class ScheduleJCalculation:
             **({"tax_years": all_adjusted_years} if self.show_all_years else {})
             )
 
+    def create_adjusted_years(self):
+        all_adjusted_years = {year: AdjustedTaxData.from_model_instance(base) for year, base in self.tax_years.items()}
+        print(all_adjusted_years)
+        return all_adjusted_years
+
+    def fill_schedule_j_with_initial_values(self, elected_income, elected_cap_gains, output):
+        output.line_1 = self.current_year.taxable_income
+        output.line_2a = elected_income
+        output.line_2b = elected_cap_gains
+        output.line_3 = output.line_1 - output.line_2a
+        return output
+
 class ScheduleJOptimization:
     """
-    Represents a single Schedule J Optimization
+    Represents a single Schedule J Optimization.
 
     Attributes:
         years (list): List of TaxYearDatas in descending order
         elected_farm_income (Decimal): Max amount of income that can be elected
         elected_farm_qualifed (Decimal): Amount of elected income that is made up of cap gains
-    """ 
+
+    """
+
     def __init__(self, years, elected_farm_income: Decimal, elected_farm_qualified: Decimal, show_all_years=False, long_form=False):
         self.years = years
         self.elected_farm_income = elected_farm_income
@@ -490,6 +550,7 @@ class ScheduleJOptimization:
             results (list): A list of all ScheduleJForm objects that were calcualted
             first instance (ScheduleJResultsContainer): Sch J instance with no elected farm income
             last_instance (ScheduleJResultsContainer): Sch J instance with max elected farm income
+
         """
         if not isinstance(elected_farm_income, Decimal):
             raise TypeError("Not a Decimal")
@@ -525,7 +586,7 @@ class ScheduleJOptimization:
                 # Truncated data show_all_years = False
                 instance = (ScheduleJCalculation(self.years, show_all_years=self.show_all_years, long_form=self.long_form)
                             .schedule_j_calculation(current_total_elected, current_qualified_elected))
-                
+
             results.append(instance.schedule_j_form)
 
             current_total_elected -= 500
@@ -534,8 +595,6 @@ class ScheduleJOptimization:
             self.years[0].elected_farm_income -= 500 * ordinary_percentage
             self.years[0].qualified_farm_income -= 500 * qualified_percentage
             iteration += 1
-
-        
 
         return {
             'optimization_results': results,

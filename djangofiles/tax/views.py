@@ -1,12 +1,12 @@
 from django.db.models import Count
-from django.views.generic import TemplateView
 from django.contrib.auth import login, logout
+from django.views.generic import TemplateView
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import action
 
-from .models import TaxDataSet, TaxYearData
+from .models import TaxDataSet
 from .serializers import UserSerializer, TaxDataSetSerializer, LoginSerializer, UserSerializer, TaxDataSetDetailSerializer, CalculationEntrySerializer, CreateCalculationSerializer, OutputSerializer, UserRegistrationSerializer
 from .utils import update_calculations
 

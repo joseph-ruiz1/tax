@@ -1,10 +1,7 @@
-import json
-
-from rest_framework import serializers
 from decimal import Decimal
-from django.db import transaction
-from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import FILING_STATUS, TaxDataSet, TaxYearData

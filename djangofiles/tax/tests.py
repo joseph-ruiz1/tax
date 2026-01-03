@@ -1,19 +1,26 @@
 from decimal import Decimal
+
 from django.test import TestCase
 from rest_framework.test import APITestCase
 
-from .calculations import tax_brackets
-from .models import TaxYearData, TaxDataSet, User
+from .models import TaxDataSet, TaxYearData, User
+from .serializers import OutputSerializer
+from .services import (
+    ScheduleJCalculation,
+    ScheduleJOptimization,
+    TaxCalculation,
+    allocate_all_years,
+    find_bracket_thresholds,
+)
 from .utils import update_calculations
-from .serializers import  OutputSerializer
-from .services import TaxCalculation, ScheduleJCalculation, ScheduleJOptimization, allocate_all_years, find_bracket_thresholds
+
 
 # HELPER FUNCTIONS
 def create_taxdataset(user, elected, elected_qualified):
     return TaxDataSet.objects.create(user=user, max_elected_farm_income=elected, qualified_farm_income=elected_qualified)
 
 def create_taxyeardata(year, filing_status, taxable_income, qualified_income, dataset):
-    return TaxYearData.objects.create(year=year, filing_status=filing_status, taxable_income=taxable_income, \
+    return TaxYearData.objects.create(year=year, filing_status=filing_status, taxable_income=taxable_income,
                                   qualified_income=qualified_income, dataset=dataset)
 
 def create_dataset_with_tax_years(user, tax_year_inputs: tuple, elected, elected_qualified):
@@ -42,8 +49,8 @@ def create_several_test_users(username, password):
 def create_tax_year_data_list(test_cases, user, save=True):
     """
     Creates TaxDataSet instances for each test case. Creates TaxYearData instances for each case and attaches dataset.
-    
-    Example input:
+
+    Sample input:
         SCHEDULE_J_ALLOCATION_TEST = [
             {'inputs': [
                 dict(year=2024, filing_status='MFJ', taxable_income=120000, qualified_income=105000,
@@ -54,7 +61,7 @@ def create_tax_year_data_list(test_cases, user, save=True):
             'outputs': [143, 2812],
             'dataset': dict(name='test', max_elected_farm_income=10000, qualified=0)}
         ],
-    
+
     Also supports compact list style:
         [
             [2024, 'MFJ', 120000, 105000, True, 10000, 0],
@@ -64,13 +71,14 @@ def create_tax_year_data_list(test_cases, user, save=True):
     Args:
         test_cases (list): list of dicts or lists describing TaxYearData.
         save (bool): whether to save the instances to the database (default True).
-    
+
     Returns:
         list[TaxYearData]: list of created instances.
-        Example:
-            [{'inputs': [TaxYearDatas], 'outputs': [], 'dataset': {dataset inputs}, 'dataset_instance': TaxDataSet}]
-    """
 
+    Example:
+            [{'inputs': [TaxYearDatas], 'outputs': [], 'dataset': {dataset inputs}, 'dataset_instance': TaxDataSet}]
+
+    """
     processed_cases = []
     for i, case in enumerate(test_cases, start=1):
         # Create dataset
@@ -141,34 +149,35 @@ class TestUserModel(TestCase):
         actual_ids = [user.id for user in users]
         self.assertEqual(actual_ids, expected_ids)
 
-class BaseTaxCalculationsTest(TestCase):
-    """
-    Run base TaxCalculation and compare to outputs in TEST_CASES
-    """
+class BasicTaxCalculationTest(TestCase):
     def setUp(self):
-        self.test_user = create_test_user(username="test", password="testing")
-        self.client.login(username="test", password="testing")
+        self.test_user = create_test_user(username="test", password="testing")  # noqa: S106
+        self.client.login(username="test", password="testing")  # noqa: S106
 
-    def test_base_tax_calculations(self):
-        # Create test sets
+    def test_calculation(self):
         for i, test in enumerate(TEST_CASES):
-            dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], 0, 0)
-
+            dataset = create_dataset_with_tax_years(self.test_user, test["inputs"], 0, 0)
             total_tax_results = []
-            # Base calculations
-            for tax_year in TaxYearData.objects.filter(dataset=dataset):
-                TaxCalculation(tax_year).calculate()
-                total_tax_results.append(round(tax_year.total_tax))
 
-            # Compare to expected
-            for j, (result, expected) in enumerate(zip(total_tax_results, test['outputs'])):
-                if round(result) != expected:
-                    print(f"❌ Test {i}, Year {j}: Got {result}, expected {expected}")
+            for tax_year in TaxYearData.objects.filter(dataset=dataset):
+                try:
+                    tax_results = TaxCalculation(tax_year).calculate_total_tax()
+                except TypeError as e:
+                    print(f"❌ Test {i}: Incorrect input type - {e}")
+                    tax_results = None
+                except ValueError as e:
+                    print(f"❌ Test {i}: Invalid input value - {e}")
+                    tax_results = None
+
+                total_tax_results.append(tax_results)
+
+            for j, (result, expected) in enumerate(zip(total_tax_results, test["outputs"], strict=True)):
+                if round(result.total_tax) != expected:
+                    print(f"❌ Test {i}, Year {j}: Got {result.total_tax}, expected {expected}")
 
 class CalculationsTest(TestCase):
-    """
-    Run base TaxCalculation to test 2021-2018. Results should match TEST outputs
-    """
+    """Run base TaxCalculation to test 2021-2018. Results should match TEST outputs."""
+
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
@@ -176,7 +185,7 @@ class CalculationsTest(TestCase):
     def test_base_tax_calculations(self):
         # Create test sets
         for i, test in enumerate(TEST_OLDER_YEARS):
-            dataset = create_dataset_with_tax_years(self.test_user, test['inputs'], 0, 0)
+            dataset = create_dataset_with_tax_years(self.test_user, test["inputs"], 0, 0)
 
             total_tax_results = []
             # Base calculations
@@ -207,10 +216,10 @@ class ScheduleJCalculationTest(TestCase):
 
             # Convert queryset to a list
             years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
-            
+
             # Base Calculations
             for year in years:
-                TaxCalculation(year).calculate()
+                TaxCalculation(year).calculate_total_tax()
 
             results_container = ScheduleJCalculation(years, show_all_years=True, long_form=True).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
             results = results_container.schedule_j_form.to_dict()
@@ -221,7 +230,7 @@ class ScheduleJCalculationTest(TestCase):
                 val2 = correct.get(key, "<missing>")
                 if isinstance(val1, Decimal):
                     val1 = round(float(val1), 0)
-                
+
                 if val1 != val2:
                     print(f"Mismatch on key '{key}': calcualtions returned {val1}, correct is {val2}")
 
@@ -235,15 +244,15 @@ class ScheduleJOptimizationTest(TestCase):
 
         for test_set in test_years:
             # Get the dataset instance
-            dataset = test_set['dataset_instance']
+            dataset = test_set["dataset_instance"]
             dataset.save()
 
             # Convert queryset to a list
             years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
-            
+
             # Base Calculations
             for year in years:
-                TaxCalculation(year).calculate()
+                TaxCalculation(year).calculate_total_tax()
             optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, long_form=False)
             results = optimize.optimize_sch_j(elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income)
             print(results[0].taxable_ordinary_all_years)
@@ -255,7 +264,7 @@ class TaxDataSetSerializerTest(APITestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
-        
+
     def test_serializer_outputs(self):
         for i, test in enumerate(SCHEDULE_J_OPTIMIZATION_TEST):
                 max_elected, max_qualified_elected = test["elected"]
@@ -266,7 +275,7 @@ class TaxDataSetSerializerTest(APITestCase):
 
                 # Base Calculations
                 for year in years:
-                    TaxCalculation(year).calculate()
+                    TaxCalculation(year).calculate_total_tax()
 
         optimize = ScheduleJOptimization(*years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, dataset=dataset)
         optimize.optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
@@ -310,7 +319,7 @@ class FindTaxBracketThresholdsTest(TestCase):
             
             # Base Calculations
             for year in years:
-                TaxCalculation(year).calculate()
+                TaxCalculation(year).calculate_total_tax()
 
             results_container = ScheduleJCalculation(years, show_all_years=True).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
             adjusted_years = results_container.tax_years
@@ -328,38 +337,38 @@ class FindTaxBracketThresholdsTest(TestCase):
                     print(f"Set: {dataset.name}: Rates failed at year {year}: expected {expected_rates}, got {actual_rates}")
 
 CREDENTIALS = [
-            ('test1', 'testing123'), 
-            ('test2', 'testing321'), 
+            ('test1', 'testing123'),
+            ('test2', 'testing321'),
             ('test3', 'testing213'),
         ]
 
 TEST_CASES = [
     {
-        'inputs': [
+        "inputs": [
             [2024, "single", 100000, 40000, False, 0, 0],
             [2023, "MFJ", 20000, 100, False, 0, 0],
             [2022, "MFJ", 2000, 50, False, 0, 0],
             [2021, "single", 100000, 10000, False, 0, 0],
         ],
-        'outputs': [14253, 1990, 195, 17121],
+        "outputs": [14253, 1990, 195, 17121],
     },
     {
-        'inputs': [
+        "inputs": [
             [2024, "MFJ", 120000, 105000, False, 0, 0],
             [2023, "MFJ", 85000, 70000, False, 0, 0],
             [2022, "single", 55000, 40000, False, 0, 0],
             [2021, "MFJ", 96000, 45000, False, 0, 0]
         ],
-        'outputs': [5392, 1500, 3593, 8002],
+        "outputs": [5392, 1500, 3593, 8002],
     },
     {
-        'inputs': [
+        "inputs": [
             [2024, "single", 230000, 200000, False, 0, 0],
             [2023, "single", 340000, 40000, False, 0, 0],
             [2022, "MFJ", 460000, 280000, False, 0, 0],
             [2021, "MFJ", 315000, 2000, False, 0, 0]
         ],
-        'outputs': [30814, 82894, 72871, 63462],
+        "outputs": [30814, 82894, 72871, 63462],
     },
 ]
 

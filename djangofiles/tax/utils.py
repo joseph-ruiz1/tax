@@ -1,8 +1,10 @@
-from.models import TaxDataSet
 from itertools import islice
-from django.urls import reverse
+
 from django.db import models
+from django.urls import reverse
 from rest_framework import serializers
+
+from .models import TaxDataSet
 
 
 def build_taxyear_formset_data(data_list, prefix="form", initial_forms=0):
