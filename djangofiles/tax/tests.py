@@ -162,6 +162,7 @@ class BasicTaxCalculationTest(TestCase):
             for tax_year in TaxYearData.objects.filter(dataset=dataset):
                 try:
                     tax_results = TaxCalculation(tax_year).calculate_total_tax()
+                    print(tax_results.upper_ordinary_bound)
                 except TypeError as e:
                     print(f"❌ Test {i}: Incorrect input type - {e}")
                     tax_results = None
@@ -345,12 +346,12 @@ CREDENTIALS = [
 TEST_CASES = [
     {
         "inputs": [
-            [2024, "single", 100000, 40000, False, 0, 0],
-            [2023, "MFJ", 20000, 100, False, 0, 0],
-            [2022, "MFJ", 2000, 50, False, 0, 0],
-            [2021, "single", 100000, 10000, False, 0, 0],
+            [2024, "single", 100000, 140000, False, 0, 0], # Edge case: negative ordinary income 15%
+            [2023, "single", 640000, 600000, False, 0, 0], # cap gains in 0%, 15%, 20%
+            [2022, "single", 640000, 540000, False, 0, 0], # Cap gains in 15%, 20%
+            [2021, "single", 600000, 640000, False, 0, 0], # Edge case: negative ordinary income in 0%, 15%, 20%
         ],
-        "outputs": [14253, 1990, 195, 17121],
+        "outputs": [7946, 101271, 107848, 91647],
     },
     {
         "inputs": [

@@ -29,6 +29,7 @@ class TaxCalculationResult:
 class TaxCalculation:
     def __init__(self, tax_data: TaxYearData):
         self.tax_data = tax_data
+        # Pull needed fields from the TaxYearData object
         self.year = self.tax_data.year
         self.filing_status = self.tax_data.filing_status
         self.taxable_income = self.tax_data.taxable_income
@@ -57,58 +58,89 @@ class TaxCalculation:
                     "upper_ordinary_bound": upper,
                     "tax_on_prior_brackets": prior_tax,
                 }
-        raise ValueError("Income too high or negative")
+
+        # Test for edge case where taxable ordinary is < $0
+        first_bracket = tax_brackets.ORDINARY_TAX_TABLES[self.year][self.filing_status]["0.10"]
+        if self.taxable_ordinary < 0:
+            return {
+                "ordinary_rate": first_bracket[0],
+                "lower_ordinary_bound": 0,
+                "upper_ordinary_bound": first_bracket[1],
+                "tax_on_prior_brackets": 0,
+            }
+
+        raise ValueError("Income too high")
 
     def _calculate_ordinary_tax(self, bracket_info):
         ordinary_tax = ((self.taxable_ordinary - bracket_info["lower_ordinary_bound"]) * bracket_info["ordinary_rate"] + bracket_info["tax_on_prior_brackets"])
         return ordinary_tax
 
     def _calculate_qualified_tax(self):
-        # If taxable income than 0% bracket, all at 0%
-        if self.taxable_income <= tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1]:
-            qualified_tax = tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1] * 0
+        qualified_tables = tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]
+        zero_threshold = qualified_tables["0"][1]
+        fifteen_threshold = qualified_tables[".15"][1]
+        twenty_threshold = qualified_tables[".15"][0]
 
-        # See if taxable exceeds 15% bracket
-        elif self.taxable_income < tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status][".15"][1]:
+        if self.taxable_income <= zero_threshold:
+            return Decimal(0)
 
-            # Edge case where more qualified income than ordinary income. Taxable income falls within 15% bracket.
-            if self.qualified_income >= self.taxable_income:
-                qualified_tax = (self.taxable_income - tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1]) * Decimal(.15)
+        if self.taxable_income < fifteen_threshold:
+            if self.taxable_ordinary >= 0:
+                return self._qualified_tax_max_fifteen_percent(zero_threshold)
+            return self._qualified_tax_max_fifteen_percent_negative_ordinary(zero_threshold)
 
-            else:
-            # Tax at 0% = 0% bracket - ordinary
-                zero_bracket = max((tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1] - self.taxable_ordinary), 0)
-                # Tax at 15% = qualified - 0% tax
-                fifteen_bracket = self.qualified_income - zero_bracket
-                qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15))
+        if self.taxable_income > twenty_threshold:
+            if self.taxable_ordinary >= 0:
+                return self._qualified_tax_max_twenty_percent(zero_threshold, fifteen_threshold)
+            return self._qualified_tax_max_twenty_percent_negative_ordinary(zero_threshold, fifteen_threshold)
 
-        # Taxable above 15% bracket, should be minimum 15%
-        elif self.taxable_ordinary >= self.taxable_income:
-            # 0% bracket - ordinary: cases where high taxable and high qualified
-            zero_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1] - self.taxable_ordinary, 0)
+        raise ValueError("Qualified tax calculation not able to compute, check inputs")
 
-            # 15% bracket - tax at zero (if any) - ordinary  
-            fifteen_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status][".15"][1] - zero_bracket - self.taxable_ordinary, 0)
+    def _qualified_tax_max_fifteen_percent(self, zero_threshold):
+        # Take the max to see if any income falls in the 0% bracket
+        income_in_zero_bracket = max(zero_threshold - self.taxable_ordinary, 0)
 
-            # Find amount at 20%
-            twenty_bracket = self.qualified_income - fifteen_bracket - zero_bracket
-            qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15)) + (twenty_bracket * Decimal(.20))
+        # Rest of qualified income goes in 15% bracket
+        income_in_fifteen_bracket = self.qualified_income - income_in_zero_bracket
 
-        # Edge case where more qualified income than ordinary income and Taxable Income falls beyond 20%.
-        else:
-            # Fill 0% bracket
-            zero_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status]["0"][1], 0)
+        qualified_tax = (income_in_zero_bracket * 0) + (income_in_fifteen_bracket * Decimal(.15))
+        return qualified_tax
 
-            # Fill 15% bracket
-            fifteen_bracket = max(tax_brackets.QUALIFIED_TAX_TABLES[self.year][self.filing_status][".15"][1] - zero_bracket, 0)
+    def _qualified_tax_max_fifteen_percent_negative_ordinary(self, zero_threshold):
+        # 0% bracket entirely filled
+        income_in_zero_bracket = zero_threshold
 
-            # Taxable income - prior brackets
-            twenty_bracket = self.taxable_income - fifteen_bracket - zero_bracket
-            qualified_tax = (zero_bracket * 0) + (fifteen_bracket * Decimal(.15)) + (twenty_bracket * Decimal(.20))
+        # Use taxable income instead since qualified income > taxable income
+        income_in_fifteen_bracket = self.taxable_income - income_in_zero_bracket
 
-        return max(qualified_tax, 0)
+        qualified_tax = (income_in_zero_bracket * 0) + (income_in_fifteen_bracket * Decimal(.15))
+        return qualified_tax
+
+    def _qualified_tax_max_twenty_percent(self, zero_threshold, fifteen_threshold):
+        income_in_zero_bracket = max(zero_threshold - self.taxable_ordinary, 0)
+
+        income_in_fifteen_bracket = max(fifteen_threshold - income_in_zero_bracket - self.taxable_ordinary, 0)
+
+        income_in_twenty_bracket = self.qualified_income - income_in_zero_bracket - income_in_fifteen_bracket
+
+        qualified_tax = (income_in_zero_bracket * 0) + (income_in_fifteen_bracket * Decimal(.15)) + (income_in_twenty_bracket * Decimal(.20))
+        return qualified_tax
+
+    def _qualified_tax_max_twenty_percent_negative_ordinary(self, zero_threshold, fifteen_threshold):
+        # 0% bracket will be filled entirely
+        income_in_zero_bracket = zero_threshold
+
+        # 15% bracket will be filled entirely
+        income_in_fifteen_bracket = fifteen_threshold - zero_threshold
+
+        # Use taxable income instead since qualified income > taxable income
+        income_in_twenty_bracket = self.taxable_income - income_in_fifteen_bracket - income_in_zero_bracket
+
+        qualified_tax = (income_in_zero_bracket * 0) + (income_in_fifteen_bracket * Decimal(.15)) + (income_in_twenty_bracket * Decimal(.20))
+        return qualified_tax
 
     def _find_total_tax(self, ordinary_tax, qualified_tax):
+        # Keeping this as a separate method in case the tax calc logic expands (e.g. 1250 gains)
         total_tax = max(ordinary_tax + qualified_tax, 0)
         return total_tax
 

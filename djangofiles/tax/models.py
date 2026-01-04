@@ -63,7 +63,7 @@ class TaxYearStructure(models.Model):
     @property
     def taxable_ordinary(self):
         """Computed property: Returns taxable ordinary income on demand."""
-        return max(self.taxable_income - self.qualified_income, 0)
+        return self.taxable_income - self.qualified_income
 
     def to_dict(self):
         return {
