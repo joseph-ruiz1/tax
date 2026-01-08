@@ -1,4 +1,5 @@
 import copy
+from dataclasses import dataclass
 from decimal import Decimal
 
 from .calculations import tax_brackets
@@ -24,7 +25,6 @@ class TaxCalculationResult:
         "total_tax": self.total_tax,
         "ordinary_rate": self.ordinary_rate,
     }
-
 
 class TaxCalculation:
     def __init__(self, tax_data: TaxYearData):
@@ -350,6 +350,7 @@ def allocate_all_years(years):
 
     Returns:
         years(list): Objects are directly mutated
+
     """
     for i, year in enumerate(years):
         if year.is_electing:
@@ -430,22 +431,52 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
 
     return bracket_thresholds
 
+@dataclass
+class ScheduleJConfig:
+    """Using in case results want to be extended and customized in future."""
+
+    full_sch_j_form: bool = False
+    show_all_tax_years: bool = False
+
+    @classmethod
+    def full_audit(cls):
+        return cls(True, True)
+
 class ScheduleJCalculation:
     """
     Represents a Schedule J tax computation for a given current year as well as prior years if electing Sch J.
-    
+
     Attributes:
         tax_years (list): List of all TaxYearData instances in descending order by year
         show_all_years (bool): True if you want ScheduleJResultContainer to return all AdjustedTaxData instances. Default is False.
         long_form (bool): True if you want ScheduleJResultContainer to return all lines on ScheduleJForm. Default is False.
-    """ 
-    def __init__(self, years: list):
-        # Create map of years
-        self.tax_years = {y.year: y for y in years}
-        self.current_year = next(iter(self.tax_years.values()))
-        # self.config = config
 
-        self.ScheduleJForm = ScheduleJForm(long_form=self.config['long_form'])
+    """
+
+    def __init__(self, years: list[TaxYearData],
+                elected_farm_income: Decimal,
+                qualified_farm_income: Decimal,
+                config: ScheduleJConfig = None):
+        self.years = self.create_tax_years_map(years)
+        self.current_year = next(iter(self.tax_years.values()))
+        self.elected_farm_income = elected_farm_income
+        self.qualified_farm_income = qualified_farm_income
+        self.config = config if config is not None else ScheduleJConfig()
+
+        self._validate_inputs()
+
+    def validate_inputs(self):
+        if not isinstance(self.elected_farm_income, Decimal):
+            raise TypeError("elected_farm_income must be a Decimal")
+        if not isinstance(self.qualified_farm_income, Decimal):
+            raise TypeError("qualified_farm_income must be a Decimal")
+        if self.qualified_farm_income > self.elected_farm_income:
+            raise ValueError("qualified_farm_income cannot exceed elected_farm_income")
+        if len(self.years) != 4:
+            raise ValueError("Number of tax years not equal to four")
+
+    def create_tax_years_map(self, years):
+        self.tax_years = {y.year: y for y in self.years}
 
 
     def schedule_j_calculation(self) -> ScheduleJResultContainer:
@@ -463,24 +494,20 @@ class ScheduleJCalculation:
         Raises: TypeError: If arguments are not a Decimal 
 
         """
-        if not isinstance(elected_farm_income, Decimal):
-            raise TypeError("Not a Decimal")
-        if not isinstance(elected_cap_gains, Decimal):
-            raise TypeError("Not a Decimal")
-
         # Create instances for calculations
-        output = ScheduleJForm(long_form=self.long_form)
-        all_adjusted_years = self.create_adjusted_years() 
-        adjusted_current_year = all_adjusted_years[max(self.tax_years)]
+        output = ScheduleJForm()
+        # Create working copies of tax years
+        adjusted_years = self._create_adjusted_years()
 
-        self.fillScheduleJWithInitialValues(elected_farm_income, elected_cap_gains, output)
+        # adjusted_current_year = all_adjusted_years[max(self.tax_years)]
+        self.fill_schedule_j_with_initial_values(output)
 
-        distribute_elected = elected_farm_income / 3
-        distribute_cap_gains = elected_cap_gains / 3
+        distribute_elected = self.elected_farm_income / 3
+        distribute_cap_gains = self.elected_cap_gains / 3
         output.line_6 = output.line_10 = output.line_14 = distribute_elected
 
         # Allocate elected farm income for all years
-        years_list = list(all_adjusted_years.values())
+        years_list = list(adjusted_years.values())
         allocate_all_years(years_list)
 
         # Find tax on 2024 taxable less elected farm income
@@ -530,25 +557,59 @@ class ScheduleJCalculation:
         output.taxable_ordinary_all_years = {year: int(y.taxable_ordinary) for year, y in all_adjusted_years.items()}
 
         return ScheduleJResultContainer(
-            schedule_j_form=output,
-            elected_farm_income=elected_farm_income,
-            elected_farm_qualified=elected_cap_gains,
-            long_form=self.long_form,
-            all_years=self.show_all_years,
-            **({"tax_years": all_adjusted_years} if self.show_all_years else {})
+            schedule_j_form=schedule_j_form,
+            elected_farm_income=self.elected_farm_income,
+            elected_farm_qualified=self.qualified_farm_income,
+            long_form=self.config.long_form,
+            all_years=self.config.show_all_years,
+            tax_years=adjusted_years if self.config.show_all_years else {}
             )
 
-    def create_adjusted_years(self):
-        all_adjusted_years = {year: AdjustedTaxData.from_model_instance(base) for year, base in self.tax_years.items()}
-        print(all_adjusted_years)
-        return all_adjusted_years
+    def _create_adjusted_years(self) -> dict[str, TaxYearData]:
+        return {year: copy.deepcopy(base) for year, base in self.tax_years.items()}
 
-    def fill_schedule_j_with_initial_values(self, elected_income, elected_cap_gains, output):
+    def _allocate_income_to_years(adjusted_years):
+        years_list = list(adjusted_years.values())
+        allocate_all_years(years_list)
+
+
+
+    def fill_schedule_j_with_initial_values(self, output):
         output.line_1 = self.current_year.taxable_income
-        output.line_2a = elected_income
-        output.line_2b = elected_cap_gains
+        output.line_2a = self.elected_income
+        output.line_2b = self.qualified_farm_income
         output.line_3 = output.line_1 - output.line_2a
         return output
+
+    def schedule_j_calculation(self) -> ScheduleJResultContainer:
+        """
+        Runs a single Schedule J calculation based on the elected income values.
+
+        Args:
+            elected_farm_income (Decimal): The amount of farm income elected for averaging
+            elected_cap_gains (Decimal): The amount of elected income made up of capital gains
+
+        Returns:
+            ScheduleJResultContainer: An object containing the computed Sch J results, which includes
+            total tax for each year
+
+        Raises: TypeError: If arguments are not a Decimal 
+
+        """
+        # Create working copies of tax years
+        adjusted_years = self._create_adjusted_years()
+
+        # Allocate elected income across years
+        self._allocate_income_to_years(adjusted_years)
+
+        # Calculate taxes for all years with allocated income
+        tax_results = self._calculate_taxes_for_all_years(adjusted_years)
+
+        # Build the Schedule J Form
+        schedule_j_form = self._build_schedule_j_form(adjusted_years, tax_results)
+
+        # Calculate tax delta
+        schedule_j_form.tax_delta = self.current_year.total_tax - schedule_j_form.line_23
 
 class ScheduleJOptimization:
     """

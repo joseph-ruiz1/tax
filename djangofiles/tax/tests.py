@@ -12,7 +12,7 @@ from .services import (
     allocate_all_years,
     find_bracket_thresholds,
 )
-from .utils import update_calculations
+from .utils import sort_tax_years_list, update_calculations
 
 
 # HELPER FUNCTIONS
@@ -195,14 +195,13 @@ class CalculationsTest(TestCase):
                 total_tax_results.append(round(tax_year.total_tax))
 
             # Compare to expected
-            for j, (result, expected) in enumerate(zip(total_tax_results, test['outputs'])):
+            for j, (result, expected) in enumerate(zip(total_tax_results, test["outputs"], strict=False)):
                 if round(result) != expected:
                     print(f"❌ Test {i}, Year {j}: Got {result}, expected {expected}")
 
 class ScheduleJCalculationTest(TestCase):
-    """
-    Runs Schedule J calculation in full. Compare ScheduleJForm to outputs in SCHEDULE_J_ALLOCATION_TEST
-    """
+    """Runs Schedule J calculation in full. Compare ScheduleJForm to outputs in SCHEDULE_J_ALLOCATION_TEST."""
+
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
@@ -212,7 +211,7 @@ class ScheduleJCalculationTest(TestCase):
 
         for test_set in test_years:
             # Get the dataset instance
-            dataset = test_set['dataset_instance']
+            dataset = test_set["dataset_instance"]
             dataset.save()
 
             # Convert queryset to a list
@@ -222,9 +221,9 @@ class ScheduleJCalculationTest(TestCase):
             for year in years:
                 TaxCalculation(year).calculate_total_tax()
 
-            results_container = ScheduleJCalculation(years, show_all_years=True, long_form=True).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+            results_container = ScheduleJCalculation(years, dataset.max_elected_farm_income, dataset.qualified_farm_income).schedule_j_calculation()
             results = results_container.schedule_j_form.to_dict()
-            correct = test_set['outputs']
+            correct = test_set["outputs"]
 
             for key in set(results.keys()).union(correct.keys()):
                 val1 = results.get(key, "<missing>")
@@ -337,6 +336,24 @@ class FindTaxBracketThresholdsTest(TestCase):
                 if expected_rates != actual_rates:
                     print(f"Set: {dataset.name}: Rates failed at year {year}: expected {expected_rates}, got {actual_rates}")
 
+class SortTaxYearsUtilFunctionTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_sort_function(self):
+        test_cases = create_tax_year_data_list(TEST_CASES_UNORGANIZED_YEARS, user=self.test_user, save=True)
+
+        for case in test_cases:
+            unsorted_years_list = case["dataset_instance"].tax_years.all()
+            sorted_years_list = sort_tax_years_list(unsorted_years_list)
+
+            for i, (result, expected) in enumerate(zip(sorted_years_list, case["outputs"], strict=False)):
+                if result.year != str(expected):
+                    print(result.year, expected)
+                    print(f"❌ Test {i}, Year {result.year}: Got {result.year}, expected {expected}")
+
+
 CREDENTIALS = [
             ('test1', 'testing123'),
             ('test2', 'testing321'),
@@ -370,6 +387,36 @@ TEST_CASES = [
             [2021, "MFJ", 315000, 2000, False, 0, 0]
         ],
         "outputs": [30814, 82894, 72871, 63462],
+    },
+]
+
+TEST_CASES_UNORGANIZED_YEARS = [
+    {
+        "inputs": [
+            [2024, "single", 100000, 140000, False, 0, 0], # Edge case: negative ordinary income 15%
+            [2023, "single", 640000, 600000, False, 0, 0], # cap gains in 0%, 15%, 20%
+            [2022, "single", 640000, 540000, False, 0, 0], # Cap gains in 15%, 20%
+            [2021, "single", 600000, 640000, False, 0, 0], # Edge case: negative ordinary income in 0%, 15%, 20%
+        ],
+        "outputs": [2024, 2023, 2022, 2021],
+    },
+    {
+        "inputs": [
+            [2023, "MFJ", 120000, 105000, False, 0, 0],
+            [2024, "MFJ", 85000, 70000, False, 0, 0],
+            [2021, "single", 55000, 40000, False, 0, 0],
+            [2022, "MFJ", 96000, 45000, False, 0, 0]
+        ],
+        "outputs": [2024, 2023, 2022, 2021],
+    },
+    {
+        "inputs": [
+            [2018, "single", 230000, 200000, False, 0, 0],
+            [2021, "single", 340000, 40000, False, 0, 0],
+            [2019, "MFJ", 460000, 280000, False, 0, 0],
+            [2020, "MFJ", 315000, 2000, False, 0, 0]
+        ],
+        "outputs": [2021, 2020, 2019, 2018],
     },
 ]
 
