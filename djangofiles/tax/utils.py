@@ -95,20 +95,20 @@ def update_calculations(dataset: TaxDataSet):
     """
     from .services import ScheduleJOptimization, TaxCalculation, find_bracket_thresholds
 
-    years = dataset.tax_years.all().order_by("-year")
+    sorted_years = sort_tax_years_list(dataset.tax_years.all())
 
     # Base Calculations and bracket finder
-    for tax_year in years:
+    for tax_year in sorted_years:
         TaxCalculation(tax_year).calculate()
         tax_year.save()
 
-    optimization_results = ScheduleJOptimization(years,
+    optimization_results = ScheduleJOptimization(sorted_years,
                                     elected_farm_income=dataset.max_elected_farm_income, 
                                     elected_farm_qualified=dataset.qualified_farm_income, 
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
 
-    tax_years_with_max_elected = optimization_results['all_elected'].tax_years
-    tax_years_with_none_elected = optimization_results['none_elected'].tax_years
+    tax_years_with_max_elected = optimization_results["all_elected"].tax_years
+    tax_years_with_none_elected = optimization_results["none_elected"].tax_years
 
     bracket_thresholds = {}
     # Set up structure for find_bracket_thresholds() and iterate through each year
@@ -125,6 +125,6 @@ def update_calculations(dataset: TaxDataSet):
         )
 
     return {
-        'optimization': optimization_results['optimization_results'],
-        'bracket_thresholds': bracket_thresholds
+        "optimization": optimization_results["optimization_results"],
+        "bracket_thresholds": bracket_thresholds,
     }

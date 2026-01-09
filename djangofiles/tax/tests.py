@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from .models import TaxDataSet, TaxYearData, User
 from .serializers import OutputSerializer
 from .services import (
+    IncomeDistributor,
     ScheduleJCalculation,
     ScheduleJOptimization,
     TaxCalculation,
@@ -128,7 +129,6 @@ def create_tax_year_data_list(test_cases, user, save=True):
 
     return processed_cases
 
-
 # TESTS
 class TestUserModel(TestCase):
     def test_create_single_user(self):
@@ -172,7 +172,7 @@ class BasicTaxCalculationTest(TestCase):
 
                 total_tax_results.append(tax_results)
 
-            for j, (result, expected) in enumerate(zip(total_tax_results, test["outputs"], strict=True)):
+            for j, (result, expected) in enumerate(zip(total_tax_results, test["outputs"], strict=True), start=1):
                 if round(result.total_tax) != expected:
                     print(f"❌ Test {i}, Year {j}: Got {result.total_tax}, expected {expected}")
 
@@ -348,16 +348,80 @@ class SortTaxYearsUtilFunctionTest(TestCase):
             unsorted_years_list = case["dataset_instance"].tax_years.all()
             sorted_years_list = sort_tax_years_list(unsorted_years_list)
 
-            for i, (result, expected) in enumerate(zip(sorted_years_list, case["outputs"], strict=False)):
+            for i, (result, expected) in enumerate(zip(sorted_years_list, case["outputs"], strict=False), start=1):
                 if result.year != str(expected):
                     print(result.year, expected)
                     print(f"❌ Test {i}, Year {result.year}: Got {result.year}, expected {expected}")
 
+class CreateTaxYearsMapTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_map_creation(self):
+        test_cases = create_tax_year_data_list(TEST_CASES_UNORGANIZED_YEARS, user=self.test_user, save=True)
+
+        for case in test_cases:
+            unsorted_years_list = case["dataset_instance"].tax_years.all()
+            sorted_years_list = sort_tax_years_list(unsorted_years_list)
+
+            sch_j_instance = ScheduleJCalculation(sorted_years_list, Decimal(1000), Decimal(0), None)
+            tax_year_map = sch_j_instance.tax_years
+
+            for i, ((year, year_obj), expected) in enumerate(zip(tax_year_map.items(), case["outputs"], strict=False), start=1):
+                assert year == expected, f"Map key ({year}) does not match expected year ({expected}) in test {i}"
+                assert isinstance(year_obj, TaxYearData), f"Map value {year_obj} is not a TaxYearData in test {i}"
+
+class IncomeAllocation(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_map_creation(self):
+        test_cases = create_tax_year_data_list(SCHEDULE_J_INCOME_ALLOCATION_TEST, user=self.test_user, save=True)
+
+        for case in test_cases:
+            unsorted_years_list = case["dataset_instance"].tax_years.all()
+            sorted_years_list = sort_tax_years_list(unsorted_years_list)
+
+            tax_years_map = {int(y.year): y for y in sorted_years_list}
+
+            distributor = IncomeDistributor(tax_years_map)
+            distributor.distribute_all_electd_income()
+
+            for i, ((year, year_obj), expected) in enumerate(zip(distributor.adjusted_years.items(), case["outputs"], strict=False), start=1):
+                expected_taxable_income = expected[0]
+                expected_qualified_income = expected[1]
+                if year_obj.taxable_income != expected_taxable_income:
+                    msg = f"Expected taxable income of {expected_taxable_income}, got {year_obj.taxable_income} in test {i}, year {year}"
+                    print(msg)
+                if year_obj.qualified_income != expected_qualified_income:
+                    msg = f"Expected qualified income of {expected_qualified_income}, got {year_obj.qualified_income} in test {i}, year {year}"
+                    print(msg)
+
+class GetFirstYearObjectFromTaxYearMap(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_map_creation(self):
+        test_cases = create_tax_year_data_list(TEST_CASES_FOR_FIRST_YEAR_MAP, user=self.test_user, save=True)
+
+        for case in test_cases:
+            unsorted_years_list = case["dataset_instance"].tax_years.all()
+            sorted_years_list = sort_tax_years_list(unsorted_years_list)
+
+            sch_j_instance = ScheduleJCalculation(sorted_years_list, Decimal(1000), Decimal(0), None)
+            first_year = sch_j_instance.first_year
+
+            for i, ((year, year_obj), expected) in enumerate(zip(first_year.items(), case["outputs"], strict=False)):
+                assert year == expected, f"First year's key ({year}) does not equal the first year ({expected}) in test {i}"
+                assert isinstance(year_obj, TaxYearData), f"First year {year_obj} is not a TaxYearData in test {i}"
 
 CREDENTIALS = [
-            ('test1', 'testing123'),
-            ('test2', 'testing321'),
-            ('test3', 'testing213'),
+            ("test1", "testing123"),
+            ("test2", "testing321"),
+            ("test3", "testing213"),
         ]
 
 TEST_CASES = [
@@ -375,7 +439,7 @@ TEST_CASES = [
             [2024, "MFJ", 120000, 105000, False, 0, 0],
             [2023, "MFJ", 85000, 70000, False, 0, 0],
             [2022, "single", 55000, 40000, False, 0, 0],
-            [2021, "MFJ", 96000, 45000, False, 0, 0]
+            [2021, "MFJ", 96000, 45000, False, 0, 0],
         ],
         "outputs": [5392, 1500, 3593, 8002],
     },
@@ -384,7 +448,7 @@ TEST_CASES = [
             [2024, "single", 230000, 200000, False, 0, 0],
             [2023, "single", 340000, 40000, False, 0, 0],
             [2022, "MFJ", 460000, 280000, False, 0, 0],
-            [2021, "MFJ", 315000, 2000, False, 0, 0]
+            [2021, "MFJ", 315000, 2000, False, 0, 0],
         ],
         "outputs": [30814, 82894, 72871, 63462],
     },
@@ -405,7 +469,7 @@ TEST_CASES_UNORGANIZED_YEARS = [
             [2023, "MFJ", 120000, 105000, False, 0, 0],
             [2024, "MFJ", 85000, 70000, False, 0, 0],
             [2021, "single", 55000, 40000, False, 0, 0],
-            [2022, "MFJ", 96000, 45000, False, 0, 0]
+            [2022, "MFJ", 96000, 45000, False, 0, 0],
         ],
         "outputs": [2024, 2023, 2022, 2021],
     },
@@ -414,9 +478,39 @@ TEST_CASES_UNORGANIZED_YEARS = [
             [2018, "single", 230000, 200000, False, 0, 0],
             [2021, "single", 340000, 40000, False, 0, 0],
             [2019, "MFJ", 460000, 280000, False, 0, 0],
-            [2020, "MFJ", 315000, 2000, False, 0, 0]
+            [2020, "MFJ", 315000, 2000, False, 0, 0],
         ],
         "outputs": [2021, 2020, 2019, 2018],
+    },
+]
+
+TEST_CASES_FOR_FIRST_YEAR_MAP = [
+    {
+        "inputs": [
+            [2024, "single", 100000, 140000, False, 0, 0], # Edge case: negative ordinary income 15%
+            [2023, "single", 640000, 600000, False, 0, 0], # cap gains in 0%, 15%, 20%
+            [2022, "single", 640000, 540000, False, 0, 0], # Cap gains in 15%, 20%
+            [2021, "single", 600000, 640000, False, 0, 0], # Edge case: negative ordinary income in 0%, 15%, 20%
+        ],
+        "outputs": [2024],
+    },
+    {
+        "inputs": [
+            [2023, "MFJ", 120000, 105000, False, 0, 0],
+            [2024, "MFJ", 85000, 70000, False, 0, 0],
+            [2021, "single", 55000, 40000, False, 0, 0],
+            [2022, "MFJ", 96000, 45000, False, 0, 0],
+        ],
+        "outputs": [2024],
+    },
+    {
+        "inputs": [
+            [2018, "single", 230000, 200000, False, 0, 0],
+            [2021, "single", 340000, 40000, False, 0, 0],
+            [2019, "MFJ", 460000, 280000, False, 0, 0],
+            [2020, "MFJ", 315000, 2000, False, 0, 0],
+        ],
+        "outputs": [2021],
     },
 ]
 
@@ -478,6 +572,36 @@ SCHEDULE_J_OPTIMIZATION_TEST = [
         ],
         'outputs': [143, 2812, 5683, 10092],
         'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=500, qualified_farm_income=0, election_year='2022')
+    },
+]
+
+SCHEDULE_J_INCOME_ALLOCATION_TEST = [
+    {
+        "inputs": [
+            [2024, "single", 100000, 140000, True, 12000, 3000],
+            [2023, "single", 640000, 600000, False, 0, 0],
+            [2022, "single", 640000, 540000, False, 0, 0],
+            [2021, "single", 600000, 640000, True, 15000, 0],
+        ],
+        "outputs": [(88000, 137000), (644000, 601000), (644000, 541000), (589000, 641000)],
+    },
+    {
+        "inputs": [
+            [2024, "MFJ", 120000, 105000, True, 60000, 0],
+            [2023, "MFJ", 85000, 70000, True, 30000, 0],
+            [2022, "single", 55000, 40000, False, 0, 0],
+            [2021, "MFJ", 96000, 45000, False, 0, 0],
+        ],
+        "outputs": [(60000, 105000), (75000, 70000), (85000, 40000), (126000, 45000)],
+    },
+    {
+        "inputs": [
+            [2024, "single", 230000, 200000, True, 60000, 0],
+            [2023, "single", 340000, 40000, True, 30000, 0],
+            [2022, "MFJ", 460000, 280000, True, 15000, 0],
+            [2021, "MFJ", 315000, 2000, True, 90000, 0],
+        ],
+        "outputs": [(170000, 200000), (330000, 40000), (475000, 280000), (260000, 2000)],
     },
 ]
 
@@ -560,12 +684,12 @@ SCHEDULE_J_ALLOCATION_TEST = [
 
 TEST_OLDER_YEARS = [
     {
-        'inputs': [
+        "inputs": [
             [2021, "MFJ", 100000, 40000, False, 0, 0],
             [2020, "MFJ", 100000, 40000, False, 0, 0],
             [2019, "MFJ", 100000, 40000, False, 0, 0],
             [2018, "MFJ", 100000, 40000, False, 0, 0],
         ],
-        'outputs': [9682, 9805, 9999, 10239],
+        "outputs": [9682, 9805, 9999, 10239],
     },
-]
+],
