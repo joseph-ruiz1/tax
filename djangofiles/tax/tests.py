@@ -441,7 +441,7 @@ class ScheduleJYearlyTaxAssignmentTest(TestCase):
             sorted_years_list = sort_tax_years_list(unsorted_years_list)
 
             sch_j_instance = ScheduleJCalculation(sorted_years_list, Decimal(1000), Decimal(0), config)
-            tax_for_each_year = sch_j_instance.calculate_tax_on_all_years()
+            tax_for_each_year = sch_j_instance._calculate_tax_on_all_years()
             sch_j_instance._fill_form_with_tax_results(tax_for_each_year)
 
             sch_j_form = sch_j_instance.output.to_dict()
@@ -466,7 +466,7 @@ class ScheduleJYearlyAdjustedTaxAssignmentTest(TestCase):
 
             sch_j_instance = ScheduleJCalculation(sorted_years_list, Decimal(3000), Decimal(0), config)
             sch_j_instance._adjust_taxable_income_by_elected()
-            adj_tax_for_each_year = sch_j_instance._calculate_tax_all_years_without_elected()
+            adj_tax_for_each_year = sch_j_instance._calculate_tax_on_all_years()
             sch_j_instance._fill_form_with_adj_tax_results(adj_tax_for_each_year)
 
             sch_j_form = sch_j_instance.output.to_dict()

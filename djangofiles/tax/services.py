@@ -468,7 +468,8 @@ class ScheduleJCalculation:
 
         # Subtract out current year elected income, find tax: lines (5, 19), (9, 20), (13, 21)
         self._adjust_taxable_income_by_elected()
-        tax_on_all_years = self._calculate_tax_all_years_without_elected()
+        tax_on_all_years_without_elected = self._calculate_tax_all_years_without_elected()
+        self._fill_form_with_adj_tax_results(tax_on_all_years_without_elected)
         self._readjust_taxable_income_for_elected()
 
         # Fill in remainder of form
@@ -517,14 +518,15 @@ class ScheduleJCalculation:
                 setattr(self.output, income_line, taxable_income)
                 setattr(self.output, tax_line, total_tax)
 
-    def calculate_tax_on_all_years(self) -> dict[int, Decimal]:
+    def _calculate_tax_on_all_years(self) -> dict[int, Decimal]:
+        """Calculate tax for all years based on current adjusted_years state."""
         tax_on_all_years = {}
         for year, year_obj in self.adjusted_years.items():
             result = TaxCalculation(year_obj).calculate_total_tax()
             tax_on_all_years[year] = result.total_tax
         return tax_on_all_years
 
-    def _fill_form_with_tax_results(self, tax_on_all_years: dict[str, Decimal]):
+    def _fill_form_with_tax_results(self, tax_on_all_years: dict[int, Decimal]):
         # fill in lines (7,8), (11,12), (15,16)
         lines_to_update = {
             self.election_year: ("line_3", "line_4"),
@@ -543,14 +545,7 @@ class ScheduleJCalculation:
                 year_obj.taxable_income += self.elected_farm_income
                 year_obj.qualified_income += self.qualified_farm_income
 
-    def _calculate_tax_all_years_without_elected(self):
-        tax_on_all_years = {}
-        for year, year_obj in self.adjusted_years.items():
-            result = TaxCalculation(year_obj).calculate_total_tax()
-            tax_on_all_years[year] = result.total_tax
-        return tax_on_all_years
-
-    def _fill_form_with_adj_tax_results(self, tax_on_all_years: dict[str, Decimal]):
+    def _fill_form_with_adj_tax_results(self, tax_on_all_years: dict[int, Decimal]):
         lines_to_update = {
             self.election_year: ("line_1", ""),
             self.election_year - 1: ("line_13", "line_21"),
