@@ -10,8 +10,8 @@ from .services import (
     ScheduleJCalculation,
     ScheduleJOptimization,
     TaxCalculation,
-    allocate_all_years,
     find_bracket_thresholds,
+    ScheduleJConfig,
 )
 from .utils import sort_tax_years_list, update_calculations
 
@@ -20,9 +20,18 @@ from .utils import sort_tax_years_list, update_calculations
 def create_taxdataset(user, elected, elected_qualified):
     return TaxDataSet.objects.create(user=user, max_elected_farm_income=elected, qualified_farm_income=elected_qualified)
 
-def create_taxyeardata(year, filing_status, taxable_income, qualified_income, dataset):
-    return TaxYearData.objects.create(year=year, filing_status=filing_status, taxable_income=taxable_income,
-                                  qualified_income=qualified_income, dataset=dataset)
+def create_taxyeardata(year,
+                        filing_status,
+                        taxable_income,
+                        qualified_income,
+                        is_electing,
+                        elected_farm_income,
+                        qualified_farm_income,
+                        dataset=None) -> TaxYearData:
+    return TaxYearData(year=year, filing_status=filing_status, taxable_income=taxable_income,
+                                  qualified_income=qualified_income, is_electing=is_electing,
+                                  elected_farm_income=elected_farm_income,
+                                  qualified_farm_income=qualified_farm_income, dataset=dataset)
 
 def create_dataset_with_tax_years(user, tax_year_inputs: tuple, elected, elected_qualified):
     dataset = create_taxdataset(user, elected, elected_qualified)
@@ -372,7 +381,7 @@ class CreateTaxYearsMapTest(TestCase):
                 assert year == expected, f"Map key ({year}) does not match expected year ({expected}) in test {i}"
                 assert isinstance(year_obj, TaxYearData), f"Map value {year_obj} is not a TaxYearData in test {i}"
 
-class IncomeAllocation(TestCase):
+class IncomeAllocationTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
@@ -417,6 +426,55 @@ class GetFirstYearObjectFromTaxYearMap(TestCase):
             for i, ((year, year_obj), expected) in enumerate(zip(first_year.items(), case["outputs"], strict=False)):
                 assert year == expected, f"First year's key ({year}) does not equal the first year ({expected}) in test {i}"
                 assert isinstance(year_obj, TaxYearData), f"First year {year_obj} is not a TaxYearData in test {i}"
+
+class ScheduleJYearlyTaxAssignmentTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_year_assignment(self):
+        test_cases = create_tax_year_data_list(SINGLE_SCHEDULE_J_TEST_CASE, user=self.test_user, save=True)
+
+        for case in test_cases:
+            config = ScheduleJConfig(full_sch_j_form=True)
+            unsorted_years_list = case["dataset_instance"].tax_years.all()
+            sorted_years_list = sort_tax_years_list(unsorted_years_list)
+
+            sch_j_instance = ScheduleJCalculation(sorted_years_list, Decimal(1000), Decimal(0), config)
+            tax_for_each_year = sch_j_instance.calculate_tax_on_all_years()
+            sch_j_instance._fill_form_with_tax_results(tax_for_each_year)
+
+            sch_j_form = sch_j_instance.output.to_dict()
+
+            # Filter out null values from actual output
+            filtered_form = {k: v for k, v in sch_j_form.items() if v is not None}
+
+            assert filtered_form == case["outputs"], "Form did not match expected output"
+
+class ScheduleJYearlyAdjustedTaxAssignmentTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_year_assignment(self):
+        test_cases = create_tax_year_data_list(SINGLE_SCHEDULE_J_TEST_CASE_ADJ, user=self.test_user, save=True)
+
+        for case in test_cases:
+            config = ScheduleJConfig(full_sch_j_form=True)
+            unsorted_years_list = case["dataset_instance"].tax_years.all()
+            sorted_years_list = sort_tax_years_list(unsorted_years_list)
+
+            sch_j_instance = ScheduleJCalculation(sorted_years_list, Decimal(3000), Decimal(0), config)
+            sch_j_instance._adjust_taxable_income_by_elected()
+            adj_tax_for_each_year = sch_j_instance._calculate_tax_all_years_without_elected()
+            sch_j_instance._fill_form_with_adj_tax_results(adj_tax_for_each_year)
+
+            sch_j_form = sch_j_instance.output.to_dict()
+
+            # Filter out null values from actual output
+            filtered_form = {k: int(v) for k, v in sch_j_form.items() if v is not None}
+            assert filtered_form == case["outputs"], "Form did not match expected output"
+
 
 CREDENTIALS = [
             ("test1", "testing123"),
@@ -680,6 +738,43 @@ SCHEDULE_J_ALLOCATION_TEST = [
             },
             'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0)
     }
+]
+
+SINGLE_SCHEDULE_J_TEST_CASE = [
+    {
+        "inputs": [
+            [2024, "single", 100000, 0, False, 0, 0],
+            [2023, "single", 200000, 0, False, 0, 0],
+            [2022, "single", 300000, 0, False, 0, 0],
+            [2021, "single", 400000, 0, False, 0, 0],
+        ],
+        "outputs": {"line_11": Decimal("300000.00"),
+                    "line_12": Decimal("78752.65000000000000000000000"),
+                    "line_15": Decimal("200000.00"),
+                    "line_16": Decimal("42831.68000000000000000000000"),
+                    "line_3": Decimal("100000.00"),
+                    "line_4": Decimal("17052.78000000000000000000000"),
+                    "line_7": Decimal("400000.00"),
+                    "line_8": Decimal("114543.9000000000000000000000")},
+    },
+]
+
+SINGLE_SCHEDULE_J_TEST_CASE_ADJ = [
+    {
+        "inputs": [
+            [2024, "single", 97000, 0, False, 0, 0], # Taxable income is adjusted to account for income being allocated
+            [2023, "single", 201000, 0, False, 0, 0],
+            [2022, "single", 301000, 0, False, 0, 0],
+            [2021, "single", 401000, 0, False, 0, 0],
+        ],
+        "outputs": {"line_1": 100000,
+                    "line_13": 200000,
+                    "line_19": 114543,
+                    "line_20": 78752,
+                    "line_21": 42831,
+                    "line_5": 400000,
+                    "line_9": 300000},
+    },
 ]
 
 TEST_OLDER_YEARS = [
