@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pprint import pprint
 
 from django.test import TestCase
 from rest_framework.test import APITestCase
@@ -8,10 +9,10 @@ from .serializers import OutputSerializer
 from .services import (
     IncomeDistributor,
     ScheduleJCalculation,
+    ScheduleJConfig,
     ScheduleJOptimization,
     TaxCalculation,
     find_bracket_thresholds,
-    ScheduleJConfig,
 )
 from .utils import sort_tax_years_list, update_calculations
 
@@ -216,32 +217,28 @@ class ScheduleJCalculationTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_serializer_outputs(self):
-        test_years = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
+        test_cases = create_tax_year_data_list(FULL_SCHEDULE_J_CASES, user=self.test_user, save=True)
 
-        for test_set in test_years:
+        for case in test_cases:
             # Get the dataset instance
-            dataset = test_set["dataset_instance"]
-            dataset.save()
+            dataset = case["dataset_instance"]
+            config = ScheduleJConfig(show_full_sch_j_form=True)
 
             # Convert queryset to a list
-            years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
+            unsorted_years_list = dataset.tax_years.all()
+            sorted_years = sort_tax_years_list(unsorted_years_list)
 
-            # Base Calculations
-            for year in years:
-                TaxCalculation(year).calculate_total_tax()
+            elected_income = sorted_years[0].elected_farm_income
+            elected_qualified = sorted_years[0].qualified_farm_income
 
-            results_container = ScheduleJCalculation(years, dataset.max_elected_farm_income, dataset.qualified_farm_income).schedule_j_calculation()
-            results = results_container.schedule_j_form.to_dict()
-            correct = test_set["outputs"]
+            sch_j_instance = ScheduleJCalculation(sorted_years, elected_income, elected_qualified, config).schedule_j_calculation()
 
-            for key in set(results.keys()).union(correct.keys()):
-                val1 = results.get(key, "<missing>")
-                val2 = correct.get(key, "<missing>")
-                if isinstance(val1, Decimal):
-                    val1 = round(float(val1), 0)
+            sch_j_form = sch_j_instance.schedule_j_form.to_dict()
 
-                if val1 != val2:
-                    print(f"Mismatch on key '{key}': calcualtions returned {val1}, correct is {val2}")
+            for (line, result), (expected_line, expected_result) in zip(sch_j_form.items(), case["outputs"].items(), strict=False):
+                rounded_result = round(result)
+                if rounded_result != expected_result:
+                    print(f"wrong output at {line}: got {rounded_result}, expected {expected_result}")
 
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
@@ -249,7 +246,7 @@ class ScheduleJOptimizationTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_optimization(self):
-        test_years = create_tax_year_data_list(SCHEDULE_J_OPTIMIZATION_TEST, user=self.test_user, save=True)
+        test_years = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
 
         for test_set in test_years:
             # Get the dataset instance
@@ -436,7 +433,7 @@ class ScheduleJYearlyTaxAssignmentTest(TestCase):
         test_cases = create_tax_year_data_list(SINGLE_SCHEDULE_J_TEST_CASE, user=self.test_user, save=True)
 
         for case in test_cases:
-            config = ScheduleJConfig(full_sch_j_form=True)
+            config = ScheduleJConfig(show_full_sch_j_form=True)
             unsorted_years_list = case["dataset_instance"].tax_years.all()
             sorted_years_list = sort_tax_years_list(unsorted_years_list)
 
@@ -460,7 +457,7 @@ class ScheduleJYearlyAdjustedTaxAssignmentTest(TestCase):
         test_cases = create_tax_year_data_list(SINGLE_SCHEDULE_J_TEST_CASE_ADJ, user=self.test_user, save=True)
 
         for case in test_cases:
-            config = ScheduleJConfig(full_sch_j_form=True)
+            config = ScheduleJConfig(show_full_sch_j_form=True)
             unsorted_years_list = case["dataset_instance"].tax_years.all()
             sorted_years_list = sort_tax_years_list(unsorted_years_list)
 
@@ -471,7 +468,6 @@ class ScheduleJYearlyAdjustedTaxAssignmentTest(TestCase):
 
             sch_j_form = sch_j_instance.output.to_dict()
 
-            # Filter out null values from actual output
             filtered_form = {k: int(v) for k, v in sch_j_form.items() if v is not None}
             assert filtered_form == case["outputs"], "Form did not match expected output"
 
@@ -574,14 +570,14 @@ TEST_CASES_FOR_FIRST_YEAR_MAP = [
 
 SCHEDULE_J_TEST_CASES = [
     {
-        'inputs': [
+        "inputs": [
             [2024, "MFJ", 107664, 10892],
             [2023, "MFJ", 126329, 9538],
             [2022, "MFJ", 129793, 4013],
             [2021, "MFJ", 226310, 203537],
         ],
-        'outputs': [143, 2812, 5683, 10092],
-        'elected': [13624, 0],
+        "outputs": [143, 2812, 5683, 10092],
+        "elected": [13624, 0],
     },
 ]
 
@@ -663,80 +659,77 @@ SCHEDULE_J_INCOME_ALLOCATION_TEST = [
     },
 ]
 
-SCHEDULE_J_ALLOCATION_TEST = [
+FULL_SCHEDULE_J_CASES = [
     {
-        'inputs': [
+        "inputs": [
             dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
             dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
             dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
             dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
         ],
-        'outputs': {
-            'line_1': 120000.00,
-            'line_10': 3333,
-            'line_11': 60000,
-            'line_12': 4903,
-            'line_13': 65000,
-            'line_14': 3333,
-            'line_15': 68333,
-            'line_16': 0.00,
-            'line_17': 18908,
-            'line_18': 18908,
-            'line_19': 10212,
-            'line_2': None,
-            'line_20': 4003,
-            'line_21': 0.00,
-            'line_22': 14215,
-            'line_23': 4692,
-            'line_2a': 10000,
-            'line_2b': 0,
-            'line_2c': None,
-            'line_3': 110000,
-            'line_4': 2892,
-            'line_5': 104333,
-            'line_6': 3333,
-            'line_7': 107667,
-            'line_8': 11112,
-            'line_9': 56667,
+        "outputs": {
+            "line_1": 120000,
+            "line_2a": 10000,
+            "line_2b": 0.00,
+            "line_3": 110000,
+            "line_4": 2892,
+            "line_5": 104333,
+            "line_6": 3333,
+            "line_7": 107667,
+            "line_8": 11112,
+            "line_9": 56667,
+            "line_10": 3333,
+            "line_11": 60000,
+            "line_12": 4903,
+            "line_13": 65000,
+            "line_14": 3333,
+            "line_15": 68333,
+            "line_16": 0,
+            "line_17": 18908,
+            "line_18": 18908,
+            "line_19": 10212,
+            "line_20": 4003,
+            "line_21": 0,
+            "line_22": 14215,
+            "line_23": 4692,
+            "election_year_base_tax": 5392,
         },
-        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0)
+        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0),
     },
     {
-        'inputs': [
+        "inputs": [
                 dict(year=2023, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
                 dict(year=2022, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
                 dict(year=2021, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
                 dict(year=2020, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
                 ],
-            'outputs': {
-                'line_1': 120000,
-                'line_10': 3333,
-                'line_11': 60000,
-                'line_12': 5101,
-                'line_13': 65000,
-                'line_14': 3333,
-                'line_15': 68333,
-                'line_16': 0.00,
-                'line_17': 19948,
-                'line_18': 19948,
-                'line_19': 10335,
-                'line_2': None,
-                'line_20': 4201,
-                'line_21': 0,
-                'line_22': 14536,
-                'line_23': 5412,
-                'line_2a': 10000,
-                'line_2b': 0.00,
-                'line_2c': None,
-                'line_3': 110000,
-                'line_4': 3612,
-                'line_5': 104333,
-                'line_6': 3333,
-                'line_7': 107667,
-                'line_8': 11235,
-                'line_9': 56667,
+            "outputs": {
+                "line_1": 120000,
+                "line_2a": 10000,
+                "line_2b": 0.00,
+                "line_3": 110000,
+                "line_4": 3612,
+                "line_5": 104333,
+                "line_6": 3333,
+                "line_7": 107667,
+                "line_8": 11235,
+                "line_9": 56667,
+                "line_10": 3333,
+                "line_11": 60000,
+                "line_12": 5101,
+                "line_13": 65000,
+                "line_14": 3333,
+                "line_15": 68333,
+                "line_16": 0.00,
+                "line_17": 19948,
+                "line_18": 19948,
+                "line_19": 10335,
+                "line_20": 4201,
+                "line_21": 0,
+                "line_22": 14536,
+                "line_23": 5412,
             },
-            'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0)
+            'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0),
     }
 ]
 
@@ -773,7 +766,8 @@ SINGLE_SCHEDULE_J_TEST_CASE_ADJ = [
                     "line_20": 78752,
                     "line_21": 42831,
                     "line_5": 400000,
-                    "line_9": 300000},
+                    "line_9": 300000,
+                    "election_year_base_tax": 17052},
     },
 ]
 
