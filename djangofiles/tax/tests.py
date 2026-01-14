@@ -1,5 +1,4 @@
 from decimal import Decimal
-from pprint import pprint
 
 from django.test import TestCase
 from rest_framework.test import APITestCase
@@ -161,18 +160,17 @@ class TestUserModel(TestCase):
 
 class BasicTaxCalculationTest(TestCase):
     def setUp(self):
-        self.test_user = create_test_user(username="test", password="testing")  # noqa: S106
-        self.client.login(username="test", password="testing")  # noqa: S106
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
 
     def test_calculation(self):
-        for i, test in enumerate(TEST_CASES):
+        for i, test in enumerate(TEST_CASES_BASIC_TAX_CALC):
             dataset = create_dataset_with_tax_years(self.test_user, test["inputs"], 0, 0)
             total_tax_results = []
 
             for tax_year in TaxYearData.objects.filter(dataset=dataset):
                 try:
                     tax_results = TaxCalculation(tax_year).calculate_total_tax()
-                    print(tax_results.upper_ordinary_bound)
                 except TypeError as e:
                     print(f"❌ Test {i}: Incorrect input type - {e}")
                     tax_results = None
@@ -186,7 +184,7 @@ class BasicTaxCalculationTest(TestCase):
                 if round(result.total_tax) != expected:
                     print(f"❌ Test {i}, Year {j}: Got {result.total_tax}, expected {expected}")
 
-class CalculationsTest(TestCase):
+class BasicTaxCalculationTestOlderYears(TestCase):
     """Run base TaxCalculation to test 2021-2018. Results should match TEST outputs."""
 
     def setUp(self):
@@ -194,17 +192,15 @@ class CalculationsTest(TestCase):
         self.client.login(username="test", password="testing")
 
     def test_base_tax_calculations(self):
-        # Create test sets
-        for i, test in enumerate(TEST_OLDER_YEARS):
+        for i, test in enumerate(TEST_CASES_BASIC_TAX_CALC_OLDER_YEARS):
             dataset = create_dataset_with_tax_years(self.test_user, test["inputs"], 0, 0)
 
             total_tax_results = []
-            # Base calculations
-            for tax_year in TaxYearData.objects.filter(dataset=dataset):
-                TaxCalculation(tax_year).calculate()
-                total_tax_results.append(round(tax_year.total_tax))
 
-            # Compare to expected
+            for tax_year in TaxYearData.objects.filter(dataset=dataset):
+                tax_calc_result = TaxCalculation(tax_year).calculate_total_tax()
+                total_tax_results.append(round(tax_calc_result.total_tax))
+
             for j, (result, expected) in enumerate(zip(total_tax_results, test["outputs"], strict=False)):
                 if round(result) != expected:
                     print(f"❌ Test {i}, Year {j}: Got {result}, expected {expected}")
@@ -477,7 +473,7 @@ CREDENTIALS = [
             ("test3", "testing213"),
         ]
 
-TEST_CASES = [
+TEST_CASES_BASIC_TAX_CALC = [
     {
         "inputs": [
             [2024, "single", 100000, 140000, False, 0, 0], # Edge case: negative ordinary income 15%
@@ -504,6 +500,18 @@ TEST_CASES = [
             [2021, "MFJ", 315000, 2000, False, 0, 0],
         ],
         "outputs": [30814, 82894, 72871, 63462],
+    },
+]
+
+TEST_CASES_BASIC_TAX_CALC_OLDER_YEARS = [
+    {
+        "inputs": [
+            [2021, "MFJ", 100000, 40000, False, 0, 0],
+            [2020, "MFJ", 100000, 40000, False, 0, 0],
+            [2019, "MFJ", 100000, 40000, False, 0, 0],
+            [2018, "MFJ", 100000, 40000, False, 0, 0],
+        ],
+        "outputs": [9682, 9805, 9999, 10239],
     },
 ]
 
@@ -772,15 +780,3 @@ SINGLE_SCHEDULE_J_TEST_CASE_ADJ = [
                     "election_year_base_tax": 17052},
     },
 ]
-
-TEST_OLDER_YEARS = [
-    {
-        "inputs": [
-            [2021, "MFJ", 100000, 40000, False, 0, 0],
-            [2020, "MFJ", 100000, 40000, False, 0, 0],
-            [2019, "MFJ", 100000, 40000, False, 0, 0],
-            [2018, "MFJ", 100000, 40000, False, 0, 0],
-        ],
-        "outputs": [9682, 9805, 9999, 10239],
-    },
-],
