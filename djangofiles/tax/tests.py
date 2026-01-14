@@ -219,26 +219,25 @@ class ScheduleJCalculationTest(TestCase):
     def test_serializer_outputs(self):
         test_cases = create_tax_year_data_list(FULL_SCHEDULE_J_CASES, user=self.test_user, save=True)
 
-        for case in test_cases:
+        for test_number, case in enumerate(test_cases, start=1):
             # Get the dataset instance
             dataset = case["dataset_instance"]
             config = ScheduleJConfig(show_full_sch_j_form=True)
 
-            # Convert queryset to a list
             unsorted_years_list = dataset.tax_years.all()
             sorted_years = sort_tax_years_list(unsorted_years_list)
 
             elected_income = sorted_years[0].elected_farm_income
             elected_qualified = sorted_years[0].qualified_farm_income
 
-            sch_j_instance = ScheduleJCalculation(sorted_years, elected_income, elected_qualified, config).schedule_j_calculation()
+            sch_j_instance = ScheduleJCalculation(sorted_years, elected_income, elected_qualified, config).calculate()
 
             sch_j_form = sch_j_instance.schedule_j_form.to_dict()
 
             for (line, result), (expected_line, expected_result) in zip(sch_j_form.items(), case["outputs"].items(), strict=False):
                 rounded_result = round(result)
                 if rounded_result != expected_result:
-                    print(f"wrong output at {line}: got {rounded_result}, expected {expected_result}")
+                    print(f"wrong output at {line} in test {test_number}: got {rounded_result}, expected {expected_result}")
 
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
@@ -317,24 +316,24 @@ class FindTaxBracketThresholdsTest(TestCase):
         test_cases = create_tax_year_data_list(BRACKET_THRESHOLDS_TEST_CASES, user=self.test_user, save=True)
         for test_set in test_cases:
             # Get the dataset instance
-            dataset = test_set['dataset_instance']
+            dataset = test_set["dataset_instance"]
             dataset.save()
 
             # Convert queryset to a list
             years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
-            
+
             # Base Calculations
             for year in years:
                 TaxCalculation(year).calculate_total_tax()
 
-            results_container = ScheduleJCalculation(years, show_all_years=True).schedule_j_calculation(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+            results_container = ScheduleJCalculation(years, show_all_years=True).calculate(dataset.max_elected_farm_income, dataset.qualified_farm_income)
             adjusted_years = results_container.tax_years
             # Test each year to see if 1 bracket below and above are returned based on taxable ordinary
             for adjusted_year in adjusted_years.values():
                 bracket_threshold_results = find_bracket_thresholds(adjusted_year.year, adjusted_year.filing_status, str(adjusted_year.ordinary_rate), str(adjusted_year.ordinary_rate))
                 year = adjusted_year.year
-                
-                expected_rates = test_set['results'][year]
+
+                expected_rates = test_set["results"][year]
                 # NEED TO FIGURE OUT HOW TO ONLY RETRIEVE KEYS FROM BRACKET_THRESHOLD_TEST
                 # PROB A BETTER WAY TO DO THAT CONVERTING TO LIST
                 actual_rates = list(bracket_threshold_results.keys())
@@ -441,7 +440,7 @@ class ScheduleJYearlyTaxAssignmentTest(TestCase):
             tax_for_each_year = sch_j_instance._calculate_tax_on_all_years()
             sch_j_instance._fill_form_with_tax_results(tax_for_each_year)
 
-            sch_j_form = sch_j_instance.output.to_dict()
+            sch_j_form = sch_j_instance.sch_j.to_dict()
 
             # Filter out null values from actual output
             filtered_form = {k: v for k, v in sch_j_form.items() if v is not None}
@@ -466,7 +465,7 @@ class ScheduleJYearlyAdjustedTaxAssignmentTest(TestCase):
             adj_tax_for_each_year = sch_j_instance._calculate_tax_on_all_years()
             sch_j_instance._fill_form_with_adj_tax_results(adj_tax_for_each_year)
 
-            sch_j_form = sch_j_instance.output.to_dict()
+            sch_j_form = sch_j_instance.sch_j.to_dict()
 
             filtered_form = {k: int(v) for k, v in sch_j_form.items() if v is not None}
             assert filtered_form == case["outputs"], "Form did not match expected output"
@@ -693,6 +692,7 @@ FULL_SCHEDULE_J_CASES = [
             "line_22": 14215,
             "line_23": 4692,
             "election_year_base_tax": 5392,
+            "tax_delta": 700,
         },
         'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0),
     },
@@ -728,8 +728,10 @@ FULL_SCHEDULE_J_CASES = [
                 "line_21": 0,
                 "line_22": 14536,
                 "line_23": 5412,
+                "election_year_base_tax": 6112,
+                "tax_delta": 700,
             },
-            'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0),
+            "dataset": dict(name='Allocation Test Case 1', max_elected_farm_income=10000, qualified_farm_income=0),
     }
 ]
 
