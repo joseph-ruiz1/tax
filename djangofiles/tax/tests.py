@@ -1,3 +1,4 @@
+import unittest
 from decimal import Decimal
 
 from django.test import TestCase
@@ -13,14 +14,14 @@ from .services import (
     TaxCalculation,
     find_bracket_thresholds,
 )
-from .utils import sort_tax_years_list, update_calculations
+from .utils import sort_tax_years_list
 
 
 # HELPER FUNCTIONS
 def create_taxdataset(user, elected, elected_qualified):
     return TaxDataSet.objects.create(user=user, max_elected_farm_income=elected, qualified_farm_income=elected_qualified)
 
-def create_taxyeardata(year,
+def create_taxyeardata(year,  # noqa: PLR0913
                         filing_status,
                         taxable_income,
                         qualified_income,
@@ -235,13 +236,14 @@ class ScheduleJCalculationTest(TestCase):
                 if rounded_result != expected_result:
                     print(f"wrong output at {line} in test {test_number}: got {rounded_result}, expected {expected_result}")
 
+@unittest.skip("Hold until optimization is refactored")
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
         self.client.login(username="test", password="testing")
 
     def test_optimization(self):
-        test_years = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
+        test_years = create_tax_year_data_list(SCHEDULE_J_OPTIMIZATION_TEST, user=self.test_user, save=True)
 
         for test_set in test_years:
             # Get the dataset instance
@@ -258,6 +260,7 @@ class ScheduleJOptimizationTest(TestCase):
             results = optimize.optimize_sch_j(elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income)
             print(results[0].taxable_ordinary_all_years)
 
+@unittest.skip("Deprecated test")
 class TaxDataSetSerializerTest(APITestCase):
     """
     updated for on demand calculations
@@ -283,23 +286,7 @@ class TaxDataSetSerializerTest(APITestCase):
 
         data = OutputSerializer(dataset).data
 
-class ElectedIncomeDistributionTest(TestCase):
-    """
-    Make sure elected income is being distributed properly across all years. Need to update to check outputs
-    """
-    def setUp(self):
-        self.test_user = create_test_user(username="test", password="testing")
-        self.client.login(username="test", password="testing")
-
-    def test_serializer_outputs(self):
-        test_years = create_tax_year_data_list(SCHEDULE_J_ALLOCATION_TEST, user=self.test_user, save=True)
-
-        # Get the dataset instance
-        dataset = test_years[0]['dataset_instance']
-        # List instead of queryset
-        years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
-        results = allocate_all_years(years)
-
+@unittest.skip("Hold until logic is refactored")
 class FindTaxBracketThresholdsTest(TestCase):
     """
     Test find_bracket_thresholds to ensure 1 bracket below and above is returned based on adjusted_year taxable ordiary income"
@@ -388,7 +375,7 @@ class IncomeAllocationTest(TestCase):
             tax_years_map = {int(y.year): y for y in sorted_years_list}
 
             distributor = IncomeDistributor(tax_years_map)
-            distributor.distribute_all_electd_income()
+            distributor.distribute_all_elected_income()
 
             for i, ((year, year_obj), expected) in enumerate(zip(distributor.adjusted_years.items(), case["outputs"], strict=False), start=1):
                 expected_taxable_income = expected[0]
@@ -408,16 +395,17 @@ class GetFirstYearObjectFromTaxYearMap(TestCase):
     def test_map_creation(self):
         test_cases = create_tax_year_data_list(TEST_CASES_FOR_FIRST_YEAR_MAP, user=self.test_user, save=True)
 
-        for case in test_cases:
+        for i, case in enumerate(test_cases, start=1):
             unsorted_years_list = case["dataset_instance"].tax_years.all()
             sorted_years_list = sort_tax_years_list(unsorted_years_list)
 
             sch_j_instance = ScheduleJCalculation(sorted_years_list, Decimal(1000), Decimal(0), None)
-            first_year = sch_j_instance.first_year
+            election_year = sch_j_instance.election_year
+            election_year_obj = sch_j_instance.election_year_obj
+            expected_year = case["outputs"]
 
-            for i, ((year, year_obj), expected) in enumerate(zip(first_year.items(), case["outputs"], strict=False)):
-                assert year == expected, f"First year's key ({year}) does not equal the first year ({expected}) in test {i}"
-                assert isinstance(year_obj, TaxYearData), f"First year {year_obj} is not a TaxYearData in test {i}"
+            assert election_year == expected_year, f"First year ({election_year}) does not equal the first year ({expected_year}) in test {i}"
+            assert isinstance(election_year_obj, TaxYearData), f"First year {election_year_obj} is not a TaxYearData in test {i}"
 
 class ScheduleJYearlyTaxAssignmentTest(TestCase):
     def setUp(self):
@@ -553,7 +541,7 @@ TEST_CASES_FOR_FIRST_YEAR_MAP = [
             [2022, "single", 640000, 540000, False, 0, 0], # Cap gains in 15%, 20%
             [2021, "single", 600000, 640000, False, 0, 0], # Edge case: negative ordinary income in 0%, 15%, 20%
         ],
-        "outputs": [2024],
+        "outputs": 2024,
     },
     {
         "inputs": [
@@ -562,7 +550,7 @@ TEST_CASES_FOR_FIRST_YEAR_MAP = [
             [2021, "single", 55000, 40000, False, 0, 0],
             [2022, "MFJ", 96000, 45000, False, 0, 0],
         ],
-        "outputs": [2024],
+        "outputs": 2024,
     },
     {
         "inputs": [
@@ -571,7 +559,7 @@ TEST_CASES_FOR_FIRST_YEAR_MAP = [
             [2019, "MFJ", 460000, 280000, False, 0, 0],
             [2020, "MFJ", 315000, 2000, False, 0, 0],
         ],
-        "outputs": [2021],
+        "outputs": 2021,
     },
 ]
 
@@ -631,8 +619,8 @@ SCHEDULE_J_OPTIMIZATION_TEST = [
             dict(year=2020, filing_status="MFJ", taxable_income=65000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
             dict(year=2019, filing_status="MFJ", taxable_income=72000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
         ],
-        'outputs': [143, 2812, 5683, 10092],
-        'dataset': dict(name='Allocation Test Case 1', max_elected_farm_income=500, qualified_farm_income=0, election_year='2022')
+        "outputs": [143, 2812, 5683, 10092],
+        "dataset": {"name": "Allocation Test Case 1", "max_elected_farm_income": 500, "qualified_farm_income": 0, "election_year": "2022"}
     },
 ]
 

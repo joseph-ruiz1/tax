@@ -259,6 +259,7 @@ class ScheduleJForm:
         for i in "abc":
             setattr(self, f"line_2{i}", None)
         self.election_year_base_tax = None
+        self.tax_delta = None
 
         self.delete_extraneous_lines()
 
@@ -304,7 +305,6 @@ class ScheduleJForm:
         fields = {attr: getattr(self, attr) for attr in line_attrs}
         fields["election_year_base_tax"] = self.election_year_base_tax
         fields["tax_delta"] = self.tax_delta
-
         return fields
 
     def __str__(self):
@@ -416,9 +416,8 @@ class ScheduleJCalculation:
         self.elected_farm_income = elected_farm_income
         self.qualified_farm_income = qualified_farm_income
         self.config = config if config is not None else ScheduleJConfig()
-
         self.adjusted_years = self._create_adjusted_years_map()
-        self.sch_j = ScheduleJForm(long_form=config.show_full_sch_j_form)
+        self.sch_j = ScheduleJForm(long_form=self.config.show_full_sch_j_form)
 
         self._validate_inputs()
 
@@ -667,7 +666,7 @@ class ScheduleJOptimization:
             iteration += 1
 
         return {
-            'optimization_results': results,
-            'all_elected': all_elected_instance,
-            'none_elected': none_elected_instance
+            "optimization_results": results,
+            "all_elected": all_elected_instance,
+            "none_elected": none_elected_instance,
         }
