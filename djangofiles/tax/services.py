@@ -598,14 +598,16 @@ class ScheduleJOptimization:
 
     """
 
-    def __init__(self, years, elected_farm_income: Decimal, elected_farm_qualified: Decimal, show_all_years=False, long_form=False):
+    def __init__(self, years, max_elected_farm_income: Decimal, elected_farm_qualified: Decimal, config: ScheduleJConfig):
         self.years = years
-        self.elected_farm_income = elected_farm_income
+        self.max_elected_farm_income = max_elected_farm_income
         self.elected_farm_qualified = elected_farm_qualified
-        self.show_all_years = show_all_years
-        self.long_form = long_form
+        self.config = config if config is not None else ScheduleJConfig()
 
-    def optimize_sch_j(self, elected_farm_income: Decimal, elected_farm_qualified: Decimal):
+        self.show_all_years = self.config.show_all_tax_years
+        self.long_form = self.config.show_full_sch_j_form
+
+    def optimize_sch_j(self):
         """
         Run Schedule J Optimization by iterating through the max elected farm income until we get to 0.
 
@@ -621,15 +623,15 @@ class ScheduleJOptimization:
             last_instance (ScheduleJResultsContainer): Sch J instance with max elected farm income
 
         """
-        if not isinstance(elected_farm_income, Decimal):
+        if not isinstance(self.elected_farm_income, Decimal):
             raise TypeError("Not a Decimal")
-        if not isinstance(elected_farm_qualified, Decimal):
+        if not isinstance(self.elected_farm_qualified, Decimal):
             raise TypeError("Not a Decimal")
         results = []
 
-        current_total_elected = elected_farm_income
-        current_qualified_elected = elected_farm_qualified
-        current_ordinary_elected = elected_farm_income - elected_farm_qualified
+        current_total_elected = self.elected_farm_income
+        current_qualified_elected = self.elected_farm_qualified
+        current_ordinary_elected = self.elected_farm_income - self.elected_farm_qualified
 
         # Find percentage so we can decrease proportionally
         ordinary_percentage = current_ordinary_elected / current_total_elected
@@ -638,14 +640,15 @@ class ScheduleJOptimization:
         iteration = 0
         all_elected_instance = None
         none_elected_instance = None
+
         while current_total_elected >= 500:
             is_first = (iteration == 0)
             is_last = (current_total_elected - 500 < 500)
 
             # Compute with show_all_years = True on first and last iterations only
             if is_first or is_last:
-                instance = (ScheduleJCalculation(self.years, show_all_years=True, long_form=self.long_form)
-                        .schedule_j_calculation(current_total_elected, current_qualified_elected))
+                instance = (ScheduleJCalculation(self.years, self.elected_farm_income, self.elected_farm_qualified, self.config)
+                            .calculate())
                 if is_first:
                     all_elected_instance = instance
                 if is_last:

@@ -236,7 +236,7 @@ class ScheduleJCalculationTest(TestCase):
                 if rounded_result != expected_result:
                     print(f"wrong output at {line} in test {test_number}: got {rounded_result}, expected {expected_result}")
 
-@unittest.skip("Hold until optimization is refactored")
+# @unittest.skip("Hold until optimization is refactored")
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
         self.test_user = create_test_user(username="test", password="testing")
@@ -250,15 +250,16 @@ class ScheduleJOptimizationTest(TestCase):
             dataset = test_set["dataset_instance"]
             dataset.save()
 
-            # Convert queryset to a list
-            years = list(TaxYearData.objects.filter(dataset=dataset).order_by("-year"))
+            unsorted_years_list = dataset.tax_years.all()
+            sorted_years = sort_tax_years_list(unsorted_years_list)
+            election_year = sorted_years[0]
 
-            # Base Calculations
-            for year in years:
-                TaxCalculation(year).calculate_total_tax()
-            optimize = ScheduleJOptimization(years=years, elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income, long_form=False)
-            results = optimize.optimize_sch_j(elected_farm_income=dataset.max_elected_farm_income, elected_farm_qualified=dataset.qualified_farm_income)
-            print(results[0].taxable_ordinary_all_years)
+            optimize = ScheduleJOptimization(years=sorted_years,
+                                             max_elected_farm_income=election_year.elected_farm_income,
+                                             elected_farm_qualified=election_year.qualified_farm_income,
+                                             config=None)
+            results = optimize.optimize_sch_j()
+            print(results)
 
 @unittest.skip("Deprecated test")
 class TaxDataSetSerializerTest(APITestCase):
@@ -613,14 +614,14 @@ BRACKET_THRESHOLDS_TEST_CASES = [
 
 SCHEDULE_J_OPTIMIZATION_TEST = [
     {
-        'inputs': [
-            dict(year=2022, filing_status="MFJ", taxable_income=110000, qualified_income=0, is_electing=True, elected_farm_income=500, qualified_farm_income=0),
-            dict(year=2021, filing_status="MFJ", taxable_income=70000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
-            dict(year=2020, filing_status="MFJ", taxable_income=65000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
-            dict(year=2019, filing_status="MFJ", taxable_income=72000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+        "inputs": [
+            dict(year=2024, filing_status="MFJ", taxable_income=110000, qualified_income=0, is_electing=True, elected_farm_income=50000, qualified_farm_income=0),
+            dict(year=2023, filing_status="MFJ", taxable_income=70000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+            dict(year=2022, filing_status="MFJ", taxable_income=65000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+            dict(year=2021, filing_status="MFJ", taxable_income=72000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
         ],
         "outputs": [143, 2812, 5683, 10092],
-        "dataset": {"name": "Allocation Test Case 1", "max_elected_farm_income": 500, "qualified_farm_income": 0, "election_year": "2022"}
+        "dataset": {"name": "Allocation Test Case 1", "max_elected_farm_income": 50000, "qualified_farm_income": 0, "election_year": "2024"},
     },
 ]
 
@@ -657,10 +658,10 @@ SCHEDULE_J_INCOME_ALLOCATION_TEST = [
 FULL_SCHEDULE_J_CASES = [
     {
         "inputs": [
-            dict(year=2024, filing_status="MFJ", taxable_income=120000, qualified_income=105000, is_electing=True, elected_farm_income=10000, qualified_farm_income=0),
-            dict(year=2023, filing_status="MFJ", taxable_income=85000, qualified_income=70000, is_electing=True, elected_farm_income=20000, qualified_farm_income=1000),
-            dict(year=2022, filing_status="single", taxable_income=55000, qualified_income=40000, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
-            dict(year=2021, filing_status="MFJ", taxable_income=96000, qualified_income=45000, is_electing=False, elected_farm_income=0, qualified_farm_income=0),
+            {"year": 2024, "filing_status": "MFJ", "taxable_income": 120000, "qualified_income": 105000, "is_electing": True, "elected_farm_income": 10000, "qualified_farm_income": 0},
+            {"year": 2023, "filing_status": "MFJ", "taxable_income": 85000, "qualified_income": 70000, "is_electing": True, "elected_farm_income": 20000, "qualified_farm_income": 1000},
+            {"year": 2022, "filing_status": "single", "taxable_income": 55000, "qualified_income": 40000, "is_electing": True, "elected_farm_income": 5000, "qualified_farm_income": 0},
+            {"year": 2021, "filing_status": "MFJ", "taxable_income": 96000, "qualified_income": 45000, "is_electing": False, "elected_farm_income": 0, "qualified_farm_income": 0},
         ],
         "outputs": {
             "line_1": 120000,
