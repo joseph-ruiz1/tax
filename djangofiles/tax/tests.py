@@ -10,7 +10,7 @@ from .services import (
     IncomeDistributor,
     ScheduleJCalculation,
     ScheduleJConfig,
-    ScheduleJOptimization,
+    ScheduleJOptimizer,
     TaxCalculation,
     find_bracket_thresholds,
 )
@@ -142,9 +142,6 @@ def create_tax_year_data_list(test_cases, user, save=True):
 # TESTS
 class TestUserModel(TestCase):
     def test_create_single_user(self):
-        """
-        If user cannot be created, an error code is displayed
-        """
         test_user = create_test_user(username="test", password="testing123")
         self.assertEqual(User.objects.count(), 1)
         self.assertEqual(test_user.username, "test")
@@ -235,31 +232,6 @@ class ScheduleJCalculationTest(TestCase):
                 rounded_result = round(result)
                 if rounded_result != expected_result:
                     print(f"wrong output at {line} in test {test_number}: got {rounded_result}, expected {expected_result}")
-
-# @unittest.skip("Hold until optimization is refactored")
-class ScheduleJOptimizationTest(TestCase):
-    def setUp(self):
-        self.test_user = create_test_user(username="test", password="testing")
-        self.client.login(username="test", password="testing")
-
-    def test_optimization(self):
-        test_years = create_tax_year_data_list(SCHEDULE_J_OPTIMIZATION_TEST, user=self.test_user, save=True)
-
-        for test_set in test_years:
-            # Get the dataset instance
-            dataset = test_set["dataset_instance"]
-            dataset.save()
-
-            unsorted_years_list = dataset.tax_years.all()
-            sorted_years = sort_tax_years_list(unsorted_years_list)
-            election_year = sorted_years[0]
-
-            optimize = ScheduleJOptimization(years=sorted_years,
-                                             max_elected_farm_income=election_year.elected_farm_income,
-                                             elected_farm_qualified=election_year.qualified_farm_income,
-                                             config=None)
-            results = optimize.optimize_sch_j()
-            print(results)
 
 @unittest.skip("Deprecated test")
 class TaxDataSetSerializerTest(APITestCase):
@@ -455,6 +427,55 @@ class ScheduleJYearlyAdjustedTaxAssignmentTest(TestCase):
             filtered_form = {k: int(v) for k, v in sch_j_form.items() if v is not None}
             assert filtered_form == case["outputs"], "Form did not match expected output"
 
+class ScheduleJOptimizationIncomeProportionTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_proportions(self):
+        test_years = create_tax_year_data_list(SCHEDULE_J_OPTIMIZATION_TEST, user=self.test_user, save=True)
+        for test_set in test_years:
+            dataset = test_set["dataset_instance"]
+            dataset.save()
+
+            unsorted_years_list = dataset.tax_years.all()
+            sorted_years = sort_tax_years_list(unsorted_years_list)
+            election_year = sorted_years[0]
+
+            calc_instance = ScheduleJOptimizer(
+                tax_years=sorted_years,
+                max_elected_farm_income=election_year.elected_farm_income,
+                qualified_farm_income=election_year.qualified_farm_income,
+                config=None)
+
+            ordinary_percentage, qualified_percentage = calc_instance._calculate_income_proportions()
+            self.assertEqual(ordinary_percentage, 1)
+
+
+# @unittest.skip("Hold until optimization is refactored")
+class ScheduleJOptimizationTest(TestCase):
+    def setUp(self):
+        self.test_user = create_test_user(username="test", password="testing")
+        self.client.login(username="test", password="testing")
+
+    def test_optimization(self):
+        test_years = create_tax_year_data_list(SCHEDULE_J_OPTIMIZATION_TEST, user=self.test_user, save=True)
+
+        for test_set in test_years:
+            # Get the dataset instance
+            dataset = test_set["dataset_instance"]
+            dataset.save()
+
+            unsorted_years_list = dataset.tax_years.all()
+            sorted_years = sort_tax_years_list(unsorted_years_list)
+            election_year = sorted_years[0]
+
+            optimize = ScheduleJOptimizer(years=sorted_years,
+                                             max_elected_farm_income=election_year.elected_farm_income,
+                                             qualified_farm_income=election_year.qualified_farm_income,
+                                             config=None)
+            results = optimize.run_optimization()
+            print(results)
 
 CREDENTIALS = [
             ("test1", "testing123"),
@@ -622,6 +643,16 @@ SCHEDULE_J_OPTIMIZATION_TEST = [
         ],
         "outputs": [143, 2812, 5683, 10092],
         "dataset": {"name": "Allocation Test Case 1", "max_elected_farm_income": 50000, "qualified_farm_income": 0, "election_year": "2024"},
+    },
+    {
+        "inputs": [
+                dict(year=2022, filing_status="MFJ", taxable_income=110000, qualified_income=0, is_electing=True, elected_farm_income=50000, qualified_farm_income=25000),
+                dict(year=2021, filing_status="MFJ", taxable_income=70000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+                dict(year=2020, filing_status="MFJ", taxable_income=65000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+                dict(year=2019, filing_status="MFJ", taxable_income=72000, qualified_income=0, is_electing=True, elected_farm_income=5000, qualified_farm_income=0),
+            ],
+            "outputs": [143, 2812, 5683, 10092],
+            "dataset": {"name": "Allocation Test Case 1", "max_elected_farm_income": 50000, "qualified_farm_income": 0, "election_year": "2024"},
     },
 ]
 

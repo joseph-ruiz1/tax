@@ -1,7 +1,6 @@
 import copy
 from dataclasses import dataclass
 from decimal import Decimal
-from pprint import pprint
 
 from .calculations import tax_brackets
 from .models import TaxYearData, TaxYearStructure
@@ -71,7 +70,7 @@ class TaxCalculation:
                 "tax_on_prior_brackets": 0,
             }
 
-        raise ValueError("Income too high")
+        raise ValueError("Taxable income is too high")
 
     def _calculate_ordinary_tax(self, bracket_info):
         ordinary_tax = ((self.taxable_ordinary - bracket_info["lower_ordinary_bound"]) * bracket_info["ordinary_rate"] + bracket_info["tax_on_prior_brackets"])
@@ -397,16 +396,6 @@ class ScheduleJConfig:
         return cls(True, True)
 
 class ScheduleJCalculation:
-    """
-    Represents a Schedule J tax computation for a given current year as well as prior years if electing Sch J.
-
-    Attributes:
-        tax_years (list): List of all TaxYearData instances in descending order by year
-        show_all_years (bool): True if you want ScheduleJResultContainer to return all AdjustedTaxData instances. Default is False.
-        long_form (bool): True if you want ScheduleJResultContainer to return all lines on ScheduleJForm. Default is False.
-
-    """
-
     def __init__(self, years: list[TaxYearData],
                 elected_farm_income: Decimal,
                 qualified_farm_income: Decimal,
@@ -587,27 +576,31 @@ class IncomeDistributor:
             year_obj.taxable_income += amount_to_distribute
             year_obj.qualified_income += amount_to_distribute_qualified
 
-class ScheduleJOptimization:
-    """
-    Represents a single Schedule J Optimization.
-
-    Attributes:
-        years (list): List of TaxYearDatas in descending order
-        elected_farm_income (Decimal): Max amount of income that can be elected
-        elected_farm_qualifed (Decimal): Amount of elected income that is made up of cap gains
-
-    """
-
-    def __init__(self, years, max_elected_farm_income: Decimal, elected_farm_qualified: Decimal, config: ScheduleJConfig):
-        self.years = years
+class ScheduleJOptimizer:
+    def __init__(self, tax_years, max_elected_farm_income: Decimal, qualified_farm_income: Decimal, config: ScheduleJConfig):
+        self.tax_years = tax_years
         self.max_elected_farm_income = max_elected_farm_income
-        self.elected_farm_qualified = elected_farm_qualified
+        self.qualified_farm_income = qualified_farm_income
         self.config = config if config is not None else ScheduleJConfig()
 
+        self.income_increment = 500
+        self.ordinary_farm_income = self.max_elected_farm_income - self.qualified_farm_income
         self.show_all_years = self.config.show_all_tax_years
         self.long_form = self.config.show_full_sch_j_form
 
-    def optimize_sch_j(self):
+        self._validate_inputs()
+
+    def _validate_inputs(self):
+        if not isinstance(self.max_elected_farm_income, Decimal):
+            raise TypeError("Not a Decimal")
+        if not isinstance(self.qualified_farm_income, Decimal):
+            raise TypeError("Not a Decimal")
+        if self.qualified_farm_income > self.max_elected_farm_income:
+            raise ValueError("qualified_farm_income cannot exceed elected_farm_income")
+        if len(self.tax_years) != 4:
+            raise ValueError("Number of tax years not equal to four")
+
+    def run_optimization(self):
         """
         Run Schedule J Optimization by iterating through the max elected farm income until we get to 0.
 
@@ -623,36 +616,30 @@ class ScheduleJOptimization:
             last_instance (ScheduleJResultsContainer): Sch J instance with max elected farm income
 
         """
-        if not isinstance(self.elected_farm_income, Decimal):
-            raise TypeError("Not a Decimal")
-        if not isinstance(self.elected_farm_qualified, Decimal):
-            raise TypeError("Not a Decimal")
+        ordinary_income_percentage, qualified_income_percentage = self._calculate_income_proportions()
+        self._handle_optimization_loop(ordinary_income_percentage, qualified_income_percentage)
+
+    def _calculate_income_proportions(self):
+        ordinary_income_percentage = self.ordinary_farm_income / self.max_elected_farm_income
+        qualified_income_percentage = self.qualified_farm_income / self.max_elected_farm_income
+        return ordinary_income_percentage, qualified_income_percentage
+
+    def _handle_optimization_loop(self, ordinary_income_percentage, qualified_income_percentage):
+        current_total_elected = self.max_elected_farm_income
+        current_qualified_elected = self.qualified_farm_income
+        current_ordinary_elected = current_total_elected - current_qualified_elected
+        iteration = 0
         results = []
 
-        current_total_elected = self.elected_farm_income
-        current_qualified_elected = self.elected_farm_qualified
-        current_ordinary_elected = self.elected_farm_income - self.elected_farm_qualified
-
-        # Find percentage so we can decrease proportionally
-        ordinary_percentage = current_ordinary_elected / current_total_elected
-        qualified_percentage = current_qualified_elected / current_total_elected
-
-        iteration = 0
-        all_elected_instance = None
-        none_elected_instance = None
-
-        while current_total_elected >= 500:
-            is_first = (iteration == 0)
-            is_last = (current_total_elected - 500 < 500)
+        while current_total_elected >= self.income_increment:
+            is_first_instance = (iteration == 0)
+            is_last_instance = (current_total_elected - self.income_increment < self.income_increment)
 
             # Compute with show_all_years = True on first and last iterations only
-            if is_first or is_last:
-                instance = (ScheduleJCalculation(self.years, self.elected_farm_income, self.elected_farm_qualified, self.config)
-                            .calculate())
-                if is_first:
-                    all_elected_instance = instance
-                if is_last:
-                   none_elected_instance = instance
+            if is_first_instance:
+                none_elected_instance = self._handle_first_iteration(current_total_elected, current_qualified_elected)
+            if is_last_instance:
+                all_elected_instance = self._handle_last_iteration(current_total_elected, current_qualified_elected)
 
             else:
                 # Truncated data show_all_years = False
@@ -662,10 +649,10 @@ class ScheduleJOptimization:
             results.append(instance.schedule_j_form)
 
             current_total_elected -= 500
-            current_ordinary_elected -= 500 * ordinary_percentage
-            current_qualified_elected -= 500 * qualified_percentage
-            self.years[0].elected_farm_income -= 500 * ordinary_percentage
-            self.years[0].qualified_farm_income -= 500 * qualified_percentage
+            current_ordinary_elected -= 500 * ordinary_income_percentage
+            current_qualified_elected -= 500 * qualified_income_percentage
+            self.years[0].elected_farm_income -= 500 * ordinary_income_percentage
+            self.years[0].qualified_farm_income -= 500 * qualified_income_percentage
             iteration += 1
 
         return {
@@ -673,3 +660,19 @@ class ScheduleJOptimization:
             "all_elected": all_elected_instance,
             "none_elected": none_elected_instance,
         }
+
+    def _handle_first_iteration(self, current_total_elected, current_qualified_elected):
+        calc_instance = ScheduleJCalculation(years=self.years,
+                                            elected_farm_income=current_total_elected,
+                                            qualified_farm_income=current_qualified_elected,
+                                            config=self.config)
+        first_iteration_results = calc_instance.calculate()
+        return first_iteration_results
+
+    def _handle_last_iteration(self, current_total_elected, current_qualified_elected):
+        calc_instance = ScheduleJCalculation(years=self.years,
+                                            elected_farm_income=current_total_elected,
+                                            qualified_farm_income=current_qualified_elected,
+                                            config=self.config)
+        last_iteration_results = calc_instance.calculate()
+        return last_iteration_results
