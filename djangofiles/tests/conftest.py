@@ -1,8 +1,11 @@
+from types import FunctionType
+
 import pytest
 from calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 from django.test import Client
 from tax.models import TaxDataSet, TaxYearData, User
 from tax.utils import sort_tax_years_list
+from utils.typing_utils import CalculationScenarioInput
 
 
 @pytest.fixture
@@ -16,9 +19,9 @@ def authenticated_client(test_user):
     return client
 
 @pytest.fixture
-def create_tax_year_data():
+def create_tax_models():
     """Factory fixture to create TaxDataSet and TaxYearData instances."""
-    def _create(test_cases, user):
+    def _create(test_cases: CalculationScenarioInput, user: User):
         processed_cases = []
         for i, case in enumerate(test_cases, start=1):
             dataset_info = case.get("dataset", {})
@@ -67,10 +70,9 @@ def create_tax_year_data():
     return _create
 
 @pytest.fixture
-def setup_calculation_test(test_user, create_tax_year_data):
-    """Returns a function that takes test_cases and yields (case, sorted_years) for each."""
+def create_models_for_test_cases(test_user: FunctionType, create_tax_models: FunctionType):
     def _setup(test_cases):
-        processed_cases = create_tax_year_data(test_cases, test_user)
+        processed_cases = create_tax_models(test_cases, test_user)
 
         for case in processed_cases:
             unsorted_years_list = case["dataset_instance"].tax_years.all()

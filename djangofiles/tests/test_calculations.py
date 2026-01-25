@@ -22,11 +22,10 @@ from utils.calculation_utils import (
     "inputs, expected",
     build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_BASIC_TAX_CALC, "tax_calculation"),
 )
-def test_basic_tax_calculation(setup_calculation_test, inputs, expected):
-    # Get the already-built data for this scenario
-    for case, sorted_years in setup_calculation_test([inputs]):
+def test_basic_tax_calculation(create_models_for_test_cases, inputs, expected):
+    for case, sorted_years in create_models_for_test_cases([inputs]):
         tax_results_all_years = calculate_total_tax_all_years(sorted_years)
 
-        for field_name, field_expected in expected.items():
-            assert tax_results_all_years[field_name] == field_expected
+        for field_name, expected_value in expected.items():
+            assert tax_results_all_years[field_name] == expected_value
 
