@@ -8,7 +8,7 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "taxable_income": 100000,
                 "qualified_income": 140000,
                 "is_electing": False,
-                "elected_farm_income": 0,
+                "elected_farm_income": 50000,
                 "qualified_farm_income": 0,
             },
             { # cap gains in 0%, 15%, 20%
@@ -50,7 +50,7 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "taxable_income": 120000,
                 "qualified_income": 105000,
                 "is_electing": False,
-                "elected_farm_income": 0,
+                "elected_farm_income": 50000,
                 "qualified_farm_income": 0,
             },
             {
@@ -235,6 +235,14 @@ EXPECTED_OUTPUTS_SORTED_YEARS = {
     "unsorted_older_years": {
         "sort_years": {
             "years": ["2021", "2020", "2019", "2018"],
+        },
+    },
+}
+
+EXPECTED_OUTPUT_CREATE_MAP = {
+    "basic_scenario": {
+        "create_map": {
+            "years": [2024, 2023, 2022, 2021],
         },
     },
 }

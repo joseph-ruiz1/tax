@@ -451,7 +451,6 @@ class ScheduleJOptimizationIncomeProportionTest(TestCase):
             ordinary_percentage, qualified_percentage = calc_instance._calculate_income_proportions()
             self.assertEqual(ordinary_percentage, 1)
 
-
 # @unittest.skip("Hold until optimization is refactored")
 class ScheduleJOptimizationTest(TestCase):
     def setUp(self):
