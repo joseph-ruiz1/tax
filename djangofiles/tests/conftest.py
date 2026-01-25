@@ -80,3 +80,14 @@ def create_models_for_test_cases(test_user: FunctionType, create_tax_models: Fun
 
             yield case, sorted_years_list
     return _setup
+
+@pytest.fixture
+def create_unsorted_models_for_test_cases(test_user: FunctionType, create_tax_models: FunctionType):
+    def _setup(test_cases):
+        processed_cases = create_tax_models(test_cases, test_user)
+
+        for case in processed_cases:
+            unsorted_years_list = case["dataset_instance"].tax_years.all()
+
+            yield case, unsorted_years_list
+    return _setup

@@ -165,6 +165,47 @@ BASIC_TAX_CALCULATION_INPUTS = {
             },
         ],
     },
+
+    "unsorted_older_years": {
+        "inputs": [
+            {
+                "year": 2018,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2020,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2021,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2019,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+        ],
+    },
 }
 
 EXPECTED_OUTPUTS_BASIC_TAX_CALC = {
@@ -190,4 +231,10 @@ EXPECTED_OUTPUTS_BASIC_TAX_CALC = {
     },
 }
 
-EXPECTED_OUTPUTS_INCOME_DISTRIBUTION = {}
+EXPECTED_OUTPUTS_SORTED_YEARS = {
+    "unsorted_older_years": {
+        "sort_years": {
+            "years": ["2021", "2020", "2019", "2018"],
+        },
+    },
+}

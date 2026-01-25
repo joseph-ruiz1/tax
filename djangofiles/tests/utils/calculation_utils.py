@@ -3,6 +3,7 @@ from collections.abc import Mapping
 import pytest
 from tax.models import TaxYearData
 from tax.services import TaxCalculation, TaxCalculationResult
+from tax.utils import sort_tax_years_list
 from utils.typing_utils import TestCaseInputs, TestCaseOutputs
 
 
@@ -19,7 +20,7 @@ def build_test_cases(test_case_inputs: TestCaseInputs, test_case_expected_output
 
     for scenario_name in test_case_expected_outputs:
         if scenario_name not in test_case_inputs:
-            raise KeyError(f"Scenario '{scenario_name}' found in expected outputs but not in inputs")
+            raise KeyError(f"Scenario '{scenario_name}' found in expected outputs but not in inputs, saw {test_case_inputs}")
 
         input_data = test_case_inputs[scenario_name]
         expected_output_data = test_case_expected_outputs[scenario_name][item_to_test]
