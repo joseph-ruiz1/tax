@@ -1,6 +1,7 @@
 import pytest
 from calculation_cases import (
     BASIC_TAX_CALCULATION_INPUTS,
+    EXPECTED_OUTPUT_INCOME_ALLOCATION,
     EXPECTED_OUTPUT_CREATE_MAP,
     EXPECTED_OUTPUTS_BASIC_TAX_CALC,
     EXPECTED_OUTPUTS_SORTED_YEARS,
@@ -68,3 +69,16 @@ class TestScheduleJTaxYearMapping:
 
         assert first_year == expected_year
         assert isinstance(first_year_obj, TaxYearData)
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUT_INCOME_ALLOCATION, "allocate_income"),
+)
+def test_income_allocation(create_models_for_test_cases, create_sch_j_instance, inputs, expected):
+    distributor = IncomeDistributor(create_sch_j_instance(inputs).tax_years)
+    distributor.distribute_all_elected_income()
+
+    for i, year_obj in enumerate(distributor.adjusted_years.values()):
+        assert round(year_obj.taxable_income) == expected["allocated_taxable_income"][i]
+        assert round(year_obj.qualified_income) == expected["allocated_qualified_income"][i]
+

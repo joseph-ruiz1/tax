@@ -1,15 +1,15 @@
 BASIC_TAX_CALCULATION_INPUTS = {
     "qualified_income_edge_cases": {
-        "dataset": {"name": "Tax Calc 2024-2021 Edge Cases", "max_elected_farm_income": 50000, "qualified_farm_income": 0, "election_year": "2024"},
+        "dataset": {"name": "Tax Calc 2024-2021 Edge Cases", "max_elected_farm_income": 12000, "qualified_farm_income": 0, "election_year": "2024"},
         "inputs": [
             { # Edge case: negative ordinary income 15%
                 "year": 2024,
                 "filing_status": "single",
                 "taxable_income": 100000,
                 "qualified_income": 140000,
-                "is_electing": False,
-                "elected_farm_income": 50000,
-                "qualified_farm_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 12000,
+                "qualified_farm_income": 3000,
             },
             { # cap gains in 0%, 15%, 20%
                 "year": 2023,
@@ -34,23 +34,23 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "filing_status": "single",
                 "taxable_income": 600000,
                 "qualified_income": 640000,
-                "is_electing": False,
-                "elected_farm_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 15000,
                 "qualified_farm_income": 0,
             },
         ],
     },
 
     "basic_scenario": {
-        "dataset": {"name": "Basic scenario 2021-2024", "max_elected_farm_income": 50000, "qualified_farm_income": 0, "election_year": "2024"},
+        "dataset": {"name": "Basic scenario 2021-2024", "max_elected_farm_income": 60000, "qualified_farm_income": 0, "election_year": "2024"},
         "inputs": [
             {
                 "year": 2024,
                 "filing_status": "MFJ",
                 "taxable_income": 120000,
                 "qualified_income": 105000,
-                "is_electing": False,
-                "elected_farm_income": 50000,
+                "is_electing": True,
+                "elected_farm_income": 60000,
                 "qualified_farm_income": 0,
             },
             {
@@ -58,8 +58,8 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "filing_status": "MFJ",
                 "taxable_income": 85000,
                 "qualified_income": 70000,
-                "is_electing": False,
-                "elected_farm_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 30000,
                 "qualified_farm_income": 0,
             },
             {
@@ -84,15 +84,15 @@ BASIC_TAX_CALCULATION_INPUTS = {
     },
 
     "basic_scenario_high_income": {
-        "dataset": {"name": "Basic scenario high income 2021-2024", "max_elected_farm_income": 50000, "qualified_farm_income": 0, "election_year": "2024"},
+        "dataset": {"name": "Basic scenario high income 2021-2024", "max_elected_farm_income": 60000, "qualified_farm_income": 0, "election_year": "2024"},
         "inputs": [
             {
                 "year": 2024,
                 "filing_status": "single",
                 "taxable_income": 230000,
                 "qualified_income": 200000,
-                "is_electing": False,
-                "elected_farm_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 60000,
                 "qualified_farm_income": 0,
             },
             {
@@ -100,8 +100,8 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "filing_status": "single",
                 "taxable_income": 340000,
                 "qualified_income": 40000,
-                "is_electing": False,
-                "elected_farm_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 30000,
                 "qualified_farm_income": 0,
             },
             {
@@ -109,8 +109,8 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "filing_status": "MFJ",
                 "taxable_income": 460000,
                 "qualified_income": 280000,
-                "is_electing": False,
-                "elected_farm_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 15000,
                 "qualified_farm_income": 0,
             },
             {
@@ -118,8 +118,8 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "filing_status": "MFJ",
                 "taxable_income": 315000,
                 "qualified_income": 2000,
-                "is_electing": False,
-                "elected_farm_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 90000,
                 "qualified_farm_income": 0,
             },
         ],
@@ -243,6 +243,26 @@ EXPECTED_OUTPUT_CREATE_MAP = {
     "basic_scenario": {
         "create_map": {
             "years": [2024, 2023, 2022, 2021],
+        },
+    },
+}
+EXPECTED_OUTPUT_INCOME_ALLOCATION = {
+    "qualified_income_edge_cases": {
+        "allocate_income": {
+            "allocated_taxable_income": [88000, 644000, 644000, 589000],
+            "allocated_qualified_income": [137000, 601000, 541000, 641000],
+        },
+    },
+    "basic_scenario": {
+        "allocate_income": {
+            "allocated_taxable_income": [60000, 75000, 85000, 126000],
+            "allocated_qualified_income": [105000, 70000, 40000, 45000],
+        },
+    },
+    "basic_scenario_high_income": {
+        "allocate_income": {
+            "allocated_taxable_income": [170000, 330000, 475000, 260000],
+            "allocated_qualified_income": [200000, 40000, 280000, 2000],
         },
     },
 }
