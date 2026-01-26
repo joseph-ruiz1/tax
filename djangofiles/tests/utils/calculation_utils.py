@@ -14,22 +14,25 @@ def calculate_total_tax_all_years(years: list[TaxYearData]) -> Mapping[str, TaxC
         results.append(round(tax_result.total_tax))
     return {"total_tax": results}
 
+
 def build_test_cases(test_case_inputs: TestCaseInputs, test_case_expected_outputs: TestCaseOutputs, item_to_test: str) -> list[tuple]:
     """Build test cases for a specific item that we want to test."""
+    if item_to_test not in test_case_expected_outputs:
+        raise ValueError(f"item_to_test='{item_to_test}' not found in expected outputs")
+
     test_cases = []
+    item_scenarios = test_case_expected_outputs[item_to_test]
 
-    for scenario_name in test_case_expected_outputs:
+    for scenario_name, expected_output_data in item_scenarios.items():
         if scenario_name not in test_case_inputs:
-            raise KeyError(f"Scenario '{scenario_name}' found in expected outputs but not in inputs, saw {test_case_inputs}")
-
-        input_data = test_case_inputs[scenario_name]
-        expected_output_data = test_case_expected_outputs[scenario_name][item_to_test]
+            raise KeyError(f"Scenario '{scenario_name}' found in expected outputs but not in inputs")
 
         test_cases.append(
             pytest.param(
-                input_data,
+                test_case_inputs[scenario_name],
                 expected_output_data,
                 id=scenario_name,
             ),
         )
+
     return test_cases

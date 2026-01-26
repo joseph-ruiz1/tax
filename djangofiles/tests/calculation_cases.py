@@ -209,60 +209,48 @@ BASIC_TAX_CALCULATION_INPUTS = {
 }
 
 EXPECTED_OUTPUTS_BASIC_TAX_CALC = {
-    "qualified_income_edge_cases": {
-        "tax_calculation": {
+    "tax_calculation": {
+        "qualified_income_edge_cases": {
             "total_tax": [7946, 101271, 107848, 91647],
         },
-    },
-    "basic_scenario": {
-        "tax_calculation": {
+        "basic_scenario": {
             "total_tax": [5392, 1500, 3593, 8002],
         },
-    },
-    "basic_scenario_high_income": {
-        "tax_calculation": {
+        "basic_scenario_high_income": {
             "total_tax": [30814, 82894, 72871, 63462],
         },
-    },
-    "basic_scenario_older_years": {
-        "tax_calculation": {
+        "basic_scenario_older_years": {
             "total_tax": [9682, 9805, 9999, 10239],
         },
     },
 }
 
 EXPECTED_OUTPUTS_SORTED_YEARS = {
-    "unsorted_older_years": {
-        "sort_years": {
+    "sort_years": {
+        "unsorted_older_years": {
             "years": ["2021", "2020", "2019", "2018"],
         },
     },
 }
 
-EXPECTED_OUTPUT_CREATE_MAP = {
-    "basic_scenario": {
-        "create_map": {
-            "years": [2024, 2023, 2022, 2021],
-        },
-    },
-}
-EXPECTED_OUTPUT_INCOME_ALLOCATION = {
-    "qualified_income_edge_cases": {
-        "allocate_income": {
+EXPECTED_OUTPUT_SCHEDULE_J = {
+    "allocate_income": {
+        "qualified_income_edge_cases": {
             "allocated_taxable_income": [88000, 644000, 644000, 589000],
             "allocated_qualified_income": [137000, 601000, 541000, 641000],
         },
-    },
-    "basic_scenario": {
-        "allocate_income": {
+        "basic_scenario": {
             "allocated_taxable_income": [60000, 75000, 85000, 126000],
             "allocated_qualified_income": [105000, 70000, 40000, 45000],
         },
-    },
-    "basic_scenario_high_income": {
-        "allocate_income": {
+        "basic_scenario_high_income": {
             "allocated_taxable_income": [170000, 330000, 475000, 260000],
             "allocated_qualified_income": [200000, 40000, 280000, 2000],
+        },
+    },
+    "create_map": {
+        "basic_scenario": {
+            "years": [2024, 2023, 2022, 2021],
         },
     },
 }
