@@ -4,6 +4,7 @@ import pytest
 from calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 from django.test import Client
 from tax.models import TaxDataSet, TaxYearData, User
+from tax.services import ScheduleJCalculation
 from tax.utils import sort_tax_years_list
 from utils.typing_utils import CalculationScenarioInput
 
@@ -91,3 +92,15 @@ def create_unsorted_models_for_test_cases(test_user: FunctionType, create_tax_mo
 
             yield case, unsorted_years_list
     return _setup
+
+@pytest.fixture
+def create_sch_j_instance(create_models_for_test_cases):
+    def _create(inputs):
+        for case, years in create_models_for_test_cases([inputs]):
+            return ScheduleJCalculation(
+                years,
+                case["dataset_instance"].max_elected_farm_income,
+                case["dataset_instance"].qualified_farm_income,
+            )
+        return None
+    return _create

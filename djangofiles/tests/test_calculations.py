@@ -1,9 +1,9 @@
 import pytest
 from calculation_cases import (
     BASIC_TAX_CALCULATION_INPUTS,
+    EXPECTED_OUTPUT_CREATE_MAP,
     EXPECTED_OUTPUTS_BASIC_TAX_CALC,
     EXPECTED_OUTPUTS_SORTED_YEARS,
-    EXPECTED_OUTPUT_CREATE_MAP
 )
 from tax.models import TaxDataSet, TaxYearData, User
 from tax.services import (
@@ -48,12 +48,23 @@ def test_year_sorting(create_unsorted_models_for_test_cases, inputs, expected):
     "inputs, expected",
     build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUT_CREATE_MAP, "create_map"),
 )
-def test_tax_year_map_creation(create_models_for_test_cases, inputs, expected):
-    for case, years in create_models_for_test_cases([inputs]):
-        tax_year_map = ScheduleJCalculation(years, case["dataset_instance"].max_elected_farm_income, case["dataset_instance"].qualified_farm_income).tax_years
+class TestScheduleJTaxYearMapping:
+    @pytest.fixture
+    def sch_j_instance(self, create_sch_j_instance, inputs):
+        return create_sch_j_instance(inputs)
+
+    def test_tax_year_map_creation(self, sch_j_instance, expected):
+        tax_year_map = sch_j_instance.tax_years
         expected_years = expected["years"]
 
         for (actual_year, year_obj), expected_year in zip(tax_year_map.items(), expected_years, strict=False):
             assert actual_year == expected_year
             assert isinstance(year_obj, TaxYearData)
 
+    def test_retrieval_of_first_year(self, sch_j_instance, expected):
+        first_year = sch_j_instance.election_year
+        first_year_obj = sch_j_instance.election_year_obj
+        expected_year = expected["years"][0]
+
+        assert first_year == expected_year
+        assert isinstance(first_year_obj, TaxYearData)
