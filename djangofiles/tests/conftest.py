@@ -1,10 +1,11 @@
 from types import FunctionType
+from dataclasses import replace
 
 import pytest
 from calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 from django.test import Client
 from tax.models import TaxDataSet, TaxYearData, User
-from tax.services import ScheduleJCalculation
+from tax.services import ScheduleJCalculation, ScheduleJConfig
 from tax.utils import sort_tax_years_list
 from utils.typing_utils import CalculationScenarioInput
 
@@ -94,13 +95,26 @@ def create_unsorted_models_for_test_cases(test_user: FunctionType, create_tax_mo
     return _setup
 
 @pytest.fixture
-def create_sch_j_instance(create_models_for_test_cases):
-    def _create(inputs):
+def create_sch_j_config():
+    def _create(**kwargs):
+        base = ScheduleJConfig()
+        if kwargs:
+            return replace(base, **kwargs)
+        return base
+    return _create
+
+@pytest.fixture
+def create_sch_j_instance(create_models_for_test_cases, create_sch_j_config):
+    def _create(inputs: CalculationScenarioInput, config: ScheduleJConfig = None):
+        if config is None:
+            config = create_sch_j_config()
+
         for case, years in create_models_for_test_cases([inputs]):
             return ScheduleJCalculation(
                 years,
                 case["dataset_instance"].max_elected_farm_income,
                 case["dataset_instance"].qualified_farm_income,
+                config,
             )
         return None
     return _create

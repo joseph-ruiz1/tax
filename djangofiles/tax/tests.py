@@ -655,7 +655,7 @@ SCHEDULE_J_OPTIMIZATION_TEST = [
     },
 ]
 
-SCHEDULE_J_INCOME_ALLOCATION_TEST = [
+SCHEDULE_J_INCOME_ALLOCATION_TEST = [.  
     {
         "inputs": [
             [2024, "single", 100000, 140000, True, 12000, 3000],

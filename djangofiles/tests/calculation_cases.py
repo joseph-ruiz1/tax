@@ -206,6 +206,48 @@ BASIC_TAX_CALCULATION_INPUTS = {
             },
         ],
     },
+
+    "none_elected": {
+        "dataset": {"name": "No elected income 2021-2024", "max_elected_farm_income": 0, "qualified_farm_income": 0, "election_year": "2024"},
+        "inputs": [
+            {
+                "year": 2024,
+                "filing_status": "single",
+                "taxable_income": 100000,
+                "qualified_income": 0,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2023,
+                "filing_status": "single",
+                "taxable_income": 200000,
+                "qualified_income": 0,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2022,
+                "filing_status": "single",
+                "taxable_income": 300000,
+                "qualified_income": 0,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2021,
+                "filing_status": "single",
+                "taxable_income": 400000,
+                "qualified_income": 0,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+        ],
+    }
 }
 
 EXPECTED_OUTPUTS_BASIC_TAX_CALC = {
@@ -251,6 +293,30 @@ EXPECTED_OUTPUT_SCHEDULE_J = {
     "create_map": {
         "basic_scenario": {
             "years": [2024, 2023, 2022, 2021],
+        },
+    },
+    "tax_assignment": {
+        "none_elected": {
+            "line_11": 300000,
+            "line_12": 78753,
+            "line_15": 200000,
+            "line_16": 42832,
+            "line_3": 100000,
+            "line_4": 17053,
+            "line_7": 400000,
+            "line_8": 114544,
+        },
+    },
+    "adj_tax_assignment": {
+        "none_elected": {
+            "line_1": 100000,
+            "line_5": 400000,
+            "line_9": 300000,
+            "line_13": 200000,
+            "line_19": 114544,
+            "line_20": 78753,
+            "line_21": 42832,
+            "election_year_base_tax": 17053,
         },
     },
 }

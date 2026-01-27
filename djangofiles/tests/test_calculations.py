@@ -18,6 +18,7 @@ from tax.utils import sort_tax_years_list
 from utils.calculation_utils import (
     build_test_cases,
     calculate_total_tax_all_years,
+    _run_sch_j_tax_assignment,
 )
 
 
@@ -73,10 +74,35 @@ class TestScheduleJTaxYearMapping:
     "inputs, expected",
     build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUT_SCHEDULE_J, "allocate_income"),
 )
-def test_income_allocation(create_models_for_test_cases, create_sch_j_instance, inputs, expected):
+def test_income_allocation(create_models_for_test_cases, create_sch_j_instance, create_sch_j_config, inputs, expected):
     distributor = IncomeDistributor(create_sch_j_instance(inputs).tax_years)
     distributor.distribute_all_elected_income()
 
     for i, year_obj in enumerate(distributor.adjusted_years.values()):
         assert round(year_obj.taxable_income) == expected["allocated_taxable_income"][i]
         assert round(year_obj.qualified_income) == expected["allocated_qualified_income"][i]
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUT_SCHEDULE_J, "tax_assignment"),
+)
+def test_sch_j_yearly_tax_assignment(create_models_for_test_cases, create_sch_j_instance, create_sch_j_config, inputs, expected):
+    """Tests _adjust_taxable_income_by_elected(), _fill_form_with_tax_results(), """
+    config = create_sch_j_config(show_full_sch_j_form=True)
+    instance = create_sch_j_instance(inputs, config)
+
+    filtered_form = _run_sch_j_tax_assignment(instance, use_adjusted=False)
+    assert filtered_form == expected
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUT_SCHEDULE_J, "adj_tax_assignment"),
+)
+def test_adj_sch_j_yearly_tax_assignment(create_models_for_test_cases, create_sch_j_instance, create_sch_j_config, inputs, expected):
+    """Tests _adjust_taxable_income_by_elected(), _fill_form_with_adj_tax_results(), """
+    config = create_sch_j_config(show_full_sch_j_form=True)
+    instance = create_sch_j_instance(inputs, config)
+
+    filtered_form = _run_sch_j_tax_assignment(instance, use_adjusted=True)
+    assert filtered_form == expected
+

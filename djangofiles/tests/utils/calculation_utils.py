@@ -36,3 +36,14 @@ def build_test_cases(test_case_inputs: TestCaseInputs, test_case_expected_output
         )
 
     return test_cases
+
+def _run_sch_j_tax_assignment(instance, use_adjusted: bool = False) -> Mapping[str, int]:
+    if use_adjusted:
+        instance._adjust_taxable_income_by_elected()
+        tax_for_each_year = instance._calculate_tax_on_all_years()
+        instance._fill_form_with_adj_tax_results(tax_for_each_year)
+    else:
+        tax_for_each_year = instance._calculate_tax_on_all_years()
+        instance._fill_form_with_tax_results(tax_for_each_year)
+
+    return {k: round(v) for k, v in instance.sch_j.to_dict().items() if v is not None}
