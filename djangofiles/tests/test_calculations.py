@@ -4,8 +4,9 @@ from calculation_cases import (
     EXPECTED_OUTPUT_SCHEDULE_J,
     EXPECTED_OUTPUTS_BASIC_TAX_CALC,
     EXPECTED_OUTPUTS_SORTED_YEARS,
+    EXPECTED_OUTPUTS_FULL_SCH_J_CALC
 )
-from tax.models import TaxDataSet, TaxYearData, User
+from tax.models import TaxDataSet, TaxYearData
 from tax.services import (
     IncomeDistributor,
     ScheduleJCalculation,
@@ -13,12 +14,13 @@ from tax.services import (
     ScheduleJOptimizer,
     TaxCalculation,
     find_bracket_thresholds,
+    ScheduleJForm
 )
 from tax.utils import sort_tax_years_list
 from utils.calculation_utils import (
+    _run_sch_j_tax_assignment,
     build_test_cases,
     calculate_total_tax_all_years,
-    _run_sch_j_tax_assignment,
 )
 
 
@@ -99,10 +101,26 @@ def test_sch_j_yearly_tax_assignment(create_models_for_test_cases, create_sch_j_
     build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUT_SCHEDULE_J, "adj_tax_assignment"),
 )
 def test_adj_sch_j_yearly_tax_assignment(create_models_for_test_cases, create_sch_j_instance, create_sch_j_config, inputs, expected):
-    """Tests _adjust_taxable_income_by_elected(), _fill_form_with_adj_tax_results(), """
+    """Tests _adjust_taxable_income_by_elected(), _fill_form_with_adj_tax_results(),"""
     config = create_sch_j_config(show_full_sch_j_form=True)
     instance = create_sch_j_instance(inputs, config)
 
     filtered_form = _run_sch_j_tax_assignment(instance, use_adjusted=True)
     assert filtered_form == expected
 
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_FULL_SCH_J_CALC, "full_sch_j_calc"),
+)
+def test_full_sch_j_calculation(create_models_for_test_cases, create_sch_j_instance, create_sch_j_config, inputs, expected):
+    config = create_sch_j_config(show_full_sch_j_form=True)
+    instance = create_sch_j_instance(inputs, config)
+
+    results = instance.calculate()
+
+    sch_j_form = results.schedule_j_form.to_dict()
+
+    for line, result in sch_j_form.items():
+        assert round(result) == expected[line]
+
+    

@@ -338,7 +338,7 @@ class ScheduleJResultContainer:
             "elected_farm_qualified": self.elected_farm_qualified,
             }
 
-        if self.all_years:
+        if self.show_all_tax_years:
             result["tax_years"] = {
                 year: data.to_dict() for year, data in self.tax_years.items()
             }

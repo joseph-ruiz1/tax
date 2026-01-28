@@ -3,7 +3,6 @@ from collections.abc import Mapping
 import pytest
 from tax.models import TaxYearData
 from tax.services import TaxCalculation, TaxCalculationResult
-from tax.utils import sort_tax_years_list
 from utils.typing_utils import TestCaseInputs, TestCaseOutputs
 
 
