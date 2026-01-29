@@ -1,7 +1,7 @@
-from django.db import models
-from django.contrib.auth.models import User
 from decimal import Decimal
 
+from django.contrib.auth.models import User
+from django.db import models
 
 VALID_YEARS = [
         ("2025", "2025"),
@@ -24,21 +24,21 @@ FILING_STATUS = {
 
 
 class TaxDataSet(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='datasets')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="datasets")
     created_at = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=200, default="Created Set")
     max_elected_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     qualified_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    election_year = models.CharField(max_length=4, choices=VALID_YEARS, default='2024')
+    election_year = models.CharField(max_length=4, choices=VALID_YEARS, default="2024")
     ordinary_farm_income = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     income_worksheet = models.JSONField(null=True, blank=True, default=dict)
 
     def __str__(self):
-        return '{} - {}'.format(self.name, self.pk)
-    
+        return f"{self.name} - {self.pk}"
+
     def save(self, *args, **kwargs):
-        self.ordinary_farm_income = max(self.max_elected_farm_income - self.qualified_farm_income, Decimal('0'))
-        super().save(*args, **kwargs)  
+        self.ordinary_farm_income = max(self.max_elected_farm_income - self.qualified_farm_income, Decimal("0"))  # noqa: FURB157
+        super().save(*args, **kwargs)
 
 class ScheduleJOptimization(models.Model):
     dataset = models.ForeignKey(TaxDataSet, on_delete=models.CASCADE)
@@ -54,24 +54,17 @@ class TaxYearStructure(models.Model):
     elected_farm_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
     qualified_farm_income = models.DecimalField(decimal_places=2, max_digits=11, default=0)
 
-    ordinary_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    lower_ordinary_bound = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    upper_ordinary_bound = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    prior_ordinary_bracket_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    ordinary_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    qualified_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return f"{self.year}  {self.filing_status}  {self.taxable_income}  {self.qualified_income}"
 
     @property
     def taxable_ordinary(self):
-        """
-        Computed property: Returns taxable ordinary income on demand.
-        """
-        return max(self.taxable_income - self.qualified_income, 0)
+        """Computed property: Returns taxable ordinary income on demand."""
+        return self.taxable_income - self.qualified_income
 
-    def __str__(self):
-        return '{}  {}  {}  {}'.format(self.year, self.filing_status, self.taxable_income, self.qualified_income)
-    
     def to_dict(self):
         return {
             "year": self.year,
@@ -79,19 +72,7 @@ class TaxYearStructure(models.Model):
             "taxable_income": self.taxable_income,
             "qualified_income": self.qualified_income,
             "taxable_ordinary": self.taxable_ordinary,
-            # "ordinary_rate": self.ordinary_rate,
-            # "lower_ordinary_bound": self.lower_ordinary_bound,
-            # "upper_ordinary_bound": self.upper_ordinary_bound,
-            # "prior_ordinary_bracket_tax": self.prior_ordinary_bracket_tax,
-            "ordinary_tax": self.ordinary_tax,
-            "qualified_tax": self.qualified_tax,
-            "total_tax": self.total_tax,
         }
-
-    class Meta:
-        abstract = True
 
 class TaxYearData(TaxYearStructure):
     dataset = models.ForeignKey(TaxDataSet, on_delete=models.CASCADE, related_name="tax_years")
-
-    

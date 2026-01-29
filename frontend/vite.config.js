@@ -30,9 +30,11 @@ export default defineConfig(async ({ mode }) => {
     },
     
     server: {
+      host: true,
+      port: 5173,
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:8000/tax/api',
+          target: 'http://api:8000/tax/api',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         }
