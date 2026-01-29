@@ -39,17 +39,6 @@ def sort_tax_years_list(years: list[TaxYearData]) -> list[TaxYearData]:
     return sorted_years
 
 def update_calculations(dataset: TaxDataSet):
-    """
-    Helper function to run Schedule J optimization.
-
-    Arguments:
-        dataset (TaxDataSet): Years get extracted in function
-
-    Returns:
-        dict with: 'optimize' (ScheduleJOptimization): Schedule J optimization results
-        'thresholds': dict with bracket thresholds for each year 
-
-    """
     from .services import ScheduleJOptimization, TaxCalculation, find_bracket_thresholds
 
     sorted_years = sort_tax_years_list(dataset.tax_years.all())
@@ -60,8 +49,8 @@ def update_calculations(dataset: TaxDataSet):
         tax_year.save()
 
     optimization_results = ScheduleJOptimization(sorted_years,
-                                    elected_farm_income=dataset.max_elected_farm_income, 
-                                    elected_farm_qualified=dataset.qualified_farm_income, 
+                                    elected_farm_income=dataset.max_elected_farm_income,
+                                    elected_farm_qualified=dataset.qualified_farm_income,
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
 
     tax_years_with_max_elected = optimization_results["all_elected"].tax_years

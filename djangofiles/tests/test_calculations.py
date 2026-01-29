@@ -181,4 +181,4 @@ class TestFirstandLastInstances:
 def test_complete_optimization(inputs, expected, create_optimization_instance):
     optimizer = create_optimization_instance(inputs)
     results = optimizer.run_optimization()
-    print(len(results["optimization_results"]))
+    print(results)

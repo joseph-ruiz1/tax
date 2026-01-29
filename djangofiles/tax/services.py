@@ -211,7 +211,7 @@ class ScheduleJForm:
 
     __repr__ = __str__  # Same for debugging
 
-class ScheduleJResultContainer:
+class ScheduleJResultsContainer:
     def __init__(self,
                  schedule_j_form: ScheduleJForm,
                  elected_farm_income,
@@ -242,14 +242,14 @@ class ScheduleJResultContainer:
 
 def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest: str, ordinary_rate_highest: str):
     """
-    Returns the bracket thresholds for all brackets between and including the lowest and highest ordinary income rates
-    
+    Returns the bracket thresholds for all brackets between and including the lowest and highest ordinary income rates.
+
     Arguments:
         year (String): year we want to find brackets for
         filing_status (String): filing status that was clamed
         ordinary_rate_lowest (String): Ordinary income rate for the year with no elected income
         ordinary_rate_highest (String): Ordinary income rate for the year with max elected income
-    
+
     Returns:
         bracket_thresholds (dict): dict with marginal rate (str) as key and upper threshold (int) as value
         ex: {0.22: 80521, 0.24: 120000, 0.32: 180000}
@@ -257,10 +257,11 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
     Notes:
         The bracket values are being converted to ints here so we don't need to serialize the Decimals
 
-        Returns all brackets from one bracket below the lowest ordinary income amount 
+        Returns all brackets from one bracket below the lowest ordinary income amount
         to one bracket above the highest income amount.
         Example: With $0 of elected income, we are in the 24% bracket, and with the max elected income we are in the 32% bracket
                 The 22%, 24%, 32%, and 35% brackets will be returned and displayed on the ordinary income graph
+
     """
     applicable_brackets = list(tax_brackets.ORDINARY_TAX_TABLES[str(year)][filing_status].items())
 
@@ -328,7 +329,7 @@ class ScheduleJCalculation:
         if len(self.tax_years) != 4 | len(self.adjusted_years) != 4:
             raise ValueError("Number of tax years not equal to four")
 
-    def calculate(self) -> ScheduleJResultContainer:
+    def calculate(self) -> ScheduleJResultsContainer:
         self._fill_schedule_j_with_basic_information()
 
         # Allocate elected farm income for all years
@@ -354,7 +355,7 @@ class ScheduleJCalculation:
         # Get ordinary income for each year for bracket threshold graph
         # sch_j.taxable_ordinary_all_years = {year: int(y.taxable_ordinary) for year, y in all_adjusted_years.items()}
 
-        return ScheduleJResultContainer(
+        return ScheduleJResultsContainer(
             schedule_j_form=self.sch_j,
             elected_farm_income=self.elected_farm_income,
             elected_farm_qualified=self.qualified_farm_income,
@@ -471,6 +472,12 @@ class IncomeDistributor:
             year_obj.taxable_income += amount_to_distribute
             year_obj.qualified_income += amount_to_distribute_qualified
 
+@dataclass
+class OptimizationResults:
+    calculation_iterations: list[ScheduleJForm]
+    all_elected_instance: ScheduleJResultsContainer
+    none_elected_instance: ScheduleJResultsContainer
+
 class ScheduleJOptimizer:
     def __init__(self, tax_years, max_elected_farm_income: Decimal, qualified_farm_income: Decimal, config: ScheduleJConfig):
         self.tax_years = tax_years
@@ -540,11 +547,10 @@ class ScheduleJOptimizer:
             self.tax_years[0].qualified_farm_income -= 500 * qualified_income_percentage
             iteration += 1
 
-        return {
-            "optimization_results": results,
-            "all_elected": all_elected_instance,
-            "none_elected": none_elected_instance,
-        }
+        return OptimizationResults(
+            calculation_iterations=results,
+            all_elected_instance=all_elected_instance,
+            none_elected_instance=none_elected_instance)
 
     def _handle_first_iteration(self, current_total_elected, current_qualified_elected):
         first_year_config = self._create_sch_j_config_showing_all_years()
