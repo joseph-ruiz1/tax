@@ -1,5 +1,5 @@
-from types import FunctionType
 from dataclasses import replace
+from types import FunctionType
 
 import pytest
 from calculation_cases import BASIC_TAX_CALCULATION_INPUTS

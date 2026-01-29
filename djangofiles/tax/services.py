@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from .calculations import tax_brackets
 from .models import TaxYearData, TaxYearStructure
-
+from .utils import validate_years_are_in_order
 
 class TaxCalculationResult:
     def __init__(self, ordinary_tax: Decimal, qualified_tax: Decimal,
@@ -494,6 +494,7 @@ class ScheduleJOptimizer:
             raise ValueError("qualified_farm_income cannot exceed elected_farm_income")
         if len(self.tax_years) != 4:
             raise ValueError("Number of tax years not equal to four")
+        validate_years_are_in_order(self.tax_years)
 
     def run_optimization(self):
         ordinary_income_percentage, qualified_income_percentage = self._calculate_income_proportions()
@@ -529,7 +530,6 @@ class ScheduleJOptimizer:
                     qualified_farm_income=current_qualified_elected,
                     config=self.config)
                 sch_j_result = instance.calculate()
-
 
             results.append(sch_j_result.schedule_j_form)
 
