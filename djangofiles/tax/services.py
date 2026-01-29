@@ -250,8 +250,8 @@ class AdjustedTaxData:
         }
 
 class ScheduleJForm:
-    def __init__(self, long_form=False):
-        self.long_form = long_form
+    def __init__(self, show_full_sch_j_form=False):
+        self.show_full_sch_j_form = show_full_sch_j_form
 
         for n in range(1, 24):
             setattr(self, f"line_{n}", None)
@@ -267,7 +267,7 @@ class ScheduleJForm:
         del self.line_2c
 
     def to_dict(self):
-        if not self.long_form:
+        if not self.show_full_sch_j_form:
             return {
                 "elected_farm_income": self.line_2a,
                 "total_tax": self.line_23,
@@ -307,7 +307,7 @@ class ScheduleJForm:
         return fields
 
     def __str__(self):
-        if self.long_form:
+        if self.show_full_sch_j_form:
             result = self.to_dict()
             lines = [f"{key}: {value}" for key, value in result.items()]
             return "\n".join(lines)
@@ -406,7 +406,7 @@ class ScheduleJCalculation:
         self.qualified_farm_income = qualified_farm_income
         self.config = config if config is not None else ScheduleJConfig()
         self.adjusted_years = self._create_adjusted_years_map()
-        self.sch_j = ScheduleJForm(long_form=self.config.show_full_sch_j_form)
+        self.sch_j = ScheduleJForm(show_full_sch_j_form=self.config.show_full_sch_j_form)
 
         self._validate_inputs()
 
@@ -451,7 +451,6 @@ class ScheduleJCalculation:
         self._fill_form_with_adj_tax_results(tax_on_all_years_without_elected)
         self._readjust_taxable_income_for_elected()
 
-        # Fill in remainder of form
         self._fill_remainder_of_form()
 
         self.sch_j.tax_delta = self.sch_j.election_year_base_tax - self.sch_j.line_23
@@ -585,8 +584,8 @@ class ScheduleJOptimizer:
 
         self.income_increment = 500
         self.ordinary_farm_income = self.max_elected_farm_income - self.qualified_farm_income
-        self.show_all_years = self.config.show_all_tax_years
-        self.long_form = self.config.show_full_sch_j_form
+        self.show_all_tax_years = self.config.show_all_tax_years
+        self.show_full_sch_j_form = self.config.show_full_sch_j_form
 
         self._validate_inputs()
 
@@ -601,21 +600,6 @@ class ScheduleJOptimizer:
             raise ValueError("Number of tax years not equal to four")
 
     def run_optimization(self):
-        """
-        Run Schedule J Optimization by iterating through the max elected farm income until we get to 0.
-
-        Args:
-            elected_farm_income (Decimal): The maximum amount of farm income that can be elected to average
-            elected_farm_qualified (Decimal): The amount of elected income made up of capital gains
-            show_all_years (bool): True if you want ScheduleJResultContainer to return all AdjustedTaxData instances. Default is False.
-            long_form (bool): True if you want ScheduleJResultContainer to return all lines on ScheduleJForm. Default is False.
-
-        Returns:
-            results (list): A list of all ScheduleJForm objects that were calcualted
-            first instance (ScheduleJResultsContainer): Sch J instance with no elected farm income
-            last_instance (ScheduleJResultsContainer): Sch J instance with max elected farm income
-
-        """
         ordinary_income_percentage, qualified_income_percentage = self._calculate_income_proportions()
         self._handle_optimization_loop(ordinary_income_percentage, qualified_income_percentage)
 
@@ -643,10 +627,15 @@ class ScheduleJOptimizer:
 
             else:
                 # Truncated data show_all_years = False
-                instance = (ScheduleJCalculation(self.years, show_all_years=self.show_all_years, long_form=self.long_form)
-                            .schedule_j_calculation(current_total_elected, current_qualified_elected))
+                instance = ScheduleJCalculation(
+                    years=self.tax_years,
+                    elected_farm_income=current_total_elected,
+                    qualified_farm_income=current_qualified_elected,
+                    config=self.config)
+                sch_j_result = instance.calculate()
 
-            results.append(instance.schedule_j_form)
+
+            results.append(sch_j_result.schedule_j_form)
 
             current_total_elected -= 500
             current_ordinary_elected -= 500 * ordinary_income_percentage
@@ -662,17 +651,22 @@ class ScheduleJOptimizer:
         }
 
     def _handle_first_iteration(self, current_total_elected, current_qualified_elected):
-        calc_instance = ScheduleJCalculation(years=self.years,
+        first_year_config = self._create_sch_j_config_showing_all_years()
+        calc_instance = ScheduleJCalculation(years=self.tax_years,
                                             elected_farm_income=current_total_elected,
                                             qualified_farm_income=current_qualified_elected,
-                                            config=self.config)
+                                            config=first_year_config)
         first_iteration_results = calc_instance.calculate()
         return first_iteration_results
 
     def _handle_last_iteration(self, current_total_elected, current_qualified_elected):
-        calc_instance = ScheduleJCalculation(years=self.years,
+        last_year_config = self._create_sch_j_config_showing_all_years()
+        calc_instance = ScheduleJCalculation(years=self.tax_years,
                                             elected_farm_income=current_total_elected,
                                             qualified_farm_income=current_qualified_elected,
-                                            config=self.config)
+                                            config=last_year_config)
         last_iteration_results = calc_instance.calculate()
         return last_iteration_results
+
+    def _create_sch_j_config_showing_all_years(self) -> ScheduleJConfig:
+        return ScheduleJConfig(show_full_sch_j_form=False, show_all_tax_years=True)

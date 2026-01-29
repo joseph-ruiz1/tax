@@ -1,20 +1,23 @@
+from decimal import Decimal
+
 import pytest
 from calculation_cases import (
     BASIC_TAX_CALCULATION_INPUTS,
     EXPECTED_OUTPUT_SCHEDULE_J,
     EXPECTED_OUTPUTS_BASIC_TAX_CALC,
+    EXPECTED_OUTPUTS_FULL_SCH_J_CALC,
+    EXPECTED_OUTPUTS_OPTIMIZATION,
     EXPECTED_OUTPUTS_SORTED_YEARS,
-    EXPECTED_OUTPUTS_FULL_SCH_J_CALC
 )
 from tax.models import TaxDataSet, TaxYearData
 from tax.services import (
     IncomeDistributor,
     ScheduleJCalculation,
     ScheduleJConfig,
+    ScheduleJForm,
     ScheduleJOptimizer,
     TaxCalculation,
     find_bracket_thresholds,
-    ScheduleJForm
 )
 from tax.utils import sort_tax_years_list
 from utils.calculation_utils import (
@@ -76,7 +79,7 @@ class TestScheduleJTaxYearMapping:
     "inputs, expected",
     build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUT_SCHEDULE_J, "allocate_income"),
 )
-def test_income_allocation(create_models_for_test_cases, create_sch_j_instance, create_sch_j_config, inputs, expected):
+def test_income_allocation(create_models_for_test_cases, create_sch_j_instance, inputs, expected):
     distributor = IncomeDistributor(create_sch_j_instance(inputs).tax_years)
     distributor.distribute_all_elected_income()
 
@@ -123,4 +126,50 @@ def test_full_sch_j_calculation(create_models_for_test_cases, create_sch_j_insta
     for line, result in sch_j_form.items():
         assert round(result) == expected[line]
 
-    
+@pytest.mark.parametrize(
+        "inputs, expected",
+        build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_OPTIMIZATION, "income_proportion"),
+    )
+class TestOptimizationHelpers:
+    @pytest.fixture
+    def optimization_instance(self, create_optimization_instance, inputs):
+        return create_optimization_instance(inputs)
+
+    def test_sch_j_optimization_income_proportion(self, optimization_instance, expected):
+        ordinary_percentage, qualified_percentage = optimization_instance._calculate_income_proportions()
+
+        assert ordinary_percentage == expected["ordinary_percentage"]
+        assert qualified_percentage == expected["qualified_percentage"]
+
+    def test_sch_j_config_creation(self, optimization_instance, expected):
+        config_obj = optimization_instance._create_sch_j_config_showing_all_years()
+        assert not config_obj.show_full_sch_j_form
+        assert config_obj.show_all_tax_years
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_OPTIMIZATION, "first_and_last_instances"),
+)
+class TestFirstandLastInstance:
+    @pytest.fixture
+    def optimization_instance(self, create_optimization_instance, inputs):
+        return create_optimization_instance(inputs)
+
+    def test_first_instance(self, optimization_instance, expected):
+        max_elected_farm_income = optimization_instance.max_elected_farm_income
+        qualified_farm_income = optimization_instance.qualified_farm_income
+
+        sch_j_results = optimization_instance._handle_first_iteration(max_elected_farm_income, qualified_farm_income)
+
+        assert sch_j_results.show_all_tax_years
+        assert not sch_j_results.show_full_sch_j_form
+        assert round(sch_j_results.schedule_j_form.line_23) == expected["first_instance"]["line_23"]
+
+    def test_last_instance(self, optimization_instance, expected):
+        _ordinary_percentage, qualified_percentage = optimization_instance._calculate_income_proportions()
+
+        sch_j_results = optimization_instance._handle_last_iteration(Decimal(500), 500 * qualified_percentage)
+
+        assert sch_j_results.show_all_tax_years
+        assert not sch_j_results.show_full_sch_j_form
+        assert round(sch_j_results.schedule_j_form.line_23) == expected["last_instance"]["line_23"]

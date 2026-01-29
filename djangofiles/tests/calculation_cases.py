@@ -332,6 +332,91 @@ BASIC_TAX_CALCULATION_INPUTS = {
             },
         ],
     },
+
+    "optimization": {
+        "dataset": {"name": "optimization test", "max_elected_farm_income": 50000, "qualified_farm_income": 0, "election_year": "2024"},
+        "inputs": [
+            {
+                "year": 2024,
+                "filing_status": "MFJ",
+                "taxable_income": 110000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 50000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2023,
+                "filing_status": "MFJ",
+                "taxable_income": 70000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2022,
+                "filing_status": "MFJ",
+                "taxable_income": 65000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2021,
+                "filing_status": "MFJ",
+                "taxable_income": 72000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+        ],
+    },
+
+
+    "optimization_older_years": {
+        "dataset": {"name": "optimization test older years", "max_elected_farm_income": 50000, "qualified_farm_income": 25000, "election_year": "2022"},
+        "inputs": [
+            {
+                "year": 2022,
+                "filing_status": "MFJ",
+                "taxable_income": 110000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 50000,
+                "qualified_farm_income": 25000,
+            },
+            {
+                "year": 2021,
+                "filing_status": "MFJ",
+                "taxable_income": 70000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2020,
+                "filing_status": "MFJ",
+                "taxable_income": 65000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2019,
+                "filing_status": "MFJ",
+                "taxable_income": 72000,
+                "qualified_income": 0,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+        ],
+    }
 }
 
 EXPECTED_OUTPUTS_BASIC_TAX_CALC = {
@@ -463,5 +548,46 @@ EXPECTED_OUTPUTS_FULL_SCH_J_CALC = {
                 "election_year_base_tax": 6112,
                 "tax_delta": 700,
             },
+    },
+}
+
+EXPECTED_OUTPUTS_OPTIMIZATION = {
+    "income_proportion": {
+        "optimization": {
+            "ordinary_percentage": 1,
+            "qualified_percentage": 0,
+        },
+        "optimization_older_years": {
+            "ordinary_percentage": .5,
+            "qualified_percentage": .5,
+        },
+    },
+
+    "first_and_last_instances": {
+        "optimization": {
+            "first_instance": {
+                "line_23": 13331,
+            },
+            "last_instance": {
+                "line_23": 6813,
+            },
+        },
+        "optimization_older_years": {
+            "first_instance": {
+                "line_23": 14301,
+            },
+            "last_instance": {
+                "line_23": 10014,
+            },
+        },
+    },
+
+    "complete_optimization": {
+        "optimization" : {
+            "results": None,
+        },
+        "optimization_older_years" : {
+            "results": None,
+        },
     },
 }

@@ -5,7 +5,7 @@ import pytest
 from calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 from django.test import Client
 from tax.models import TaxDataSet, TaxYearData, User
-from tax.services import ScheduleJCalculation, ScheduleJConfig
+from tax.services import ScheduleJCalculation, ScheduleJConfig, ScheduleJOptimizer
 from tax.utils import sort_tax_years_list
 from utils.typing_utils import CalculationScenarioInput
 
@@ -118,3 +118,20 @@ def create_sch_j_instance(create_models_for_test_cases, create_sch_j_config):
             )
         return None
     return _create
+
+@pytest.fixture
+def create_optimization_instance(create_models_for_test_cases, create_sch_j_config):
+    def _create(inputs: CalculationScenarioInput, config: ScheduleJConfig = None):
+        if config is None:
+            config = create_sch_j_config()
+
+        for case, tax_years in create_models_for_test_cases([inputs]):
+            return ScheduleJOptimizer(
+                tax_years,
+                case["dataset_instance"].max_elected_farm_income,
+                case["dataset_instance"].qualified_farm_income,
+                config,
+            )
+        return None
+    return _create
+
