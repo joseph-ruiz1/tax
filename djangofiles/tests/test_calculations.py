@@ -150,7 +150,7 @@ class TestOptimizationHelpers:
     "inputs, expected",
     build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_OPTIMIZATION, "first_and_last_instances"),
 )
-class TestFirstandLastInstance:
+class TestFirstandLastInstances:
     @pytest.fixture
     def optimization_instance(self, create_optimization_instance, inputs):
         return create_optimization_instance(inputs)
