@@ -134,4 +134,3 @@ def create_optimization_instance(create_models_for_test_cases, create_sch_j_conf
             )
         return None
     return _create
-

@@ -173,3 +173,12 @@ class TestFirstandLastInstances:
         assert sch_j_results.show_all_tax_years
         assert not sch_j_results.show_full_sch_j_form
         assert round(sch_j_results.schedule_j_form.line_23) == expected["last_instance"]["line_23"]
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_OPTIMIZATION, "complete_optimization"),
+)
+def test_complete_optimization(inputs, expected, create_optimization_instance):
+    optimizer = create_optimization_instance(inputs)
+    results = optimizer.run_optimization()
+    print(len(results["optimization_results"]))

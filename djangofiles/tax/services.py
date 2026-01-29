@@ -314,7 +314,7 @@ class ScheduleJCalculation:
         year, tax_year_obj = next(iter(self.tax_years.items()))
         return year, tax_year_obj
 
-    def _create_adjusted_years_map(self) -> dict[str, AdjustedTaxData]:
+    def _create_adjusted_years_map(self) -> dict[str, TaxYearData]:
         adjusted_years_list = [copy.deepcopy(base) for base in self.tax_years.values()]
         return self._create_tax_years_map(adjusted_years_list)
 
@@ -439,7 +439,7 @@ class ScheduleJCalculation:
         self.sch_j.tax_delta = self.sch_j.election_year_base_tax - self.sch_j.line_23
 
 class IncomeDistributor:
-    def __init__(self, adjusted_years: dict[int, AdjustedTaxData]):
+    def __init__(self, adjusted_years: dict[int, TaxYearData]):
         self.adjusted_years = adjusted_years
 
     def distribute_all_elected_income(self):
@@ -497,7 +497,7 @@ class ScheduleJOptimizer:
 
     def run_optimization(self):
         ordinary_income_percentage, qualified_income_percentage = self._calculate_income_proportions()
-        self._handle_optimization_loop(ordinary_income_percentage, qualified_income_percentage)
+        return self._handle_optimization_loop(ordinary_income_percentage, qualified_income_percentage)
 
     def _calculate_income_proportions(self):
         ordinary_income_percentage = self.ordinary_farm_income / self.max_elected_farm_income
@@ -536,8 +536,8 @@ class ScheduleJOptimizer:
             current_total_elected -= 500
             current_ordinary_elected -= 500 * ordinary_income_percentage
             current_qualified_elected -= 500 * qualified_income_percentage
-            self.years[0].elected_farm_income -= 500 * ordinary_income_percentage
-            self.years[0].qualified_farm_income -= 500 * qualified_income_percentage
+            self.tax_years[0].elected_farm_income -= 500 * ordinary_income_percentage
+            self.tax_years[0].qualified_farm_income -= 500 * qualified_income_percentage
             iteration += 1
 
         return {
