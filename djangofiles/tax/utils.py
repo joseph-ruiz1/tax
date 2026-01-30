@@ -6,9 +6,8 @@ from rest_framework import serializers
 
 from .models import TaxDataSet, TaxYearData
 
-
 if TYPE_CHECKING:
-    from .services import OptimizationResults
+    from .services import ScheduleJResultsContainer
 
 def chunker(iterable, size):
     iterator = iter(iterable)
@@ -59,7 +58,9 @@ def update_calculations(dataset: TaxDataSet):
                                     config=config,
                                     ).run_optimization()
 
-    bracket_thresholds = handle_bracket_thresholds(optimization_results)
+    all_elected_instance = optimization_results.all_elected_instance
+    none_elected_instance = optimization_results.none_elected_instance
+    bracket_thresholds = handle_bracket_thresholds(all_elected_instance, none_elected_instance)
 
 
     return {
@@ -68,24 +69,21 @@ def update_calculations(dataset: TaxDataSet):
     }
 
 # Need to figure out services import
-def handle_bracket_thresholds(optimization_results: OptimizationResults):
+def handle_bracket_thresholds(all_elected_instance: ScheduleJResultsContainer, none_elected_instance: ScheduleJResultsContainer):
     from .services import find_bracket_thresholds
 
-    tax_years_with_max_elected = optimization_results.all_elected_instance
-    tax_years_with_none_elected = optimization_results.none_elected_instance
+    tax_years = none_elected_instance.tax_years  # Both instances will have same years/filing status
 
     bracket_thresholds = {}
-    for year, year_obj in tax_years_with_none_elected.tax_years.items():
-        all_elected_tax_year = tax_years_with_max_elected.tax_years[year]
-
-        max_elected_rate = tax_years_with_max_elected.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
-        none_elected_rate = tax_years_with_none_elected.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
-        rates = [max_elected_rate, none_elected_rate]
+    for year, year_obj in tax_years.items():
+        all_elected_rate = all_elected_instance.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
+        none_elected_rate = none_elected_instance.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
 
         bracket_thresholds[year] = find_bracket_thresholds(
             year=year,
             filing_status=year_obj.filing_status,
-            ordinary_rate_lowest=str(min(rates)),
-            ordinary_rate_highest=str(max(rates)),
+            ordinary_rate_lowest=str(min(all_elected_rate, none_elected_rate)),
+            ordinary_rate_highest=str(max(all_elected_rate, none_elected_rate)),
         )
+
     return bracket_thresholds

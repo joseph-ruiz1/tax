@@ -197,7 +197,10 @@ def test_update_calculations_entry(inputs, expected, create_models_for_test_case
     build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_BRACKET_THRESHOLDS, "bracket_thresholds"),
 )
 def test_bracket_thresholds(inputs, expected, run_optimization_instance):
-    test = run_optimization_instance(inputs)
-    results = handle_bracket_thresholds(test)
+    optimization_results = run_optimization_instance(inputs)
+    all_elected_instance = optimization_results.all_elected_instance
+    none_elected_instance = optimization_results.none_elected_instance
+    bracket_thresholds = handle_bracket_thresholds(all_elected_instance, none_elected_instance)
 
-    assert results == expected["brackets"]
+
+    assert bracket_thresholds == expected["brackets"]
