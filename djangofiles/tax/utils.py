@@ -1,10 +1,14 @@
 from itertools import islice
+from typing import TYPE_CHECKING
 
 from django.db import models
 from rest_framework import serializers
 
 from .models import TaxDataSet, TaxYearData
 
+
+if TYPE_CHECKING:
+    from .services import OptimizationResults
 
 def chunker(iterable, size):
     iterator = iter(iterable)
@@ -39,19 +43,21 @@ def sort_tax_years_list(years: list[TaxYearData]) -> list[TaxYearData]:
     return sorted_years
 
 def update_calculations(dataset: TaxDataSet):
-    from .services import ScheduleJOptimization, TaxCalculation
+    from .services import ScheduleJOptimizer, TaxCalculation, ScheduleJConfig
 
     sorted_years = sort_tax_years_list(dataset.tax_years.all())
 
     # Base Calculations and bracket finder
     for tax_year in sorted_years:
-        TaxCalculation(tax_year).calculate()
+        TaxCalculation(tax_year).calculate_total_tax()
         tax_year.save()
 
-    optimization_results = ScheduleJOptimization(sorted_years,
-                                    elected_farm_income=dataset.max_elected_farm_income,
-                                    elected_farm_qualified=dataset.qualified_farm_income,
-                                    ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+    config = ScheduleJConfig()
+    optimization_results = ScheduleJOptimizer(sorted_years,
+                                    max_elected_farm_income=dataset.max_elected_farm_income,
+                                    qualified_farm_income=dataset.qualified_farm_income,
+                                    config=config,
+                                    ).run_optimization()
 
     bracket_thresholds = handle_bracket_thresholds(optimization_results)
 
@@ -65,9 +71,9 @@ def update_calculations(dataset: TaxDataSet):
 def handle_bracket_thresholds(optimization_results: OptimizationResults):
     from .services import find_bracket_thresholds
 
-    tax_years_with_max_elected = optimization_results["all_elected"].tax_years
-    tax_years_with_none_elected = optimization_results["none_elected"].tax_years
-
+    tax_years_with_max_elected = optimization_results.all_elected_instance.schedule_j_form.taxable_ordinary_all_years
+    tax_years_with_none_elected = optimization_results.none_elected_instance.schedule_j_form.taxable_ordinary_all_years
+    print(tax_years_with_max_elected)
     bracket_thresholds = {}
     for year, none_elected_tax_year in tax_years_with_none_elected.items():
         all_elected_tax_year = tax_years_with_max_elected[year]

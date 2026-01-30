@@ -93,18 +93,18 @@ class DataSetViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "list":
             return TaxDataSetSerializer
-        if self.action in {"retrieve", "delete"}:
+        elif self.action in {"retrieve", "delete"}:
             return TaxDataSetDetailSerializer
-        if self.action == "create_step":
+        elif self.action == "create_step":
             return CreateCalculationSerializer
-        if self.action == "new_entry":
+        elif self.action == "new_entry":
             return CalculationEntrySerializer
-        if self.action == "results_get":
+        elif self.action == "results_get":
             return OutputSerializer
-        if self.action == "results_patch":
+        elif self.action == "results_patch":
             return CalculationEntrySerializer
-        return None
 
+        raise NotImplementedError(f"No serializer for action: {self.action}")
     @action(detail=False, methods=["post"], url_path="create")
     def create_step(self, request):
         """
@@ -128,7 +128,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["patch"], url_path="new")
-    def new_entry(self, request):
+    def new_entry(self, request, pk=None):
         """Save initial information submitted from data entry screen."""
         dataset = self.get_object()
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
@@ -146,8 +146,10 @@ class DataSetViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'], url_path="results")
-    def results_get(self, request):
+    def results_get(self, request, pk=None):
         """Fetch caulcation inputs and results."""
+        print(f"results_get called with pk={pk}, request={request}")
+        print(f"self.action = {self.action}")
         dataset = self.get_object()
         results = update_calculations(dataset)
         serializer = self.get_serializer(dataset,

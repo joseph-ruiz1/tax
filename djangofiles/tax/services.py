@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from .calculations import tax_brackets
 from .models import TaxYearData, TaxYearStructure
-from .utils import validate_years_are_in_order
 
 
 class TaxCalculationResult:
@@ -156,6 +155,7 @@ class ScheduleJForm:
             setattr(self, f"line_2{i}", None)
         self.election_year_base_tax = None
         self.tax_delta = None
+        self.taxable_ordinary_all_years = {}
 
         self.delete_extraneous_lines()
 
@@ -354,8 +354,9 @@ class ScheduleJCalculation:
         self.sch_j.tax_delta = self.sch_j.election_year_base_tax - self.sch_j.line_23
 
         # Get ordinary income for each year for bracket threshold graph
-        self.sch_j.taxable_ordinary_all_years = {year: int(y.taxable_ordinary) for year, y in self.adjusted_years.items()}
-
+        self.sch_j.taxable_ordinary_all_years["taxable_ordinary"] = {year: int(y.taxable_ordinary) for year, y in self.adjusted_years.items()}
+        self.sch_j.taxable_ordinary_all_years["ordinary_rate"] = None
+        print(tax_on_all_years)
         return ScheduleJResultsContainer(
             schedule_j_form=self.sch_j,
             elected_farm_income=self.elected_farm_income,
@@ -494,6 +495,8 @@ class ScheduleJOptimizer:
         self._validate_inputs()
 
     def _validate_inputs(self):
+        from .utils import validate_years_are_in_order
+
         if not isinstance(self.max_elected_farm_income, Decimal):
             raise TypeError("Not a Decimal")
         if not isinstance(self.qualified_farm_income, Decimal):
