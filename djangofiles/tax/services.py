@@ -340,6 +340,8 @@ class ScheduleJCalculation:
         # Calculate tax with elected income factored in: lines (7,8), (11,12), (15,16)
         tax_on_all_years = self._calculate_tax_on_all_years()
         self._fill_form_with_tax_results(tax_on_all_years)
+        # Get ordinary income for each year for bracket threshold graph
+        self.sch_j.taxable_ordinary_results = tax_on_all_years
 
         # Remove the election year's elected income since that income gets distributed in the IncomeDistributor
         # Need to remove that income so we can calculate the base tax without the election year's elected income factored in (lines 19, 20, 21)
@@ -353,10 +355,6 @@ class ScheduleJCalculation:
 
         self.sch_j.tax_delta = self.sch_j.election_year_base_tax - self.sch_j.line_23
 
-        # Get ordinary income for each year for bracket threshold graph
-        self.sch_j.taxable_ordinary_all_years["taxable_ordinary"] = {year: int(y.taxable_ordinary) for year, y in self.adjusted_years.items()}
-        self.sch_j.taxable_ordinary_all_years["ordinary_rate"] = None
-        print(tax_on_all_years)
         return ScheduleJResultsContainer(
             schedule_j_form=self.sch_j,
             elected_farm_income=self.elected_farm_income,
@@ -379,7 +377,7 @@ class ScheduleJCalculation:
         for year, (income_line, tax_line) in year_to_lines.items():
             if year in results:
                 taxable_income = self.adjusted_years[year].taxable_income
-                total_tax = results[year]
+                total_tax = results[year]["total_tax"]
                 setattr(self.sch_j, income_line, taxable_income)
                 setattr(self.sch_j, tax_line, total_tax)
 
@@ -388,7 +386,10 @@ class ScheduleJCalculation:
         tax_on_all_years = {}
         for year, year_obj in self.adjusted_years.items():
             result = TaxCalculation(year_obj).calculate_total_tax()
-            tax_on_all_years[year] = result.total_tax
+            tax_on_all_years[year] = {
+                "total_tax": result.total_tax,
+                "ordinary_rate": result.ordinary_rate,
+            }
         return tax_on_all_years
 
     def _fill_form_with_tax_results(self, tax_on_all_years: dict[int, Decimal]):
@@ -507,7 +508,7 @@ class ScheduleJOptimizer:
             raise ValueError("Number of tax years not equal to four")
         validate_years_are_in_order(self.tax_years)
 
-    def run_optimization(self):
+    def run_optimization(self) -> OptimizationResults:
         ordinary_income_percentage, qualified_income_percentage = self._calculate_income_proportions()
         return self._handle_optimization_loop(ordinary_income_percentage, qualified_income_percentage)
 

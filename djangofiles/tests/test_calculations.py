@@ -19,7 +19,7 @@ from tax.services import (
     TaxCalculation,
     find_bracket_thresholds,
 )
-from tax.utils import sort_tax_years_list
+from tax.utils import sort_tax_years_list, update_calculations
 from utils.calculation_utils import (
     _run_sch_j_tax_assignment,
     build_test_cases,
@@ -181,3 +181,11 @@ class TestFirstandLastInstances:
 def test_complete_optimization(inputs, expected, create_optimization_instance):
     optimizer = create_optimization_instance(inputs)
     results = optimizer.run_optimization()
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_OPTIMIZATION, "complete_optimization"),
+)
+def test_update_calculations_entry(inputs, expected, create_models_for_test_cases):
+    for case, years in create_models_for_test_cases([inputs]):
+        update_calculations(case["dataset_instance"])
