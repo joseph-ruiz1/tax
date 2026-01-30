@@ -6,6 +6,7 @@ from .calculations import tax_brackets
 from .models import TaxYearData, TaxYearStructure
 from .utils import validate_years_are_in_order
 
+
 class TaxCalculationResult:
     def __init__(self, ordinary_tax: Decimal, qualified_tax: Decimal,
                  total_tax: Decimal, ordinary_rate: Decimal, lower_ordinary_bound: Decimal,
@@ -353,7 +354,7 @@ class ScheduleJCalculation:
         self.sch_j.tax_delta = self.sch_j.election_year_base_tax - self.sch_j.line_23
 
         # Get ordinary income for each year for bracket threshold graph
-        # sch_j.taxable_ordinary_all_years = {year: int(y.taxable_ordinary) for year, y in all_adjusted_years.items()}
+        self.sch_j.taxable_ordinary_all_years = {year: int(y.taxable_ordinary) for year, y in self.adjusted_years.items()}
 
         return ScheduleJResultsContainer(
             schedule_j_form=self.sch_j,

@@ -39,7 +39,7 @@ def sort_tax_years_list(years: list[TaxYearData]) -> list[TaxYearData]:
     return sorted_years
 
 def update_calculations(dataset: TaxDataSet):
-    from .services import ScheduleJOptimization, TaxCalculation, find_bracket_thresholds
+    from .services import ScheduleJOptimization, TaxCalculation
 
     sorted_years = sort_tax_years_list(dataset.tax_years.all())
 
@@ -53,11 +53,22 @@ def update_calculations(dataset: TaxDataSet):
                                     elected_farm_qualified=dataset.qualified_farm_income,
                                     ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
 
+    bracket_thresholds = handle_bracket_thresholds(optimization_results)
+
+
+    return {
+        "optimization": optimization_results["optimization_results"],
+        "bracket_thresholds": bracket_thresholds,
+    }
+
+# Need to figure out services import
+def handle_bracket_thresholds(optimization_results: OptimizationResults):
+    from .services import find_bracket_thresholds
+
     tax_years_with_max_elected = optimization_results["all_elected"].tax_years
     tax_years_with_none_elected = optimization_results["none_elected"].tax_years
 
     bracket_thresholds = {}
-    # Set up structure for find_bracket_thresholds() and iterate through each year
     for year, none_elected_tax_year in tax_years_with_none_elected.items():
         all_elected_tax_year = tax_years_with_max_elected[year]
 
@@ -69,8 +80,3 @@ def update_calculations(dataset: TaxDataSet):
             ordinary_rate_lowest=str(min(rates)),
             ordinary_rate_highest=str(max(rates)),
         )
-
-    return {
-        "optimization": optimization_results["optimization_results"],
-        "bracket_thresholds": bracket_thresholds,
-    }
