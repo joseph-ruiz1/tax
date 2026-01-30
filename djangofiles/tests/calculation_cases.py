@@ -416,7 +416,91 @@ BASIC_TAX_CALCULATION_INPUTS = {
                 "qualified_farm_income": 0,
             },
         ],
-    }
+    },
+
+    "varied_income": {
+        "dataset": {"name": "varied income for bracket thresholds", "max_elected_farm_income": 50000, "qualified_farm_income": 25000, "election_year": "2022"},
+        "inputs": [
+            {
+                "year": 2024,
+                "filing_status": "MFJ",
+                "taxable_income": 120000,
+                "qualified_income": 15000,
+                "is_electing": True,
+                "elected_farm_income": 10000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2023,
+                "filing_status": "MFJ",
+                "taxable_income": 85000,
+                "qualified_income": 10000,
+                "is_electing": True,
+                "elected_farm_income": 20000,
+                "qualified_farm_income": 1000,
+            },
+            {
+                "year": 2022,
+                "filing_status": "single",
+                "taxable_income": 55000,
+                "qualified_income": 4000,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2021,
+                "filing_status": "MFJ",
+                "taxable_income": 496000,
+                "qualified_income": 45000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+        ],
+    },
+
+    "varied_income_older_years": {
+        "dataset": {"name": "varied income for bracket thresholds", "max_elected_farm_income": 10000, "qualified_farm_income": 0, "election_year": "2023"},
+        "inputs": [
+            {
+                "year": 2021,
+                "filing_status": "MFJ",
+                "taxable_income": 120000,
+                "qualified_income": 1000,
+                "is_electing": True,
+                "elected_farm_income": 10000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2020,
+                "filing_status": "MFJ",
+                "taxable_income": 185000,
+                "qualified_income": 5000,
+                "is_electing": True,
+                "elected_farm_income": 20000,
+                "qualified_farm_income": 1000,
+            },
+            {
+                "year": 2019,
+                "filing_status": "single",
+                "taxable_income": 335000,
+                "qualified_income": 4000,
+                "is_electing": True,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2018,
+                "filing_status": "MFJ",
+                "taxable_income": 96000,
+                "qualified_income": 5000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+        ],
+    },
 }
 
 EXPECTED_OUTPUTS_BASIC_TAX_CALC = {
@@ -588,6 +672,25 @@ EXPECTED_OUTPUTS_OPTIMIZATION = {
         },
         "optimization_older_years" : {
             "results": None,
+        },
+    },
+}
+
+EXPECTED_OUTPUTS_BRACKET_THRESHOLDS = {
+    "bracket_thresholds": {
+        "varied_income": {
+            "brackets": {
+                2024: {"0.12": 23201, "0.22": 94301, "0.24": 201051},
+                2023: {"0.10": 0, "0.12": 22001, "0.22": 89451},
+                2022: {"0.12": 10276, "0.22": 41776, "0.24": 89076},
+                2021: {"0.32": 329851, "0.35": 418851, "0.37": 628301}},
+        },
+        "varied_income_older_years": {
+            "brackets": {
+                2021: {"0.12": 19901, "0.22": 81051, "0.24": 172751},
+                2020: {"0.12": 19751, "0.22": 80251, "0.24": 171051},
+                2019: {"0.32": 160726, "0.35": 204101, "0.37": 510301},
+                2018: {"0.12": 19051, "0.22": 77401, "0.24": 165001}},
         },
     },
 }

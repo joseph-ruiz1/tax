@@ -5,6 +5,7 @@ from calculation_cases import (
     BASIC_TAX_CALCULATION_INPUTS,
     EXPECTED_OUTPUT_SCHEDULE_J,
     EXPECTED_OUTPUTS_BASIC_TAX_CALC,
+    EXPECTED_OUTPUTS_BRACKET_THRESHOLDS,
     EXPECTED_OUTPUTS_FULL_SCH_J_CALC,
     EXPECTED_OUTPUTS_OPTIMIZATION,
     EXPECTED_OUTPUTS_SORTED_YEARS,
@@ -19,7 +20,7 @@ from tax.services import (
     TaxCalculation,
     find_bracket_thresholds,
 )
-from tax.utils import sort_tax_years_list, update_calculations
+from tax.utils import sort_tax_years_list, update_calculations, handle_bracket_thresholds
 from utils.calculation_utils import (
     _run_sch_j_tax_assignment,
     build_test_cases,
@@ -188,4 +189,15 @@ def test_complete_optimization(inputs, expected, create_optimization_instance):
 )
 def test_update_calculations_entry(inputs, expected, create_models_for_test_cases):
     for case, years in create_models_for_test_cases([inputs]):
-        update_calculations(case["dataset_instance"])
+        results = update_calculations(case["dataset_instance"])
+        print(results["bracket_thresholds"])
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_BRACKET_THRESHOLDS, "bracket_thresholds"),
+)
+def test_bracket_thresholds(inputs, expected, run_optimization_instance):
+    test = run_optimization_instance(inputs)
+    results = handle_bracket_thresholds(test)
+
+    assert results == expected["brackets"]

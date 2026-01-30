@@ -5,7 +5,12 @@ import pytest
 from calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 from django.test import Client
 from tax.models import TaxDataSet, TaxYearData, User
-from tax.services import ScheduleJCalculation, ScheduleJConfig, ScheduleJOptimizer
+from tax.services import (
+    OptimizationResults,
+    ScheduleJCalculation,
+    ScheduleJConfig,
+    ScheduleJOptimizer,
+)
 from tax.utils import sort_tax_years_list
 from utils.typing_utils import CalculationScenarioInput
 
@@ -134,3 +139,10 @@ def create_optimization_instance(create_models_for_test_cases, create_sch_j_conf
             )
         return None
     return _create
+
+@pytest.fixture
+def run_optimization_instance(create_optimization_instance) -> OptimizationResults:
+    def _run(inputs: CalculationScenarioInput, config: ScheduleJConfig = None):
+        instance = create_optimization_instance(inputs, config)
+        return instance.run_optimization()
+    return _run

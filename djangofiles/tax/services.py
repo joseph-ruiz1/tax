@@ -155,7 +155,7 @@ class ScheduleJForm:
             setattr(self, f"line_2{i}", None)
         self.election_year_base_tax = None
         self.tax_delta = None
-        self.taxable_ordinary_all_years = {}
+        self.taxable_ordinary_results  = {}
 
         self.delete_extraneous_lines()
 
