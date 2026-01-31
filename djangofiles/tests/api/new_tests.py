@@ -1,14 +1,6 @@
 import pytest
 from tax.models import TaxDataSet, TaxYearData, User
-from tax.services import (
-    IncomeDistributor,
-    ScheduleJCalculation,
-    ScheduleJConfig,
-    ScheduleJOptimizer,
-    TaxCalculation,
-    find_bracket_thresholds,
-)
-from tax.utils import sort_tax_years_list
+from sample_user_data import CREDENTIALS
 
 
 @pytest.mark.django_db
@@ -28,8 +20,6 @@ class TestUserModel:
         actual_ids = [user.id for user in users]
         assert actual_ids == expected_ids
 
-CREDENTIALS = [
-            ("test1", "testing123"),
-            ("test2", "testing321"),
-            ("test3", "testing213"),
-        ]
+@pytest.mark.django_db
+def test_create_user(api_client, test_user) -> None:
+    response_create = api_client.post("/api/")
