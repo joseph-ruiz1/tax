@@ -1,7 +1,12 @@
 import pytest
 from rest_framework import status
-from sample_user_data import CREDENTIALS, SAMPLE_USER_DATA, SAMPLE_USER_DATA_NO_CONFIRMATION
+from sample_user_data import (
+    CREDENTIALS,
+    SAMPLE_USER_DATA,
+    SAMPLE_USER_DATA_NO_CONFIRMATION,
+)
 from tax.models import TaxDataSet, TaxYearData, User
+from tax.serializers import DEFAULT_ELECTION_YEAR
 
 
 @pytest.mark.django_db
@@ -35,6 +40,10 @@ class BaseAPITest:
         assert response.status_code == expected_status
 
     @staticmethod
+    def assert_failed_creation(response, expected_status=status.HTTP_403_FORBIDDEN):
+        assert response.status_code == expected_status
+
+    @staticmethod
     def assert_field_failure(response, failed_field, failure_message, failure_numer=0):
         error = response.data["errors"][failed_field][failure_numer]
         assert error.title() == failure_message
@@ -44,19 +53,19 @@ class TestAuthViewSet(BaseAPITest):
     def test_regular_user_creation(self, api_client):
         response = api_client.post(
             "/tax/api/auth/register/",
-            data=SAMPLE_USER_DATA,
+            data=SAMPLE_USER_DATA["user_1"],
             format="json",
             follow=True)
         self.assert_successful_creation(response)
 
-        user = User.objects.get(username=SAMPLE_USER_DATA["username"])
+        user = User.objects.get(username=SAMPLE_USER_DATA["user_1"]["username"])
 
         assert user.is_authenticated
 
-    def test_register_duplicate_username(self, api_client, user):
+    def test_register_duplicate_username(self, api_client, test_user):
         response = api_client.post(
             "/tax/api/auth/register/",
-            data=SAMPLE_USER_DATA,
+            data=SAMPLE_USER_DATA["user_1"],
             format="json",
             follow=True,
         )
@@ -76,7 +85,7 @@ class TestAuthViewSet(BaseAPITest):
     def test_register_no_confirmation(self, api_client):
         response = api_client.post(
             "/tax/api/auth/register/",
-            data=SAMPLE_USER_DATA_NO_CONFIRMATION,
+            data=SAMPLE_USER_DATA_NO_CONFIRMATION["user_1"],
             format="json",
             follow=True,
         )
@@ -84,32 +93,32 @@ class TestAuthViewSet(BaseAPITest):
         self.assert_field_failure(response, "password_confirm", "This Field Is Required.")
 
 
-    def test_login(self, api_client, user):
+    def test_login(self, api_client, test_user):
         response = api_client.post(
             "/tax/api/auth/login/",
-            data=SAMPLE_USER_DATA_NO_CONFIRMATION,
+            data=SAMPLE_USER_DATA_NO_CONFIRMATION["user_1"],
             format="json",
             follow=True,
         )
         self.assert_successful_response(response)
         assert response.data["message"] == "Login successful"
 
-    def test_invalid_login(self, api_client, user):
+    def test_invalid_login(self, api_client, test_user):
         response = api_client.post(
             "/tax/api/auth/login/",
-            data={"username": SAMPLE_USER_DATA["username"], "password": "incorrect"},
+            data={"username": SAMPLE_USER_DATA["user_1"]["username"], "password": "incorrect"},
             format="json",
             follow=True,
         )
         self.assert_failed_response(response)
         self.assert_field_failure(response, "non_field_errors", "Invalid Credentials")
 
-    def test_logout(self, authenticated_client, user):
+    def test_logout(self, authenticated_client, test_user):
         response = authenticated_client.post("/tax/api/auth/logout/")
         self.assert_successful_response(response)
         assert response.data["message"] == "Logout successful"
 
-    def test_check_auth(self, authenticated_client, user):
+    def test_check_auth(self, authenticated_client, test_user):
         response = authenticated_client.get("/tax/api/auth/check/")
         self.assert_successful_response(response)
         assert response.data["authenticated"] is True
@@ -128,7 +137,23 @@ class TestDataSetViewSet(BaseAPITest):
             format="json",
         )
         self.assert_successful_creation(response)
+
         dataset = TaxDataSet.objects.get(id=response.data["dataset_id"])
         assert TaxDataSet.objects.filter(id=dataset.id).exists()
+        assert dataset.election_year == DEFAULT_ELECTION_YEAR
 
-        assert dataset.election_year == "2024"
+    def test_create_dataset_unauthenticated(self, api_client):
+        response = api_client.post(
+            "/tax/api/datasets/create/",
+            data={},
+            format="json",
+        )
+        self.assert_failed_creation(response)
+
+    def test_list_datasets(self, authenticated_client, datasets):
+        response = authenticated_client.get("/tax/api/datasets/")
+        self.assert_successful_response(response)
+        assert len(response.data) == len(datasets)
+
+    def test_list_datasets_filter_by_user(self, authenticated_client, authenticated_client_2, datasets):
+        user_2_dataset = authenticated_client_2

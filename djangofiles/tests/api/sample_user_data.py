@@ -5,12 +5,25 @@ CREDENTIALS = [
 ]
 
 SAMPLE_USER_DATA = {
-    "username": "testuser",
-    "password": "securePassword123",
-    "password_confirm": "securePassword123",
+    "user_1": {
+        "username": "testuser",
+        "password": "securePassword123",
+        "password_confirm": "securePassword123",
+    },
+    "user_2": {
+        "username": "testuser2",
+        "password": "securePassword123",
+        "password_confirm": "securePassword123",
+    }
 }
 
 SAMPLE_USER_DATA_NO_CONFIRMATION = {
-    "username": "testuser",
-    "password": "securePassword123",
+    "user_1": {
+        "username": "testuser",
+        "password": "securePassword123",
+    },
+    "user_2": {
+        "username": "testuser2",
+        "password": "securePassword123",
+    },
 }

@@ -9,7 +9,7 @@ from .models import FILING_STATUS, TaxDataSet, TaxYearData
 from .utils import validate_only_four_tax_years
 
 VALID_YEARS_LIST = ["2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018"]
-DEFAULT_YEAR = "2024"
+DEFAULT_ELECTION_YEAR = "2024"
 
 class UserSerializer(serializers.ModelSerializer):
     datasets = serializers.PrimaryKeyRelatedField(many=True, queryset=TaxDataSet.objects.all())
@@ -140,8 +140,7 @@ class TaxDataSetDetailSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Validate the years only go to 2018."""
-        current_year = DEFAULT_YEAR
-         # MIGHT BE BUGGY SINCE TESTING AS STR, DOING YEAR +1 INSTEAD OF YEAR -1
+        current_year = DEFAULT_ELECTION_YEAR
         for i, year in enumerate(data["tax_years"]):
             if str(year["year"]) != str(current_year):
                 msg = f"Year error. {year['year']} not valid."
@@ -162,7 +161,7 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         dataset = TaxDataSet.objects.create(**validated_data)
         # Create 4 blank years
-        new_year_obj_list = [TaxYearData.objects.create(dataset=dataset, year=int(DEFAULT_YEAR)-i) for i in range(4)]
+        new_year_obj_list = [TaxYearData.objects.create(dataset=dataset, year=int(DEFAULT_ELECTION_YEAR)-i) for i in range(4)]
         # First year has is_electing = True
         new_year_obj_list[0].is_electing = True
         return dataset
