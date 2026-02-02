@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from sample_user_data import CREDENTIALS, SAMPLE_USER_DATA
+from sample_user_data import CREDENTIALS, SAMPLE_USER_DATA, SAMPLE_USER_DATA_NO_CONFIRMATION
 from tax.models import TaxDataSet, TaxYearData, User
 
 
@@ -52,7 +52,7 @@ class TestAuthViewSet(BaseAPITest):
 
         assert user.is_authenticated
 
-    def test_duplicate_username(self, api_client, user):
+    def test_register_duplicate_username(self, api_client, user):
         response = api_client.post(
             "/tax/api/auth/register/",
             data=SAMPLE_USER_DATA,
@@ -62,3 +62,51 @@ class TestAuthViewSet(BaseAPITest):
         self.assert_failed_response(response)
         error = response.data["errors"]["username"]
         assert error[0].title() == "A User With That Username Already Exists."
+
+    def test_register_no_password(self, api_client):
+        response = api_client.post(
+            "/tax/api/auth/register/",
+            data={"username": "test"},
+            format="json",
+            follow=True,
+        )
+        self.assert_failed_response(response)
+        error = response.data["errors"]["password"]
+        assert error[0].title() == "This Field Is Required."
+
+    def test_register_no_confirmation(self, api_client):
+        response = api_client.post(
+            "/tax/api/auth/register/",
+            data=SAMPLE_USER_DATA_NO_CONFIRMATION,
+            format="json",
+            follow=True,
+        )
+        self.assert_failed_response(response)
+        error = response.data["errors"]["password_confirm"]
+        assert error[0].title() == "This Field Is Required."
+
+    def test_login(self, api_client, user):
+        response = api_client.post(
+            "/tax/api/auth/login/",
+            data=SAMPLE_USER_DATA_NO_CONFIRMATION,
+            format="json",
+            follow=True,
+        )
+        self.assert_successful_response(response)
+        assert response.data["message"] == "Login successful"
+
+    def test_invalid_login(self, api_client, user):
+        response = api_client.post(
+            "/tax/api/auth/login/",
+            data={"username": SAMPLE_USER_DATA["username"], "password": "incorrect"},
+            format="json",
+            follow=True,
+        )
+        self.assert_failed_response(response)
+        error = response.data["errors"]["non_field_errors"]
+        assert error[0].title() == "Invalid Credentials"
+
+    def test_logout(self, authenticated_client, user):
+        response = authenticated_client.post("/tax/api/auth/logout/")
+        self.assert_successful_response(response)
+        assert response.data["message"] == "Logout successful"

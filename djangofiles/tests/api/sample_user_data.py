@@ -9,3 +9,8 @@ SAMPLE_USER_DATA = {
     "password": "securePassword123",
     "password_confirm": "securePassword123",
 }
+
+SAMPLE_USER_DATA_NO_CONFIRMATION = {
+    "username": "testuser",
+    "password": "securePassword123",
+}
