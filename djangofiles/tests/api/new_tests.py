@@ -40,10 +40,6 @@ class BaseAPITest:
         assert error.title() == failure_message
 
 @pytest.mark.django_db
-def test_create_user(api_client, test_user) -> None:
-    response_create = api_client.post("/tax/api/")
-
-@pytest.mark.django_db
 class TestAuthViewSet(BaseAPITest):
     def test_regular_user_creation(self, api_client):
         response = api_client.post(
@@ -122,3 +118,17 @@ class TestAuthViewSet(BaseAPITest):
         response = api_client.get("/tax/api/auth/check/")
         self.assert_successful_response(response)
         assert response.data["authenticated"] is False
+
+
+class TestDataSetViewSet(BaseAPITest):
+    def test_create_dataset(self, authenticated_client):
+        response = authenticated_client.post(
+            "/tax/api/datasets/create/",
+            data={},
+            format="json",
+        )
+        self.assert_successful_creation(response)
+        dataset = TaxDataSet.objects.get(id=response.data["dataset_id"])
+        assert TaxDataSet.objects.filter(id=dataset.id).exists()
+
+        assert dataset.election_year == "2024"
