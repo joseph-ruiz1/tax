@@ -155,5 +155,25 @@ class TestDataSetViewSet(BaseAPITest):
         self.assert_successful_response(response)
         assert len(response.data) == len(datasets)
 
-    def test_list_datasets_filter_by_user(self, authenticated_client, authenticated_client_2, datasets):
-        user_2_dataset = authenticated_client_2
+    def test_list_datasets_filter_by_user(self, authenticated_client, test_user_2, datasets, create_empty_dataset):
+        create_empty_dataset(test_user_2)
+
+        response = authenticated_client.get("/tax/api/datasets/")
+        self.assert_successful_response(response)
+        assert len(response.data) == len(datasets)
+
+    def test_retrieve_dataset(self, authenticated_client, dataset):
+        response = authenticated_client.get(f"/tax/api/datasets/{dataset.id}/")
+        self.assert_successful_response(response)
+        assert response.data["id"] == 1
+
+    def test_retrieve_invalid_dataset(self, authenticated_client, test_user_2, create_empty_dataset):
+        dataset = create_empty_dataset(test_user_2)
+        response = authenticated_client.get(f"/tax/api/datasets/{dataset.id}/")
+        # Keeping 404 error instead of 403 or 401 could be better for security, but perhaps not debugging
+        # https://auth0.com/blog/forbidden-unauthorized-http-status-codes/#:~:text=Don%27t%20let%20the%20client%20know
+        self.assert_failed_response(response, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_dataset(self, authenticated_client, dataset):
+        response = authenticated_client.delete(f"/tax/api/datasets/{dataset.id}/")
+        assert response.status_code == status.HTTP_204_NO_CONTENT

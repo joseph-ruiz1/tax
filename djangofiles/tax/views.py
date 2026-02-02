@@ -148,8 +148,6 @@ class DataSetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path="results")
     def results_get(self, request, pk=None):
         """Fetch caulcation inputs and results."""
-        print(f"results_get called with pk={pk}, request={request}")
-        print(f"self.action = {self.action}")
         dataset = self.get_object()
         results = update_calculations(dataset)
         serializer = self.get_serializer(dataset,

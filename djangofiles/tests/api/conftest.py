@@ -32,8 +32,13 @@ def create_empty_dataset():
         dataset = TaxDataSet.objects.create(user=user)
         for year in range(election_year - 3, election_year + 1):
             TaxYearData.objects.create(dataset=dataset, year=year)
+        dataset.save()
         return dataset
     return _create
+
+@pytest.fixture
+def dataset(test_user, create_empty_dataset):
+    return create_empty_dataset(user=test_user)
 
 @pytest.fixture
 def datasets(test_user, create_empty_dataset):
