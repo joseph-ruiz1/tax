@@ -7,5 +7,5 @@ CREDENTIALS = [
 SAMPLE_USER_DATA = {
     "username": "testuser",
     "password": "securePassword123",
-    "email": "test@example.com",
+    "password_confirm": "securePassword123",
 }

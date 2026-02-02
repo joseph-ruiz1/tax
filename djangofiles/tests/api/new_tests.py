@@ -1,6 +1,7 @@
 import pytest
+from rest_framework import status
+from sample_user_data import CREDENTIALS, SAMPLE_USER_DATA
 from tax.models import TaxDataSet, TaxYearData, User
-from sample_user_data import CREDENTIALS
 
 
 @pytest.mark.django_db
@@ -20,6 +21,44 @@ class TestUserModel:
         actual_ids = [user.id for user in users]
         assert actual_ids == expected_ids
 
+class BaseAPITest:
+    @staticmethod
+    def assert_successful_response(response, expected_status=status.HTTP_200_OK):
+        assert response.status_code == expected_status
+
+    @staticmethod
+    def assert_successful_creation(response, expected_status=status.HTTP_201_CREATED):
+        assert response.status_code == expected_status
+
+    @staticmethod
+    def assert_failed_response(response, expected_status=status.HTTP_400_BAD_REQUEST):
+        assert response.status_code == expected_status
+
 @pytest.mark.django_db
 def test_create_user(api_client, test_user) -> None:
-    response_create = api_client.post("/api/")
+    response_create = api_client.post("/tax/api/")
+
+@pytest.mark.django_db
+class TestAuthViewSet(BaseAPITest):
+    def test_regular_user_creation(self, api_client):
+        response = api_client.post(
+            "/tax/api/auth/register/",
+            data=SAMPLE_USER_DATA,
+            format="json",
+            follow=True)
+        self.assert_successful_creation(response)
+
+        user = User.objects.get(username=SAMPLE_USER_DATA["username"])
+
+        assert user.is_authenticated
+
+    def test_duplicate_username(self, api_client, user):
+        response = api_client.post(
+            "/tax/api/auth/register/",
+            data=SAMPLE_USER_DATA,
+            format="json",
+            follow=True,
+        )
+        self.assert_failed_response(response)
+        error = response.data["errors"]["username"]
+        assert error[0].title() == "A User With That Username Already Exists."
