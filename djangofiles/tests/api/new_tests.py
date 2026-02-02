@@ -112,3 +112,13 @@ class TestAuthViewSet(BaseAPITest):
         response = authenticated_client.post("/tax/api/auth/logout/")
         self.assert_successful_response(response)
         assert response.data["message"] == "Logout successful"
+
+    def test_check_auth(self, authenticated_client, user):
+        response = authenticated_client.get("/tax/api/auth/check/")
+        self.assert_successful_response(response)
+        assert response.data["authenticated"] is True
+
+    def test_check_unauthenticated(self, api_client):
+        response = api_client.get("/tax/api/auth/check/")
+        self.assert_successful_response(response)
+        assert response.data["authenticated"] is False
