@@ -34,6 +34,11 @@ class BaseAPITest:
     def assert_failed_response(response, expected_status=status.HTTP_400_BAD_REQUEST):
         assert response.status_code == expected_status
 
+    @staticmethod
+    def assert_field_failure(response, failed_field, failure_message, failure_numer=0):
+        error = response.data["errors"][failed_field][failure_numer]
+        assert error.title() == failure_message
+
 @pytest.mark.django_db
 def test_create_user(api_client, test_user) -> None:
     response_create = api_client.post("/tax/api/")
@@ -60,8 +65,7 @@ class TestAuthViewSet(BaseAPITest):
             follow=True,
         )
         self.assert_failed_response(response)
-        error = response.data["errors"]["username"]
-        assert error[0].title() == "A User With That Username Already Exists."
+        self.assert_field_failure(response, "username", "A User With That Username Already Exists.")
 
     def test_register_no_password(self, api_client):
         response = api_client.post(
@@ -71,8 +75,7 @@ class TestAuthViewSet(BaseAPITest):
             follow=True,
         )
         self.assert_failed_response(response)
-        error = response.data["errors"]["password"]
-        assert error[0].title() == "This Field Is Required."
+        self.assert_field_failure(response, "password", "This Field Is Required.")
 
     def test_register_no_confirmation(self, api_client):
         response = api_client.post(
@@ -82,8 +85,8 @@ class TestAuthViewSet(BaseAPITest):
             follow=True,
         )
         self.assert_failed_response(response)
-        error = response.data["errors"]["password_confirm"]
-        assert error[0].title() == "This Field Is Required."
+        self.assert_field_failure(response, "password_confirm", "This Field Is Required.")
+
 
     def test_login(self, api_client, user):
         response = api_client.post(
@@ -103,8 +106,7 @@ class TestAuthViewSet(BaseAPITest):
             follow=True,
         )
         self.assert_failed_response(response)
-        error = response.data["errors"]["non_field_errors"]
-        assert error[0].title() == "Invalid Credentials"
+        self.assert_field_failure(response, "non_field_errors", "Invalid Credentials")
 
     def test_logout(self, authenticated_client, user):
         response = authenticated_client.post("/tax/api/auth/logout/")
