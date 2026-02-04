@@ -49,7 +49,7 @@ def datasets(test_user, create_empty_dataset):
 
 @pytest.fixture
 def dataset_with_tax_year_pk(dataset):
-    def _prepare(test_scenario="basic_scenario"):
+    def _prepare(test_scenario: str = "basic_scenario"):
         data = copy.deepcopy(TAX_INPUTS[test_scenario])
         tax_years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
 

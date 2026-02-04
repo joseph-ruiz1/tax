@@ -1,3 +1,4 @@
+from tests.calculations.calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 TAX_INPUTS = {
     "basic_scenario": {
         "name": "Basic scenario 2021-2024",
@@ -55,4 +56,60 @@ TAX_INPUTS = {
             "sch_d": 0,
         },
     },
+    "unsorted_older_years": {
+        "name": "Unsorted years 2021-2018",
+        "max_elected_farm_income": 5000,
+        "qualified_farm_income": 0,
+        "election_year": "2021",
+        "tax_years": [
+            {
+                "year": 2018,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2020,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2021,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 5000,
+                "qualified_farm_income": 0,
+            },
+            {
+                "year": 2019,
+                "filing_status": "MFJ",
+                "taxable_income": 100000,
+                "qualified_income": 40000,
+                "is_electing": False,
+                "elected_farm_income": 0,
+                "qualified_farm_income": 0,
+            },
+        ],
+        "income_worksheet": {
+            "sch_f": 5000,
+            "wages": 0,
+            "sch_c": 0,
+            "sch_e": 0,
+            "form_4835": 0,
+            "ccf": 0,
+            "se_deduction": 0,
+            "qbi": 0,
+            "form_4797": 0,
+            "sch_d": 0,
+        },
+    }
 }

@@ -10,6 +10,7 @@ from tax.serializers import DEFAULT_ELECTION_YEAR
 from test_api_data import TAX_INPUTS
 from tests.calculations.calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 from utils import update_inputs, add_pk_to_tax_year
+from tests.calculations.calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 
 
 @pytest.mark.django_db
@@ -191,15 +192,18 @@ class TestDataSetViewSet(BaseAPITest):
         response = authenticated_client.delete(f"/tax/api/datasets/{dataset.id}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_new_entry(self, authenticated_client, dataset):
-        test_data = TAX_INPUTS["basic_scenario"]
-        add_pk_to_tax_year(dataset, test_data)
+    @pytest.mark.parametrize(
+        "scenario",
+        [("basic_scenario")],
+    )
+    def test_new_entry(self, authenticated_client, dataset, dataset_with_tax_year_pk, scenario):
+        test_data = dataset_with_tax_year_pk(scenario)
+
         response = authenticated_client.patch(
             f"/tax/api/datasets/{dataset.id}/new/",
             data=test_data,
             format="json",
         )
-        print(response.data)
         self.assert_successful_response(response)
 
 class TestTaxEntries(BaseAPITest):
@@ -210,17 +214,43 @@ class TestTaxEntries(BaseAPITest):
             ("basic_scenario", "2017"),
         ],
     )
-    def test_invalid_tax_year(self, authenticated_client, dataset_with_tax_year_pk, scenario, invalid_year):
+    def test_invalid_tax_year(self, authenticated_client, dataset, dataset_with_tax_year_pk, scenario, invalid_year):
         test_data = dataset_with_tax_year_pk(scenario)
         test_data["tax_years"][0]["year"] = invalid_year
 
         response = authenticated_client.patch(
-            f"/tax/api/datasets/{dataset_with_tax_year_pk.id}/new/",
+            f"/tax/api/datasets/{dataset.id}/new/",
             data=test_data,
             format="json",
         )
         self.assert_failed_response(response)
         self.assert_field_failure(response, "tax_years", f'"{invalid_year}" is not a valid choice.')
 
+    @pytest.mark.parametrize(
+        "invalid_income, expected_msg",
+        [
+            (1000000000, "Ensure that there are no more than 9 digits before the decimal point."),
+            (-1000, "Income must be positive"),
+        ],
+    )
+    def test_invalid_taxable_income(self, authenticated_client, dataset, dataset_with_tax_year_pk, invalid_income, expected_msg):
+        test_data = dataset_with_tax_year_pk("basic_scenario")
+        test_data["tax_years"][0]["taxable_income"] = invalid_income
 
+        response = authenticated_client.patch(
+            f"/tax/api/datasets/{dataset.id}/new/",
+            data=test_data,
+            format="json",
+        )
+        self.assert_failed_response(response)
+        self.assert_field_failure(response, "tax_years", f"{expected_msg}")
+
+    def test_unsorted_years(self, authenticated_client, dataset, dataset_with_tax_year_pk):
+        unsorted_data = dataset_with_tax_year_pk("unsorted_older_years")
+        response = authenticated_client.patch(
+            f"/tax/api/datasets/{dataset.id}/new/",
+            data=unsorted_data,
+            format="json",
+        )
+        self.assert_successful_response(response)
 
