@@ -1,7 +1,10 @@
+import copy
+
 import pytest
 from rest_framework.test import APIClient
 from sample_user_data import SAMPLE_USER_DATA, SAMPLE_USER_DATA_NO_CONFIRMATION
 from tax.models import TaxDataSet, TaxYearData, User
+from test_api_data import TAX_INPUTS
 
 
 @pytest.fixture
@@ -43,3 +46,15 @@ def dataset(test_user, create_empty_dataset):
 @pytest.fixture
 def datasets(test_user, create_empty_dataset):
     return [create_empty_dataset(test_user) for _ in range(3)]
+
+@pytest.fixture
+def dataset_with_tax_year_pk(dataset):
+    def _prepare(test_scenario="basic_scenario"):
+        data = copy.deepcopy(TAX_INPUTS[test_scenario])
+        tax_years = TaxYearData.objects.filter(dataset=dataset).order_by("-year")
+
+        for year_obj, year_test_data in zip(tax_years, data["tax_years"], strict=False):
+            year_test_data["id"] = year_obj.id
+        return data
+
+    return _prepare

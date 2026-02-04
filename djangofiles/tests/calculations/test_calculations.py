@@ -13,14 +13,12 @@ from calculation_cases import (
 from tax.models import TaxDataSet, TaxYearData
 from tax.services import (
     IncomeDistributor,
-    ScheduleJCalculation,
-    ScheduleJConfig,
-    ScheduleJForm,
-    ScheduleJOptimizer,
-    TaxCalculation,
-    find_bracket_thresholds,
 )
-from tax.utils import sort_tax_years_list, update_calculations, handle_bracket_thresholds
+from tax.utils import (
+    handle_bracket_thresholds,
+    sort_tax_years_list,
+    update_calculations,
+)
 from utils.calculation_utils import (
     _run_sch_j_tax_assignment,
     build_test_cases,
@@ -201,6 +199,5 @@ def test_bracket_thresholds(inputs, expected, run_optimization_instance):
     all_elected_instance = optimization_results.all_elected_instance
     none_elected_instance = optimization_results.none_elected_instance
     bracket_thresholds = handle_bracket_thresholds(all_elected_instance, none_elected_instance)
-
 
     assert bracket_thresholds == expected["brackets"]

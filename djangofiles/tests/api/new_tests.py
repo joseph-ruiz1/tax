@@ -1,5 +1,5 @@
 import pytest
-from rest_framework import status
+from rest_framework import status, exceptions
 from sample_user_data import (
     CREDENTIALS,
     SAMPLE_USER_DATA,
@@ -47,9 +47,19 @@ class BaseAPITest:
         assert response.status_code == expected_status
 
     @staticmethod
-    def assert_field_failure(response, failed_field, failure_message, failure_numer=0):
-        error = response.data["errors"][failed_field][failure_numer]
-        assert error.title() == failure_message
+    def assert_field_failure(response, failed_field, failure_message, failure_number=0):
+        error = response.data["errors"][failed_field][failure_number]
+        if isinstance(error, exceptions.ErrorDetail):
+            assert error.title() == failure_message
+        if isinstance(error, dict):
+            BaseAPITest.assert_validation_failure(error, failure_message, failure_number)
+
+    @staticmethod
+    # Probably buggy with the list indexes
+    def assert_validation_failure(error_map, failure_message, failure_numer=0):
+        # Used if error is coming from model validation
+        errors = list(error_map.values())
+        assert errors[failure_numer][0] == failure_message
 
 @pytest.mark.django_db
 class TestAuthViewSet(BaseAPITest):
@@ -189,5 +199,28 @@ class TestDataSetViewSet(BaseAPITest):
             data=test_data,
             format="json",
         )
+        print(response.data)
         self.assert_successful_response(response)
+
+class TestTaxEntries(BaseAPITest):
+    @pytest.mark.parametrize(
+        "scenario, invalid_year",
+        [
+            ("basic_scenario", "2026"),
+            ("basic_scenario", "2017"),
+        ],
+    )
+    def test_invalid_tax_year(self, authenticated_client, dataset_with_tax_year_pk, scenario, invalid_year):
+        test_data = dataset_with_tax_year_pk(scenario)
+        test_data["tax_years"][0]["year"] = invalid_year
+
+        response = authenticated_client.patch(
+            f"/tax/api/datasets/{dataset_with_tax_year_pk.id}/new/",
+            data=test_data,
+            format="json",
+        )
+        self.assert_failed_response(response)
+        self.assert_field_failure(response, "tax_years", f'"{invalid_year}" is not a valid choice.')
+
+
 
