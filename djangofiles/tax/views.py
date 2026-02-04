@@ -105,6 +105,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
             return CalculationEntrySerializer
 
         raise NotImplementedError(f"No serializer for action: {self.action}")
+
     @action(detail=False, methods=["post"], url_path="create")
     def create_step(self, request):
         """

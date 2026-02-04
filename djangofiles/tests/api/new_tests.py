@@ -7,6 +7,9 @@ from sample_user_data import (
 )
 from tax.models import TaxDataSet, TaxYearData, User
 from tax.serializers import DEFAULT_ELECTION_YEAR
+from test_api_data import TAX_INPUTS
+from tests.calculations.calculation_cases import BASIC_TAX_CALCULATION_INPUTS
+from utils import update_inputs, add_pk_to_tax_year
 
 
 @pytest.mark.django_db
@@ -177,3 +180,14 @@ class TestDataSetViewSet(BaseAPITest):
     def test_delete_dataset(self, authenticated_client, dataset):
         response = authenticated_client.delete(f"/tax/api/datasets/{dataset.id}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_new_entry(self, authenticated_client, dataset):
+        test_data = TAX_INPUTS["basic_scenario"]
+        add_pk_to_tax_year(dataset, test_data)
+        response = authenticated_client.patch(
+            f"/tax/api/datasets/{dataset.id}/new/",
+            data=test_data,
+            format="json",
+        )
+        self.assert_successful_response(response)
+
