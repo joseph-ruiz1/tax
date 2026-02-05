@@ -31,11 +31,14 @@ def validate_only_four_tax_years(dataset: object):
     if years.count() != 4:
         raise serializers.ValidationError("Number of tax year instances not equal to 4")
 
-def validate_years_are_in_order(years: list[TaxYearData]):
+def validate_years_are_in_order(years: list[TaxYearData | dict]):
     """Ensure years are not skipped, e.g. 2024, 2023, 2021, 2020 would fail."""
     for i in range(len(years) - 1):
-        if years[i].year < years[i+1].year:
-            raise serializers.ValidationError("Years are not sequential")
+        current_year = getattr(years[i], "year", None) or years[i].get("year")
+        next_year = getattr(years[i+1], "year", None) or years[i+1].get("year")
+
+        if current_year < next_year:
+            raise serializers.ValidationError("Years must be in descending order")
 
 def sort_tax_years_list(years: list[TaxYearData]) -> list[TaxYearData]:
     sorted_years = sorted(years, key=lambda year: year.year, reverse=True)

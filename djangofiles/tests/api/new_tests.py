@@ -252,5 +252,6 @@ class TestTaxEntries(BaseAPITest):
             data=unsorted_data,
             format="json",
         )
-        self.assert_successful_response(response)
 
+        self.assert_failed_response(response)
+        self.assert_field_failure(response, "non_field_errors", "Years Must Be In Descending Order")

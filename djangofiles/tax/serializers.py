@@ -6,7 +6,10 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import FILING_STATUS, TaxDataSet, TaxYearData
-from .utils import validate_only_four_tax_years
+from .utils import (
+    validate_only_four_tax_years,
+    validate_years_are_in_order,
+)
 
 VALID_YEARS_LIST = ["2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018"]
 DEFAULT_ELECTION_YEAR = "2024"
@@ -82,7 +85,7 @@ class TaxYearDataDetailSerializer(serializers.ModelSerializer):
 
 class SchJFormSerializer(serializers.Serializer):
     """
-    Show total tax and the associated elected farm incomes. 
+    Show total tax and the associated elected farm incomes.
 
     Eventually I should build where all Sch J lines can be serialized. Maybe have an arg for it.
 
@@ -92,7 +95,7 @@ class SchJFormSerializer(serializers.Serializer):
     line_2a = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     line_2b = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     tax_delta = serializers.DecimalField(max_digits=12, decimal_places=2)
-    taxable_ordinary_all_years = serializers.JSONField()
+    taxable_ordinary_results = serializers.JSONField()
 
 class FarmIncomeWorksheetSerializer(serializers.Serializer):
     sch_f = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
@@ -176,6 +179,7 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Cannot have negative farm income")
         if sum(data["income_worksheet"].values()) != data["max_elected_farm_income"]:
             raise serializers.ValidationError("Farm income worksheet total not equal to max elected")
+        validate_years_are_in_order(data["tax_years"])
         return data
 
     def update(self, instance, validated_data):
