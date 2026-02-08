@@ -32,22 +32,6 @@ class TestUserModel:
 
 class BaseAPITest:
     @staticmethod
-    def assert_successful_response(response, expected_status=status.HTTP_200_OK):
-        assert response.status_code == expected_status
-
-    @staticmethod
-    def assert_successful_creation(response, expected_status=status.HTTP_201_CREATED):
-        assert response.status_code == expected_status
-
-    @staticmethod
-    def assert_failed_response(response, expected_status=status.HTTP_400_BAD_REQUEST):
-        assert response.status_code == expected_status
-
-    @staticmethod
-    def assert_failed_creation(response, expected_status=status.HTTP_403_FORBIDDEN):
-        assert response.status_code == expected_status
-
-    @staticmethod
     def assert_field_failure(response, failed_field, failure_message, failure_number=0):
         error = response.data["errors"][failed_field][failure_number]
         if isinstance(error, exceptions.ErrorDetail):
@@ -70,7 +54,7 @@ class TestAuthViewSet(BaseAPITest):
             data=SAMPLE_USER_DATA["user_1"],
             format="json",
             follow=True)
-        self.assert_successful_creation(response)
+        assert response.status_code == status.HTTP_201_CREATED
 
         user = User.objects.get(username=SAMPLE_USER_DATA["user_1"]["username"])
 
@@ -83,7 +67,7 @@ class TestAuthViewSet(BaseAPITest):
             format="json",
             follow=True,
         )
-        self.assert_failed_response(response)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assert_field_failure(response, "username", "A User With That Username Already Exists.")
 
     def test_register_no_password(self, api_client):
@@ -93,7 +77,7 @@ class TestAuthViewSet(BaseAPITest):
             format="json",
             follow=True,
         )
-        self.assert_failed_response(response)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assert_field_failure(response, "password", "This Field Is Required.")
 
     def test_register_no_confirmation(self, api_client):
@@ -103,7 +87,7 @@ class TestAuthViewSet(BaseAPITest):
             format="json",
             follow=True,
         )
-        self.assert_failed_response(response)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assert_field_failure(response, "password_confirm", "This Field Is Required.")
 
 
@@ -114,7 +98,7 @@ class TestAuthViewSet(BaseAPITest):
             format="json",
             follow=True,
         )
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
         assert response.data["message"] == "Login successful"
 
     def test_invalid_login(self, api_client, test_user):
@@ -124,22 +108,22 @@ class TestAuthViewSet(BaseAPITest):
             format="json",
             follow=True,
         )
-        self.assert_failed_response(response)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assert_field_failure(response, "non_field_errors", "Invalid Credentials")
 
     def test_logout(self, authenticated_client, test_user):
         response = authenticated_client.post("/tax/api/auth/logout/")
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
         assert response.data["message"] == "Logout successful"
 
     def test_check_auth(self, authenticated_client, test_user):
         response = authenticated_client.get("/tax/api/auth/check/")
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
         assert response.data["authenticated"] is True
 
     def test_check_unauthenticated(self, api_client):
         response = api_client.get("/tax/api/auth/check/")
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
         assert response.data["authenticated"] is False
 
 
@@ -150,7 +134,7 @@ class TestDataSetViewSet(BaseAPITest):
             data={},
             format="json",
         )
-        self.assert_successful_creation(response)
+        assert response.status_code == status.HTTP_201_CREATED
 
         dataset = TaxDataSet.objects.get(id=response.data["dataset_id"])
         assert TaxDataSet.objects.filter(id=dataset.id).exists()
@@ -162,23 +146,23 @@ class TestDataSetViewSet(BaseAPITest):
             data={},
             format="json",
         )
-        self.assert_failed_creation(response)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_list_datasets(self, authenticated_client, datasets):
         response = authenticated_client.get("/tax/api/datasets/")
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(datasets)
 
     def test_list_datasets_filter_by_user(self, authenticated_client, test_user_2, datasets, create_empty_dataset):
         create_empty_dataset(test_user_2)
 
         response = authenticated_client.get("/tax/api/datasets/")
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(datasets)
 
     def test_retrieve_dataset(self, authenticated_client, dataset):
         response = authenticated_client.get(f"/tax/api/datasets/{dataset.id}/")
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
         assert response.data["id"] == 1
 
     def test_retrieve_invalid_dataset(self, authenticated_client, test_user_2, create_empty_dataset):
@@ -186,7 +170,7 @@ class TestDataSetViewSet(BaseAPITest):
         response = authenticated_client.get(f"/tax/api/datasets/{dataset.id}/")
         # Keeping 404 error instead of 403 or 401 could be better for security, but perhaps not debugging
         # https://auth0.com/blog/forbidden-unauthorized-http-status-codes/#:~:text=Don%27t%20let%20the%20client%20know
-        self.assert_failed_response(response, status.HTTP_404_NOT_FOUND)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_dataset(self, authenticated_client, dataset):
         response = authenticated_client.delete(f"/tax/api/datasets/{dataset.id}/")
@@ -204,7 +188,7 @@ class TestDataSetViewSet(BaseAPITest):
             data=test_data,
             format="json",
         )
-        self.assert_successful_response(response)
+        assert response.status_code == status.HTTP_200_OK
 
 class TestTaxEntries(BaseAPITest):
     @pytest.mark.parametrize(
@@ -223,7 +207,7 @@ class TestTaxEntries(BaseAPITest):
             data=test_data,
             format="json",
         )
-        self.assert_failed_response(response)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assert_field_failure(response, "tax_years", f'"{invalid_year}" is not a valid choice.')
 
     @pytest.mark.parametrize(
@@ -242,7 +226,7 @@ class TestTaxEntries(BaseAPITest):
             data=test_data,
             format="json",
         )
-        self.assert_failed_response(response)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assert_field_failure(response, "tax_years", f"{expected_msg}")
 
     def test_unsorted_years(self, authenticated_client, dataset, dataset_with_tax_year_pk):
@@ -253,5 +237,5 @@ class TestTaxEntries(BaseAPITest):
             format="json",
         )
 
-        self.assert_failed_response(response)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
         self.assert_field_failure(response, "non_field_errors", "Years Must Be In Descending Order")
