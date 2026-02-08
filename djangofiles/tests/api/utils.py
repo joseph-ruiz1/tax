@@ -1,6 +1,5 @@
-from collections.abc import Mapping
-
 from tax.models import TaxDataSet, TaxYearData
+
 
 # prob need to create custom type here
 def update_inputs(dataset: TaxDataSet, data_to_update):

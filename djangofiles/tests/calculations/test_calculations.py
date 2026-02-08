@@ -10,7 +10,12 @@ from calculation_cases import (
     EXPECTED_OUTPUTS_OPTIMIZATION,
     EXPECTED_OUTPUTS_SORTED_YEARS,
 )
-from tax.models import TaxDataSet, TaxYearData
+from calculations.utils.calculation_utils import (
+    _run_sch_j_tax_assignment,
+    build_test_cases,
+    calculate_total_tax_all_years,
+)
+from tax.models import TaxYearData
 from tax.services import (
     IncomeDistributor,
 )
@@ -18,11 +23,6 @@ from tax.utils import (
     handle_bracket_thresholds,
     sort_tax_years_list,
     update_calculations,
-)
-from utils.calculation_utils import (
-    _run_sch_j_tax_assignment,
-    build_test_cases,
-    calculate_total_tax_all_years,
 )
 
 
