@@ -1,4 +1,3 @@
-from tests.calculations.calculation_cases import BASIC_TAX_CALCULATION_INPUTS
 TAX_INPUTS = {
     "basic_scenario": {
         "name": "Basic scenario 2021-2024",
