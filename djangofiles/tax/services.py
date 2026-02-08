@@ -381,7 +381,7 @@ class ScheduleJCalculation:
                 setattr(self.sch_j, income_line, taxable_income)
                 setattr(self.sch_j, tax_line, total_tax)
 
-    def _calculate_tax_on_all_years(self) -> dict[int, Decimal]:
+    def _calculate_tax_on_all_years(self) -> dict[int, dict[str, Decimal]]:
         """Calculate tax for all years based on current adjusted_years state."""
         tax_on_all_years = {}
         for year, year_obj in self.adjusted_years.items():
