@@ -1,14 +1,6 @@
 import pytest
-from tax.models import TaxDataSet, TaxYearData, User
-from tax.services import (
-    IncomeDistributor,
-    ScheduleJCalculation,
-    ScheduleJConfig,
-    ScheduleJOptimizer,
-    TaxCalculation,
-    find_bracket_thresholds,
-)
-from tax.utils import sort_tax_years_list
+from api.sample_user_data import CREDENTIALS
+from tax.models import User
 
 
 @pytest.mark.django_db
@@ -27,9 +19,3 @@ class TestUserModel:
         expected_ids = list(range(1, len(users) + 1))
         actual_ids = [user.id for user in users]
         assert actual_ids == expected_ids
-
-CREDENTIALS = [
-            ("test1", "testing123"),
-            ("test2", "testing321"),
-            ("test3", "testing213"),
-        ]

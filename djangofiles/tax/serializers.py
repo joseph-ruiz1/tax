@@ -6,9 +6,13 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import FILING_STATUS, TaxDataSet, TaxYearData
-from .utils import validate_only_four_tax_years
+from .utils import (
+    validate_only_four_tax_years,
+    validate_years_are_in_order,
+)
 
 VALID_YEARS_LIST = ["2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018"]
+DEFAULT_ELECTION_YEAR = "2024"
 
 class UserSerializer(serializers.ModelSerializer):
     datasets = serializers.PrimaryKeyRelatedField(many=True, queryset=TaxDataSet.objects.all())
@@ -64,29 +68,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 class TaxYearDataDetailSerializer(serializers.ModelSerializer):
-    """
-    Need to include ID in returned value since years can change and we need to be able to lookup
-    """
     id = serializers.IntegerField(required=False)
     class Meta:
         model = TaxYearData
         fields = ["id", "year", "filing_status", "taxable_income", "qualified_income", "is_electing", "elected_farm_income", "qualified_farm_income"]
 
     def validate(self, data):
-        """
-        Validate that year and filing status are in options
-        """
-        if data['year'] not in VALID_YEARS_LIST:
+        """Validate that year and filing status are in options."""
+        if data["year"] not in VALID_YEARS_LIST:
             raise serializers.ValidationError(f"Year error. {data['year']} not valid.")
-        if data['filing_status'] not in FILING_STATUS.keys():
+        if data["filing_status"] not in FILING_STATUS:
             raise serializers.ValidationError(f"Incorrect filing status. {data['filing_status']} not valid.")
-        if data['taxable_income'] < 0 or data['qualified_income'] < 0:
+        if data["taxable_income"] < 0 or data["qualified_income"] < 0:
             raise serializers.ValidationError("Income must be positive")
         return data
 
 class SchJFormSerializer(serializers.Serializer):
     """
-    Show total tax and the associated elected farm incomes. 
+    Show total tax and the associated elected farm incomes.
 
     Eventually I should build where all Sch J lines can be serialized. Maybe have an arg for it.
 
@@ -96,7 +95,7 @@ class SchJFormSerializer(serializers.Serializer):
     line_2a = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     line_2b = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
     tax_delta = serializers.DecimalField(max_digits=12, decimal_places=2)
-    taxable_ordinary_all_years = serializers.JSONField()
+    taxable_ordinary_results = serializers.JSONField()
 
 class FarmIncomeWorksheetSerializer(serializers.Serializer):
     sch_f = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
@@ -139,8 +138,7 @@ class TaxDataSetDetailSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Validate the years only go to 2018."""
-        current_year = 2024
-         # MIGHT BE BUGGY SINCE TESTING AS STR, DOING YEAR +1 INSTEAD OF YEAR -1
+        current_year = DEFAULT_ELECTION_YEAR
         for i, year in enumerate(data["tax_years"]):
             if str(year["year"]) != str(current_year):
                 msg = f"Year error. {year['year']} not valid."
@@ -161,15 +159,14 @@ class CreateCalculationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         dataset = TaxDataSet.objects.create(**validated_data)
         # Create 4 blank years
-        new_year_obj_list = [TaxYearData.objects.create(dataset=dataset, year=2024-i) for i in range(4)]
+        new_year_obj_list = [TaxYearData.objects.create(dataset=dataset, year=int(DEFAULT_ELECTION_YEAR)-i) for i in range(4)]
         # First year has is_electing = True
         new_year_obj_list[0].is_electing = True
         return dataset
 
 class CalculationEntrySerializer(serializers.ModelSerializer):
-    """
-    Deserialize input from form submission for TaxDataSet and TaxYearDatas. Requires all information.
-    """
+    """Deserialize input from form submission for TaxDataSet and TaxYearDatas. Requires all information."""
+
     tax_years = TaxYearDataDetailSerializer(many=True, required=True)
     income_worksheet = FarmIncomeWorksheetSerializer(many=False, required=False)
 
@@ -178,11 +175,11 @@ class CalculationEntrySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "max_elected_farm_income", "qualified_farm_income", "election_year", "income_worksheet", "tax_years"]
 
     def validate(self, data):
-        """Validate that elected incomes are greater than 0."""
         if data["max_elected_farm_income"] < 0 or data["qualified_farm_income"] < 0:
             raise serializers.ValidationError("Cannot have negative farm income")
         if sum(data["income_worksheet"].values()) != data["max_elected_farm_income"]:
             raise serializers.ValidationError("Farm income worksheet total not equal to max elected")
+        validate_years_are_in_order(data["tax_years"])
         return data
 
     def update(self, instance, validated_data):

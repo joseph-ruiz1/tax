@@ -5,25 +5,24 @@ from calculation_cases import (
     BASIC_TAX_CALCULATION_INPUTS,
     EXPECTED_OUTPUT_SCHEDULE_J,
     EXPECTED_OUTPUTS_BASIC_TAX_CALC,
+    EXPECTED_OUTPUTS_BRACKET_THRESHOLDS,
     EXPECTED_OUTPUTS_FULL_SCH_J_CALC,
     EXPECTED_OUTPUTS_OPTIMIZATION,
     EXPECTED_OUTPUTS_SORTED_YEARS,
 )
-from tax.models import TaxDataSet, TaxYearData
-from tax.services import (
-    IncomeDistributor,
-    ScheduleJCalculation,
-    ScheduleJConfig,
-    ScheduleJForm,
-    ScheduleJOptimizer,
-    TaxCalculation,
-    find_bracket_thresholds,
-)
-from tax.utils import sort_tax_years_list
-from utils.calculation_utils import (
+from calculations.utils.calculation_utils import (
     _run_sch_j_tax_assignment,
     build_test_cases,
     calculate_total_tax_all_years,
+)
+from tax.models import TaxYearData
+from tax.services import (
+    IncomeDistributor,
+)
+from tax.utils import (
+    handle_bracket_thresholds,
+    sort_tax_years_list,
+    update_calculations,
 )
 
 
@@ -181,4 +180,24 @@ class TestFirstandLastInstances:
 def test_complete_optimization(inputs, expected, create_optimization_instance):
     optimizer = create_optimization_instance(inputs)
     results = optimizer.run_optimization()
-    print(len(results["optimization_results"]))
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_OPTIMIZATION, "complete_optimization"),
+)
+def test_update_calculations_entry(inputs, expected, create_models_for_test_cases):
+    for case, years in create_models_for_test_cases([inputs]):
+        results = update_calculations(case["dataset_instance"])
+        print(results["bracket_thresholds"])
+
+@pytest.mark.parametrize(
+    "inputs, expected",
+    build_test_cases(BASIC_TAX_CALCULATION_INPUTS, EXPECTED_OUTPUTS_BRACKET_THRESHOLDS, "bracket_thresholds"),
+)
+def test_bracket_thresholds(inputs, expected, run_optimization_instance):
+    optimization_results = run_optimization_instance(inputs)
+    all_elected_instance = optimization_results.all_elected_instance
+    none_elected_instance = optimization_results.none_elected_instance
+    bracket_thresholds = handle_bracket_thresholds(all_elected_instance, none_elected_instance)
+
+    assert bracket_thresholds == expected["brackets"]

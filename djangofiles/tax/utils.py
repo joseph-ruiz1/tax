@@ -1,10 +1,13 @@
 from itertools import islice
+from typing import TYPE_CHECKING
 
 from django.db import models
 from rest_framework import serializers
 
 from .models import TaxDataSet, TaxYearData
 
+if TYPE_CHECKING:
+    from .services import ScheduleJResultsContainer
 
 def chunker(iterable, size):
     iterator = iter(iterable)
@@ -27,56 +30,63 @@ def validate_only_four_tax_years(dataset: object):
 
     if years.count() != 4:
         raise serializers.ValidationError("Number of tax year instances not equal to 4")
-    return dataset
+
+def validate_years_are_in_order(years: list[TaxYearData | dict]):
+    """Ensure years are not skipped, e.g. 2024, 2023, 2021, 2020 would fail."""
+    for i in range(len(years) - 1):
+        current_year = getattr(years[i], "year", None) or years[i].get("year")
+        next_year = getattr(years[i+1], "year", None) or years[i+1].get("year")
+
+        if current_year < next_year:
+            raise serializers.ValidationError("Years must be in descending order")
 
 def sort_tax_years_list(years: list[TaxYearData]) -> list[TaxYearData]:
     sorted_years = sorted(years, key=lambda year: year.year, reverse=True)
     return sorted_years
 
 def update_calculations(dataset: TaxDataSet):
-    """
-    Helper function to run Schedule J optimization.
-
-    Arguments:
-        dataset (TaxDataSet): Years get extracted in function
-
-    Returns:
-        dict with: 'optimize' (ScheduleJOptimization): Schedule J optimization results
-        'thresholds': dict with bracket thresholds for each year 
-
-    """
-    from .services import ScheduleJOptimization, TaxCalculation, find_bracket_thresholds
+    from .services import ScheduleJOptimizer, TaxCalculation, ScheduleJConfig
 
     sorted_years = sort_tax_years_list(dataset.tax_years.all())
 
     # Base Calculations and bracket finder
     for tax_year in sorted_years:
-        TaxCalculation(tax_year).calculate()
+        TaxCalculation(tax_year).calculate_total_tax()
         tax_year.save()
 
-    optimization_results = ScheduleJOptimization(sorted_years,
-                                    elected_farm_income=dataset.max_elected_farm_income, 
-                                    elected_farm_qualified=dataset.qualified_farm_income, 
-                                    ).optimize_sch_j(dataset.max_elected_farm_income, dataset.qualified_farm_income)
+    config = ScheduleJConfig()
+    optimization_results = ScheduleJOptimizer(sorted_years,
+                                    max_elected_farm_income=dataset.max_elected_farm_income,
+                                    qualified_farm_income=dataset.qualified_farm_income,
+                                    config=config,
+                                    ).run_optimization()
 
-    tax_years_with_max_elected = optimization_results["all_elected"].tax_years
-    tax_years_with_none_elected = optimization_results["none_elected"].tax_years
+    all_elected_instance = optimization_results.all_elected_instance
+    none_elected_instance = optimization_results.none_elected_instance
+    bracket_thresholds = handle_bracket_thresholds(all_elected_instance, none_elected_instance)
+
+
+    return {
+        "optimization": optimization_results.calculation_iterations,
+        "bracket_thresholds": bracket_thresholds,
+    }
+
+# Need to figure out services import
+def handle_bracket_thresholds(all_elected_instance: ScheduleJResultsContainer, none_elected_instance: ScheduleJResultsContainer):
+    from .services import find_bracket_thresholds
+
+    tax_years = none_elected_instance.tax_years  # Both instances will have same years/filing status
 
     bracket_thresholds = {}
-    # Set up structure for find_bracket_thresholds() and iterate through each year
-    for year, none_elected_tax_year in tax_years_with_none_elected.items():
-        all_elected_tax_year = tax_years_with_max_elected[year]
-
-        rates = [none_elected_tax_year.ordinary_rate, all_elected_tax_year.ordinary_rate]
+    for year, year_obj in tax_years.items():
+        all_elected_rate = all_elected_instance.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
+        none_elected_rate = none_elected_instance.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
 
         bracket_thresholds[year] = find_bracket_thresholds(
             year=year,
-            filing_status=none_elected_tax_year.filing_status,
-            ordinary_rate_lowest=str(min(rates)),
-            ordinary_rate_highest=str(max(rates)),
+            filing_status=year_obj.filing_status,
+            ordinary_rate_lowest=str(min(all_elected_rate, none_elected_rate)),
+            ordinary_rate_highest=str(max(all_elected_rate, none_elected_rate)),
         )
 
-    return {
-        "optimization": optimization_results["optimization_results"],
-        "bracket_thresholds": bracket_thresholds,
-    }
+    return bracket_thresholds
