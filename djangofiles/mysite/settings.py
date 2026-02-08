@@ -46,9 +46,17 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.sites'
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'dj_rest_auth',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'dj_rest_auth.registration',
 ]
+
+SITE_ID = 1
 
 LOGIN_REDIRECT_URL = 'tax:dashboard'
 LOGOUT_REDIRECT_URL = 'tax:login'
