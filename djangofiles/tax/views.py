@@ -1,4 +1,5 @@
 from django.contrib.auth import login, logout
+from django.shortcuts import get_object_or_404
 from django.db.models import Count
 from django.views.generic import TemplateView
 from rest_framework import status, viewsets
@@ -119,7 +120,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
 
             return Response({
                 "success": True,
-                "dataset_id": dataset.id
+                "dataset_id": dataset.id,
             }, status=status.HTTP_201_CREATED)
 
         return Response({
@@ -192,6 +193,41 @@ class OptimizationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return TaxDataSet.objects.annotate(tax_year_count=Count("tax_years")).filter(user=self.request.user).filter(tax_year_count=4)
 
-    def get_object(self):
-        queryset = self.get_queryset()
-        
+    def get_serializer_class(self):
+        if self.action in ["delete"]:
+            return TaxDataSetDetailSerializer
+        if self.action in ["update", "patch"]:
+            return CalculationEntrySerializer
+        if self.action == "list":
+            return TaxDataSetSerializer
+        if self.action == "retrieve":
+            return OutputSerializer
+        if self.action == "create":
+            return CreateCalculationSerializer
+
+    # def get_object(self):
+    #     queryset = self.get_queryset()
+
+    def retrieve(self, request, *args, **kwargs):
+        # serializer = self.get_serializer(data=request.data)
+        dataset = self.get_object()
+        results = update_calculations(dataset)
+        serializer = self.get_serializer(dataset,
+                                         context={"results": results["optimization"],
+                                                  "bracket_thresholds": results["bracket_thresholds"]})
+        return Response({
+            "success": True,
+            "message": "Get Successful",
+            "form": serializer.data["inputs"],
+            "outputs": serializer.data["outputs"],
+        })
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid()
+        dataset = serializer.save(user=request.user)
+
+        return Response({
+            "success": True,
+            "dataset_id": dataset.id,
+        }, status=status.HTTP_201_CREATED)

@@ -65,7 +65,6 @@ def update_calculations(dataset: TaxDataSet):
     none_elected_instance = optimization_results.none_elected_instance
     bracket_thresholds = handle_bracket_thresholds(all_elected_instance, none_elected_instance)
 
-
     return {
         "optimization": optimization_results.calculation_iterations,
         "bracket_thresholds": bracket_thresholds,
@@ -75,6 +74,8 @@ def update_calculations(dataset: TaxDataSet):
 def handle_bracket_thresholds(all_elected_instance: ScheduleJResultsContainer, none_elected_instance: ScheduleJResultsContainer):
     from .services import find_bracket_thresholds
 
+    print(all_elected_instance.schedule_j_form.taxable_ordinary_results)
+    print(none_elected_instance.schedule_j_form.taxable_ordinary_results)
     tax_years = none_elected_instance.tax_years  # Both instances will have same years/filing status
 
     bracket_thresholds = {}
