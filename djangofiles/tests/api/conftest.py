@@ -2,7 +2,7 @@ import copy
 
 import pytest
 from rest_framework.test import APIClient
-from sample_user_data import SAMPLE_USER_DATA, SAMPLE_USER_DATA_NO_CONFIRMATION
+from sample_user_data import SAMPLE_USER_DATA_NO_CONFIRMATION
 from tax.models import TaxDataSet, TaxYearData, User
 from test_api_data import TAX_INPUTS
 

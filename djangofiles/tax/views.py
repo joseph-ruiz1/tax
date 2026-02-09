@@ -184,3 +184,14 @@ class DataSetViewSet(viewsets.ModelViewSet):
             "success": False,
             "errors": serializer.errors,
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OptimizationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return TaxDataSet.objects.annotate(tax_year_count=Count("tax_years")).filter(user=self.request.user).filter(tax_year_count=4)
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        

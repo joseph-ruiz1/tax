@@ -1,9 +1,9 @@
 from collections.abc import Mapping
 
 import pytest
+from calculations.utils.typing_utils import TestCaseInputs, TestCaseOutputs
 from tax.models import TaxYearData
 from tax.services import TaxCalculation, TaxCalculationResult
-from utils.typing_utils import TestCaseInputs, TestCaseOutputs
 
 
 def calculate_total_tax_all_years(years: list[TaxYearData]) -> Mapping[str, TaxCalculationResult]:
