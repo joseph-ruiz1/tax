@@ -10,72 +10,15 @@ from .models import TaxDataSet
 from .serializers import (
     CalculationEntrySerializer,
     CreateCalculationSerializer,
-    LoginSerializer,
     OutputSerializer,
     TaxDataSetDetailSerializer,
     TaxDataSetSerializer,
-    UserRegistrationSerializer,
-    UserSerializer,
 )
 from .utils import update_calculations
 
 
 class IndexView(TemplateView):
     template_name = "tax/index.html"
-
-class AuthViewSet(viewsets.ViewSet):
-    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
-    def login(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            # Create cookie
-            login(request, serializer.validated_data)
-            return Response({
-                "success": True,
-                "message": "Login successful",
-            })
-        return Response({
-            "success": False,
-            "errors": serializer.errors,
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
-    def register(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            login(request, user)
-            return Response({
-                "success": True,
-                "message": "Registration successful",
-            }, status=status.HTTP_201_CREATED)
-        return Response({
-            "success": False,
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=["post"], permission_classes=[AllowAny])
-    def logout(self, request):
-        logout(request)
-        return Response({
-            "success": True,
-            "message": "Logout successful",
-        })
-
-    @action(detail=False, methods=["get"], permission_classes=[AllowAny])
-    def check(self, request):
-        if request.user.is_authenticated:
-            return Response({
-                "authenticated": True,
-                "user": UserSerializer(request.user).data,
-            })
-        return Response({
-            "authenticated": False,
-        })
-
-    @action(detail=False, methods=["get"])
-    def me(self, request):
-        return Response(UserSerializer(request.user).data)
 
 class DataSetViewSet(viewsets.ModelViewSet):
     """Dataset dashboard page. Allows for viewing, editing, and deleting Creates are handled in CalculationEntryView."""

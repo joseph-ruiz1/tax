@@ -31,7 +31,7 @@ class BaseAPITest:
         assert errors[failure_numer][0] == failure_message
 
 @pytest.mark.django_db
-class TestAuthViewSet(BaseAPITest):
+class TestAuth(BaseAPITest):
     def test_user_creation(self, api_client):
         response = api_client.post(
             reverse("tax:rest_register"),
