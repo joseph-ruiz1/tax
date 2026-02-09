@@ -7,13 +7,13 @@ CREDENTIALS = [
 SAMPLE_USER_DATA = {
     "user_1": {
         "username": "testuser",
-        "password": "securePassword123",
-        "password_confirm": "securePassword123",
+        "password1": "securePassword123",
+        "password2": "securePassword123",
     },
     "user_2": {
         "username": "testuser2",
-        "password": "securePassword123",
-        "password_confirm": "securePassword123",
+        "password1": "securePassword123",
+        "password2": "securePassword123",
     }
 }
 
