@@ -106,68 +106,68 @@ class TestAuthViewSet(BaseAPITest):
         assert response.data["detail"].code == "not_authenticated"
 
 
-# class TestDataSetViewSet(BaseAPITest):
-#     def test_create_dataset(self, authenticated_client):
-#         response = authenticated_client.post(
-#             reverse("tax:dataset-create-step"),
-#             data={},
-#             format="json",
-#         )
-#         assert response.status_code == status.HTTP_201_CREATED
+class TestDataSetViewSet(BaseAPITest):
+    def test_create_dataset(self, authenticated_client):
+        response = authenticated_client.post(
+            reverse("tax:dataset-create-step"),
+            data={},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
 
-#         dataset = TaxDataSet.objects.get(id=response.data["dataset_id"])
-#         assert TaxDataSet.objects.filter(id=dataset.id).exists()
-#         assert dataset.election_year == DEFAULT_ELECTION_YEAR
+        dataset = TaxDataSet.objects.get(id=response.data["dataset_id"])
+        assert TaxDataSet.objects.filter(id=dataset.id).exists()
+        assert dataset.election_year == DEFAULT_ELECTION_YEAR
 
-#     def test_create_dataset_unauthenticated(self, api_client):
-#         response = api_client.post(
-#             reverse("tax:dataset-create-step"),
-#             data={},
-#             format="json",
-#         )
-#         assert response.status_code == status.HTTP_403_FORBIDDEN
+    def test_create_dataset_unauthenticated(self, api_client):
+        response = api_client.post(
+            reverse("tax:dataset-create-step"),
+            data={},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
-#     def test_list_datasets(self, authenticated_client, datasets):
-#         response = authenticated_client.get(reverse("tax:dataset-list"))
-#         assert response.status_code == status.HTTP_200_OK
-#         assert len(response.data) == len(datasets)
+    def test_list_datasets(self, authenticated_client, datasets):
+        response = authenticated_client.get(reverse("tax:dataset-list"))
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == len(datasets)
 
-#     def test_list_datasets_filter_by_user(self, authenticated_client, test_user_2, datasets, create_empty_dataset):
-#         create_empty_dataset(test_user_2)
+    def test_list_datasets_filter_by_user(self, authenticated_client, test_user_2, datasets, create_empty_dataset):
+        create_empty_dataset(test_user_2)
 
-#         response = authenticated_client.get(reverse("tax:dataset-list"))
-#         assert response.status_code == status.HTTP_200_OK
-#         assert len(response.data) == len(datasets)
+        response = authenticated_client.get(reverse("tax:dataset-list"))
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == len(datasets)
 
-#     def test_retrieve_dataset(self, authenticated_client, dataset):
-#         response = authenticated_client.get(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
-#         assert response.status_code == status.HTTP_200_OK
-#         assert response.data["id"] == 1
+    def test_retrieve_dataset(self, authenticated_client, dataset):
+        response = authenticated_client.get(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["id"] == 1
 
-#     def test_retrieve_invalid_dataset(self, authenticated_client, test_user_2, create_empty_dataset):
-#         dataset = create_empty_dataset(test_user_2)
-#         response = authenticated_client.get(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
-#         # Keeping 404 error instead of 403 or 401 could be better for security, but perhaps not debugging
-#         # https://auth0.com/blog/forbidden-unauthorized-http-status-codes/#:~:text=Don%27t%20let%20the%20client%20know
-#         assert response.status_code == status.HTTP_404_NOT_FOUND
+    def test_retrieve_invalid_dataset(self, authenticated_client, test_user_2, create_empty_dataset):
+        dataset = create_empty_dataset(test_user_2)
+        response = authenticated_client.get(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
+        # Keeping 404 error instead of 403 or 401 could be better for security, but perhaps not debugging
+        # https://auth0.com/blog/forbidden-unauthorized-http-status-codes/#:~:text=Don%27t%20let%20the%20client%20know
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
-#     def test_delete_dataset(self, authenticated_client, dataset):
-#         response = authenticated_client.delete(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
-#         assert response.status_code == status.HTTP_204_NO_CONTENT
+    def test_delete_dataset(self, authenticated_client, dataset):
+        response = authenticated_client.delete(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
-#     @pytest.mark.parametrize(
-#         "scenario",
-#         [("basic_scenario")],
-#     )
-#     def test_new_entry(self, authenticated_client, dataset, dataset_with_tax_year_pk, scenario):
-#         test_data = dataset_with_tax_year_pk(scenario)
+    @pytest.mark.parametrize(
+        "scenario",
+        [("basic_scenario")],
+    )
+    def test_new_entry(self, authenticated_client, dataset, dataset_with_tax_year_pk, scenario):
+        test_data = dataset_with_tax_year_pk(scenario)
 
-#         response = authenticated_client.patch(
-#             reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
-#             data=test_data,
-#             format="json",
-#         )
-#         assert response.status_code == status.HTTP_200_OK
+        response = authenticated_client.patch(
+            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            data=test_data,
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
 
 class TestTaxEntries(BaseAPITest):
     @pytest.mark.parametrize(
