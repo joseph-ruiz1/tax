@@ -29,7 +29,7 @@ export const apiService = {
   },
 
   async register(formData) {
-    const response = await api.post('/auth/register/', formData)
+    const response = await api.post('/auth/registration/', formData)
     return response.data
   },
 
@@ -40,8 +40,11 @@ export const apiService = {
 
   async checkAuth() {
     try {
-      const response = await api.get('/auth/check/')
-      return response.data
+      const response = await api.get('/auth/user/')
+      return {
+        authenticated: true,
+        user: response.data
+      }
     } catch (error) {
       if (error.response?.status === 401) {
         return { authenticated: false }

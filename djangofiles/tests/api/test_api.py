@@ -19,6 +19,11 @@ class BaseAPITest:
             BaseAPITest.assert_validation_failure(error, failure_message, failure_number)
 
     @staticmethod
+    def assert_auth_failure(response, failed_field, failure_code, failure_number=0):
+        error = response.data[failed_field][failure_number]
+        assert error.code == failure_code
+
+    @staticmethod
     # Probably buggy with the list indexes
     def assert_validation_failure(error_map, failure_message, failure_numer=0):
         # Used if error is coming from model validation
@@ -26,84 +31,79 @@ class BaseAPITest:
         assert errors[failure_numer][0] == failure_message
 
 @pytest.mark.django_db
-class TestAuthViewSet(BaseAPITest):
-    def test_regular_user_creation(self, api_client):
+class TestAuth(BaseAPITest):
+    def test_user_creation(self, api_client):
         response = api_client.post(
-            "/tax/api/auth/register/",
+            reverse("tax:rest_register"),
             data=SAMPLE_USER_DATA["user_1"],
             format="json",
-            follow=True)
+            follow=True,
+        )
         assert response.status_code == status.HTTP_201_CREATED
-
         user = User.objects.get(username=SAMPLE_USER_DATA["user_1"]["username"])
-
         assert user.is_authenticated
 
     def test_register_duplicate_username(self, api_client, test_user):
         response = api_client.post(
-            "/tax/api/auth/register/",
+            reverse("tax:rest_register"),
             data=SAMPLE_USER_DATA["user_1"],
             format="json",
             follow=True,
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        self.assert_field_failure(response, "username", "A User With That Username Already Exists.")
+        self.assert_auth_failure(response, "username", "username_taken")
 
     def test_register_no_password(self, api_client):
         response = api_client.post(
-            "/tax/api/auth/register/",
+            reverse("tax:rest_register"),
             data={"username": "test"},
             format="json",
             follow=True,
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        self.assert_field_failure(response, "password", "This Field Is Required.")
+        self.assert_auth_failure(response, "password1", "required")
 
     def test_register_no_confirmation(self, api_client):
         response = api_client.post(
-            "/tax/api/auth/register/",
+            reverse("tax:rest_register"),
             data=SAMPLE_USER_DATA_NO_CONFIRMATION["user_1"],
             format="json",
             follow=True,
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        self.assert_field_failure(response, "password_confirm", "This Field Is Required.")
-
+        self.assert_auth_failure(response, "password2", "required")
 
     def test_login(self, api_client, test_user):
         response = api_client.post(
-            "/tax/api/auth/login/",
+            reverse("tax:rest_login"),
             data=SAMPLE_USER_DATA_NO_CONFIRMATION["user_1"],
             format="json",
             follow=True,
         )
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["message"] == "Login successful"
 
     def test_invalid_login(self, api_client, test_user):
         response = api_client.post(
-            "/tax/api/auth/login/",
+            reverse("tax:rest_login"),
             data={"username": SAMPLE_USER_DATA["user_1"]["username"], "password": "incorrect"},
             format="json",
             follow=True,
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        self.assert_field_failure(response, "non_field_errors", "Invalid Credentials")
+        self.assert_auth_failure(response, "non_field_errors", "invalid")
 
     def test_logout(self, authenticated_client, test_user):
-        response = authenticated_client.post("/tax/api/auth/logout/")
+        response = authenticated_client.post(reverse("tax:rest_logout"))
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["message"] == "Logout successful"
 
     def test_check_auth(self, authenticated_client, test_user):
-        response = authenticated_client.get("/tax/api/auth/check/")
+        response = authenticated_client.get(reverse("tax:rest_user_details"))
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["authenticated"] is True
 
     def test_check_unauthenticated(self, api_client):
-        response = api_client.get("/tax/api/auth/check/")
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["authenticated"] is False
+        response = api_client.get(reverse("tax:rest_user_details"))
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data["detail"].code == "not_authenticated"
 
 
 class TestDataSetViewSet(BaseAPITest):

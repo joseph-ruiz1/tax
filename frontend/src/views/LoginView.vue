@@ -79,18 +79,34 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label" for="register-email">Email</label>
+          <input 
+            v-model="registerForm.email"
+            type="email" 
+            id="register-email" 
+            class="form-input"
+            :class="{ error: errors.email }"
+            required
+            autocomplete="email"
+          >
+          <div v-if="errors.email" class="error-message">{{ errors.email }}</div>
+        </div>
+
+        <div class="form-group">
           <label class="form-label" for="register-password">Password</label>
           <input 
             v-model="registerForm.password"
             type="password" 
             id="register-password" 
             class="form-input"
-            :class="{ error: errors.password }"
+            :class="{ error: errors.password1 || errors.password }"
             required
             autocomplete="new-password"
-            minlength="4"
+            minlength="8"
           >
-          <div v-if="errors.password" class="error-message">{{ errors.password }}</div>
+          <div v-if="errors.password1 || errors.password" class="error-message">
+            {{ errors.password1 || errors.password }}
+          </div>
         </div>
 
         <div class="form-group">
@@ -100,11 +116,13 @@
             type="password" 
             id="register-password-confirm" 
             class="form-input"
-            :class="{ error: errors.password_confirm }"
+            :class="{ error: errors.password2 || errors.password_confirm }"
             required
             autocomplete="new-password"
           >
-          <div v-if="errors.password_confirm" class="error-message">{{ errors.password_confirm }}</div>
+          <div v-if="errors.password2 || errors.password_confirm" class="error-message">
+            {{ errors.password2 || errors.password_confirm }}
+          </div>
         </div>
 
         <button type="submit" class="submit-btn" :disabled="loading">
@@ -134,6 +152,7 @@ const loginForm = reactive({
 
 const registerForm = reactive({
   username: '',
+  email: '',
   password: '',
   password_confirm: ''
 })
@@ -160,18 +179,33 @@ const handleLogin = async () => {
   clearErrors()
   loading.value = true
   try {
-    const response = await apiService.login(loginForm)
-    if (response.success) {
-      successMessage.value = 'Login successful. Redirecting...'
+    await apiService.login(loginForm)
+    // dj-rest-auth returns user data on successful login
+    successMessage.value = 'Login successful. Redirecting...'
+    setTimeout(() => {
       router.push('/')
-    }
+    }, 500)
   } catch (error) {
     console.error('Login error:', error)
-    // Handle server errors
-    if (error.response && error.response.status >= 500) {
+    
+    // dj-rest-auth error format
+    if (error.response?.data) {
+      const errorData = error.response.data
+      
+      // Handle non_field_errors (like "Unable to log in with provided credentials")
+      if (errorData.non_field_errors) {
+        showError('username', errorData.non_field_errors[0])
+      } else if (errorData.username) {
+        showError('username', Array.isArray(errorData.username) ? errorData.username[0] : errorData.username)
+      } else if (errorData.password) {
+        showError('password', Array.isArray(errorData.password) ? errorData.password[0] : errorData.password)
+      } else if (errorData.detail) {
+        showError('username', errorData.detail)
+      } else {
+        showError('username', 'Invalid credentials. Please try again.')
+      }
+    } else if (error.response?.status >= 500) {
       showError('username', 'Server error. Please try again later.')
-    } else if (error.response && error.response.status >= 400) {
-      showError('username', 'Invalid credentials. Please try again.')
     } else {
       showError('username', 'Please check your connection and try again.')
     }
@@ -188,47 +222,55 @@ const handleRegister = async () => {
     return
   }
 
-  if (registerForm.password.length < 4) {
-    showError('password', 'Password must be at least 4 characters long')
+  if (registerForm.password.length < 8) {
+    showError('password', 'Password must be at least 8 characters long')
     return
   }
 
   loading.value = true
 
-    try {
-      const response = await apiService.register(registerForm)
+  try {
+    // apiService.register will convert password to password1/password2
+    await apiService.register({
+      username: registerForm.username,
+      email: registerForm.email,
+      password: registerForm.password
+    })
+    
+    successMessage.value = 'Account created successfully! Redirecting...'
+    setTimeout(() => {
+      router.push('/')
+    }, 500)
+  } catch (error) {
+    console.error('Registration error:', error)
+    
+    if (error.response?.data) {
+      const errorData = error.response.data
       
-      if (response.success) {
-        successMessage.value = 'Account created successfully! Redirecting...'
-        router.push('/')
+      // dj-rest-auth returns errors in different fields
+      // Map common fields
+      const fieldMap = {
+        'password1': 'password',
+        'password2': 'password_confirm',
+        'non_field_errors': 'password_confirm'
       }
-    } catch (error) {
-      console.error('Registration error:', error)
-      if (error.response && error.response.data) {
-        const data = error.response.data
-
-        if (data.errors) {
-          Object.keys(data.errors).forEach(field => {
-          if (field === 'non_field_errors') {
-            showError('password_confirm', data.errors[field][0])
-          } else {
-            const errorMsg = Array.isArray(data.errors[field]) 
-              ? data.errors[field][0] 
-              : data.errors[field]
-            showError(field, errorMsg)
-          }
-        })
-        } else {
-          showError('username', 'Registration failed. Please try again.')
-        } 
-      } else {
-      // Generic error fallback for network issues
+      
+      Object.keys(errorData).forEach(field => {
+        const displayField = fieldMap[field] || field
+        const errorMsg = Array.isArray(errorData[field]) 
+          ? errorData[field][0] 
+          : errorData[field]
+        showError(displayField, errorMsg)
+      })
+    } else if (error.response?.status >= 500) {
+      showError('username', 'Server error. Please try again later.')
+    } else {
       showError('username', 'Registration failed. Please try again.')
-      }
-    } finally {
-      loading.value = false
     }
+  } finally {
+    loading.value = false
   }
+}
 </script>
 
 <style scoped>

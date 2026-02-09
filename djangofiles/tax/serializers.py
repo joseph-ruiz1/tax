@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import serializers
+from dj_rest_auth.serializers import UserDetailsSerializer as BaseUserDetailsSerializer
 
 from .models import FILING_STATUS, TaxDataSet, TaxYearData
 from .utils import (
