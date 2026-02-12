@@ -71,11 +71,9 @@ def update_calculations(dataset: TaxDataSet):
     }
 
 # Need to figure out services import
-def handle_bracket_thresholds(all_elected_instance: ScheduleJResultsContainer, none_elected_instance: ScheduleJResultsContainer):
-    from .services import find_bracket_thresholds
+def handle_bracket_thresholds(all_elected_instance: ScheduleJResultsContainer, none_elected_instance: ScheduleJResultsContainer) -> dict[str, dict[str, int]]:
+    from .services import find_bracket_thresholds, BracketThresholdSolver
 
-    print(all_elected_instance.schedule_j_form.taxable_ordinary_results)
-    print(none_elected_instance.schedule_j_form.taxable_ordinary_results)
     tax_years = none_elected_instance.tax_years  # Both instances will have same years/filing status
 
     bracket_thresholds = {}
@@ -83,11 +81,12 @@ def handle_bracket_thresholds(all_elected_instance: ScheduleJResultsContainer, n
         all_elected_rate = all_elected_instance.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
         none_elected_rate = none_elected_instance.schedule_j_form.taxable_ordinary_results[year]["ordinary_rate"]
 
-        bracket_thresholds[year] = find_bracket_thresholds(
+        bracket_finder = BracketThresholdSolver(
             year=year,
             filing_status=year_obj.filing_status,
             ordinary_rate_lowest=str(min(all_elected_rate, none_elected_rate)),
             ordinary_rate_highest=str(max(all_elected_rate, none_elected_rate)),
         )
+        bracket_thresholds[year] = bracket_finder.find_brackets()
 
     return bracket_thresholds

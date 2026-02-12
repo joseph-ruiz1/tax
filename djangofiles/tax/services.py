@@ -267,7 +267,11 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
     applicable_brackets = list(tax_brackets.ORDINARY_TAX_TABLES[str(year)][filing_status].items())
 
     # Find the lowest and highest rate positions
-    lowest_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_lowest)
+    lowest_index = 100
+    if ordinary_rate_lowest == 0:
+        lowest_index = 0
+    else:
+        lowest_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_lowest)
     highest_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_highest)
 
     # Expand range by one bracket on each side if possible
@@ -281,6 +285,44 @@ def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest:
         bracket_thresholds[rate] = int(threshold)
 
     return bracket_thresholds
+
+class BracketThresholdSolver:
+    def __init__(self,
+                year: str,
+                filing_status: str,
+                ordinary_rate_lowest: str,
+                ordinary_rate_highest: str):
+        self.year = year
+        self.filing_status = filing_status
+        self.ordinary_rate_highest = ordinary_rate_highest
+        self.ordinary_rate_lowest = ordinary_rate_lowest
+        self.applicable_brackets = list(tax_brackets.ORDINARY_TAX_TABLES[str(self.year)][self.filing_status].items())
+
+    def find_brackets(self):
+        if self.ordinary_rate_highest == "0":
+            return {"0.10": 0}
+
+        lowest_rate_index = self._get_lowest_rate_index()
+        highest_rate_index = self._get_highest_rate_index()
+
+        return self._extract_bracket_range(lowest_rate_index, highest_rate_index)
+
+    def _get_lowest_rate_index(self):
+        if self.ordinary_rate_lowest == "0":
+            return 0
+        lowest_index = next(i for i, (rate, _) in enumerate(self.applicable_brackets) if rate == self.ordinary_rate_lowest)
+        return max(0, lowest_index - 1)
+
+    def _get_highest_rate_index(self):
+        highest_index = next(i for i, (rate, _) in enumerate(self.applicable_brackets) if rate == self.ordinary_rate_highest)
+        return min(len(self.applicable_brackets) - 1, highest_index + 1)
+
+    def _extract_bracket_range(self, lowest_rate_index, highest_rate_index):
+        bracket_thresholds = {}
+        for i in range(lowest_rate_index, highest_rate_index + 1):
+            rate, (threshold, _, _) = self.applicable_brackets[i]
+            bracket_thresholds[rate] = int(threshold)
+        return bracket_thresholds
 
 @dataclass
 class ScheduleJConfig:

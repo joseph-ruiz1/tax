@@ -1,5 +1,5 @@
 BASIC_TAX_CALCULATION_INPUTS = {
-    "qualified_income_edge_cases": {
+    "qualified_income_edge_case": {
         "dataset": {"name": "Tax Calc 2024-2021 Edge Cases", "max_elected_farm_income": 12000, "qualified_farm_income": 0, "election_year": "2024"},
         "inputs": [
             { # Edge case: negative ordinary income 15%
@@ -506,7 +506,7 @@ BASIC_TAX_CALCULATION_INPUTS = {
 
 EXPECTED_OUTPUTS_BASIC_TAX_CALC = {
     "tax_calculation": {
-        "qualified_income_edge_cases": {
+        "qualified_income_edge_case": {
             "total_tax": [7946, 101271, 107848, 91647],
         },
         "basic_scenario": {
@@ -531,7 +531,7 @@ EXPECTED_OUTPUTS_SORTED_YEARS = {
 
 EXPECTED_OUTPUT_SCHEDULE_J = {
     "allocate_income": {
-        "qualified_income_edge_cases": {
+        "qualified_income_edge_case": {
             "allocated_taxable_income": [88000, 644000, 644000, 589000],
             "allocated_qualified_income": [137000, 601000, 541000, 641000],
         },
@@ -679,7 +679,7 @@ EXPECTED_OUTPUTS_OPTIMIZATION = {
 
 EXPECTED_OUTPUTS_BRACKET_THRESHOLDS = {
     "bracket_thresholds": {
-        "varied_income": {
+        "qualified_income_edge_case": {
             "brackets": {
                 2024: {"0.12": 23201, "0.22": 94301, "0.24": 201051},
                 2023: {"0.10": 0, "0.12": 22001, "0.22": 89451},
