@@ -72,7 +72,7 @@ def update_calculations(dataset: TaxDataSet):
 
 # Need to figure out services import
 def handle_bracket_thresholds(all_elected_instance: ScheduleJResultsContainer, none_elected_instance: ScheduleJResultsContainer) -> dict[str, dict[str, int]]:
-    from .services import find_bracket_thresholds, BracketThresholdSolver
+    from .services import BracketThresholdSolver
 
     tax_years = none_elected_instance.tax_years  # Both instances will have same years/filing status
 
