@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from .calculations import tax_brackets
 from .models import TaxYearData, TaxYearStructure
-from .types import TaxBrackets
+from .types import TaxBrackets, Year
 
 
 class TaxCalculationResult:
@@ -251,7 +251,7 @@ class BracketThresholdSolver:
     """
 
     def __init__(self,
-                year: str,
+                year: Year,
                 filing_status: str,
                 ordinary_rate_lowest: str,
                 ordinary_rate_highest: str):
@@ -263,6 +263,7 @@ class BracketThresholdSolver:
 
     def find_brackets(self) -> TaxBrackets:
         if self.ordinary_rate_highest == "0":
+            # Only bracket will be 10% if there is no ordinary income
             return {"0.10": 0}
 
         lowest_rate_index = self._get_lowest_rate_index()
