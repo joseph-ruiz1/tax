@@ -77,78 +77,24 @@ class AuthViewSet(viewsets.ViewSet):
     def me(self, request):
         return Response(UserSerializer(request.user).data)
 
-class DataSetViewSet(viewsets.ModelViewSet):
-    """Dataset dashboard page. Allows for viewing, editing, and deleting Creates are handled in CalculationEntryView."""
-
-    queryset = TaxDataSet.objects.all()
+class OptimizationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
     def get_queryset(self):
-        # Only return those with 4 tax years
         return TaxDataSet.objects.annotate(tax_year_count=Count("tax_years")).filter(user=self.request.user).filter(tax_year_count=4)
 
     def get_serializer_class(self):
-        if self.action == "list":
-            return TaxDataSetSerializer
-        elif self.action in {"retrieve", "delete"}:
-            return TaxDataSetDetailSerializer
-        elif self.action == "create_step":
+        if self.action == "create":
             return CreateCalculationSerializer
-        elif self.action == "new_entry":
-            return CalculationEntrySerializer
-        elif self.action == "results_get":
+        if self.action == "retrieve":
             return OutputSerializer
-        elif self.action == "results_patch":
+        if self.action in ["update", "partial_update"]:
             return CalculationEntrySerializer
+        if self.action == "delete":
+            return TaxDataSetDetailSerializer
+        return TaxDataSetSerializer
 
-        raise NotImplementedError(f"No serializer for action: {self.action}")
-
-    @action(detail=False, methods=["post"], url_path="create")
-    def create_step(self, request):
-        """
-        Creates new TaxDataSet instance with 2024 as default election year.
-
-        Returns TaxYearData instances so we can access IDs.
-        """
-        serializer = self.get_serializer(data={})
-        if serializer.is_valid():
-            dataset = serializer.save(user=request.user)
-
-            return Response({
-                "success": True,
-                "dataset_id": dataset.id
-            }, status=status.HTTP_201_CREATED)
-
-        return Response({
-            "success": False,
-            "message": "Dataset Creation failed",
-            "errors": serializer.errors,
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=["patch"], url_path="new")
-    def new_entry(self, request, pk=None):
-        """Save initial information submitted from data entry screen."""
-        dataset = self.get_object()
-        serializer = self.get_serializer(dataset, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                    "success": True,
-                    "message": "Data saved successfully",
-                    "dataset": serializer.data,
-                })
-        return Response({
-            "success": False,
-            "errors": serializer.errors,
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['get'], url_path="results")
-    def results_get(self, request, pk=None):
-        """Fetch caulcation inputs and results."""
+    def retrieve(self, request, pk=None):
         dataset = self.get_object()
         results = update_calculations(dataset)
         serializer = self.get_serializer(dataset,
@@ -161,9 +107,17 @@ class DataSetViewSet(viewsets.ModelViewSet):
             "outputs": serializer.data["outputs"],
         })
 
-    @action(detail=True, methods=["patch"], url_path="results-update")
-    def results_patch(self, request, pk=None):
-        """Update inputs and regenerate Schedule J Calculation."""
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid()
+        dataset = serializer.save(user=request.user)
+
+        return Response({
+            "success": True,
+            "dataset_id": dataset.id,
+        }, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk=None):
         dataset = self.get_object()
         serializer = self.get_serializer(dataset, data=request.data, partial=True)
         if serializer.is_valid():
@@ -185,13 +139,3 @@ class DataSetViewSet(viewsets.ModelViewSet):
             "errors": serializer.errors,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-
-class OptimizationViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return TaxDataSet.objects.annotate(tax_year_count=Count("tax_years")).filter(user=self.request.user).filter(tax_year_count=4)
-
-    def get_object(self):
-        queryset = self.get_queryset()
-        

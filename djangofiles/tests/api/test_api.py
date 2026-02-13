@@ -7,6 +7,8 @@ from sample_user_data import (
 )
 from tax.models import TaxDataSet, User
 from tax.serializers import DEFAULT_ELECTION_YEAR
+from test_api_data import TAX_INPUTS
+from utils import update_inputs
 
 
 class BaseAPITest:
@@ -106,53 +108,55 @@ class TestAuthViewSet(BaseAPITest):
         assert response.data["authenticated"] is False
 
 
-class TestDataSetViewSet(BaseAPITest):
+class TestOptimizationViewSet(BaseAPITest):
     def test_create_dataset(self, authenticated_client):
         response = authenticated_client.post(
-            reverse("tax:dataset-create-step"),
+            reverse("tax:optimization-list"),
             data={},
             format="json",
         )
-        assert response.status_code == status.HTTP_201_CREATED
-
         dataset = TaxDataSet.objects.get(id=response.data["dataset_id"])
         assert TaxDataSet.objects.filter(id=dataset.id).exists()
         assert dataset.election_year == DEFAULT_ELECTION_YEAR
 
     def test_create_dataset_unauthenticated(self, api_client):
         response = api_client.post(
-            reverse("tax:dataset-create-step"),
+            reverse("tax:optimization-list"),
             data={},
             format="json",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_list_datasets(self, authenticated_client, datasets):
-        response = authenticated_client.get(reverse("tax:dataset-list"))
+        response = authenticated_client.get(reverse("tax:optimization-list"))
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(datasets)
 
     def test_list_datasets_filter_by_user(self, authenticated_client, test_user_2, datasets, create_empty_dataset):
         create_empty_dataset(test_user_2)
 
-        response = authenticated_client.get(reverse("tax:dataset-list"))
+        response = authenticated_client.get(reverse("tax:optimization-list"))
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == len(datasets)
 
-    def test_retrieve_dataset(self, authenticated_client, dataset):
-        response = authenticated_client.get(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
+    def test_retrieve_dataset(self, authenticated_client, dataset, dataset_with_tax_year_pk):
+        test_data = dataset_with_tax_year_pk("basic_scenario")
+        update_inputs(dataset, test_data)
+        response = authenticated_client.get(reverse("tax:optimization-detail", kwargs={"pk": dataset.id}))
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["id"] == 1
+        # Ensure we're receiving correct amount of sch_j instances
+        assert len(response.data["outputs"]["results"]) == test_data["max_elected_farm_income"] / 500
 
     def test_retrieve_invalid_dataset(self, authenticated_client, test_user_2, create_empty_dataset):
         dataset = create_empty_dataset(test_user_2)
-        response = authenticated_client.get(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
+        response = authenticated_client.get(reverse("tax:optimization-detail", kwargs={"pk": dataset.id}))
         # Keeping 404 error instead of 403 or 401 could be better for security, but perhaps not debugging
         # https://auth0.com/blog/forbidden-unauthorized-http-status-codes/#:~:text=Don%27t%20let%20the%20client%20know
         assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["detail"].title() == "No Taxdataset Matches The Given Query."
 
     def test_delete_dataset(self, authenticated_client, dataset):
-        response = authenticated_client.delete(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
+        response = authenticated_client.delete(reverse("tax:optimization-detail", kwargs={"pk": dataset.id}))
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
     @pytest.mark.parametrize(
@@ -163,7 +167,7 @@ class TestDataSetViewSet(BaseAPITest):
         test_data = dataset_with_tax_year_pk(scenario)
 
         response = authenticated_client.patch(
-            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
             data=test_data,
             format="json",
         )
@@ -182,7 +186,7 @@ class TestTaxEntries(BaseAPITest):
         test_data["tax_years"][0]["year"] = invalid_year
 
         response = authenticated_client.patch(
-            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
             data=test_data,
             format="json",
         )
@@ -201,7 +205,7 @@ class TestTaxEntries(BaseAPITest):
         test_data["tax_years"][0]["taxable_income"] = invalid_income
 
         response = authenticated_client.patch(
-            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
             data=test_data,
             format="json",
         )
@@ -211,7 +215,7 @@ class TestTaxEntries(BaseAPITest):
     def test_unsorted_years(self, authenticated_client, dataset, dataset_with_tax_year_pk):
         unsorted_data = dataset_with_tax_year_pk("unsorted_older_years")
         response = authenticated_client.patch(
-            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
             data=unsorted_data,
             format="json",
         )

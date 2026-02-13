@@ -12,7 +12,7 @@ def update_inputs(dataset: TaxDataSet, data_to_update):
 
     for data in tax_year_data:
         TaxYearData.objects.filter(
-            dataset=dataset, 
+            dataset=dataset,
             year=data["year"],
         ).update(**{k: v for k, v in data.items() if k != "year"})
 

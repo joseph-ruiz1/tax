@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from .calculations import tax_brackets
 from .models import TaxYearData, TaxYearStructure
+from .types import TaxBrackets, Year
 
 
 class TaxCalculationResult:
@@ -241,46 +242,51 @@ class ScheduleJResultsContainer:
             }
         return result
 
-def find_bracket_thresholds(year: str, filing_status: str, ordinary_rate_lowest: str, ordinary_rate_highest: str):
+class BracketThresholdSolver:
     """
-    Returns the bracket thresholds for all brackets between and including the lowest and highest ordinary income rates.
+    Finds bracket thresholds for all brackets between and including the lowest and highest ordinary income rates.
 
-    Arguments:
-        year (String): year we want to find brackets for
-        filing_status (String): filing status that was clamed
-        ordinary_rate_lowest (String): Ordinary income rate for the year with no elected income
-        ordinary_rate_highest (String): Ordinary income rate for the year with max elected income
-
-    Returns:
-        bracket_thresholds (dict): dict with marginal rate (str) as key and upper threshold (int) as value
-        ex: {0.22: 80521, 0.24: 120000, 0.32: 180000}
-
-    Notes:
-        The bracket values are being converted to ints here so we don't need to serialize the Decimals
-
-        Returns all brackets from one bracket below the lowest ordinary income amount
-        to one bracket above the highest income amount.
-        Example: With $0 of elected income, we are in the 24% bracket, and with the max elected income we are in the 32% bracket
-                The 22%, 24%, 32%, and 35% brackets will be returned and displayed on the ordinary income graph
-
+    Example: With $0 of elected income, we are in the 24% bracket, and with the max elected income we are in the 32% bracket
+                The 22%, 24%, 32%, and 35% brackets will be returned and displayed on the ordinary income graph.
     """
-    applicable_brackets = list(tax_brackets.ORDINARY_TAX_TABLES[str(year)][filing_status].items())
 
-    # Find the lowest and highest rate positions
-    lowest_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_lowest)
-    highest_index = next(i for i, (rate, _) in enumerate(applicable_brackets) if rate == ordinary_rate_highest)
+    def __init__(self,
+                year: Year,
+                filing_status: str,
+                ordinary_rate_lowest: str,
+                ordinary_rate_highest: str):
+        self.year = year
+        self.filing_status = filing_status
+        self.ordinary_rate_highest = ordinary_rate_highest
+        self.ordinary_rate_lowest = ordinary_rate_lowest
+        self.applicable_brackets = list(tax_brackets.ORDINARY_TAX_TABLES[str(self.year)][self.filing_status].items())
 
-    # Expand range by one bracket on each side if possible
-    start_index = max(0, lowest_index - 1)
-    end_index = min(len(applicable_brackets) - 1, highest_index + 1)
+    def find_brackets(self) -> TaxBrackets:
+        if self.ordinary_rate_highest == "0":
+            # Only bracket will be 10% if there is no ordinary income
+            return {"0.10": 0}
 
-    # Extract all brackets in the range
-    bracket_thresholds = {}
-    for i in range(start_index, end_index + 1):
-        rate, (threshold, _, _) = applicable_brackets[i]
-        bracket_thresholds[rate] = int(threshold)
+        lowest_rate_index = self._get_lowest_rate_index()
+        highest_rate_index = self._get_highest_rate_index()
 
-    return bracket_thresholds
+        return self._extract_bracket_range(lowest_rate_index, highest_rate_index)
+
+    def _get_lowest_rate_index(self):
+        if self.ordinary_rate_lowest == "0":
+            return 0
+        lowest_index = next(i for i, (rate, _) in enumerate(self.applicable_brackets) if rate == self.ordinary_rate_lowest)
+        return max(0, lowest_index - 1)
+
+    def _get_highest_rate_index(self):
+        highest_index = next(i for i, (rate, _) in enumerate(self.applicable_brackets) if rate == self.ordinary_rate_highest)
+        return min(len(self.applicable_brackets) - 1, highest_index + 1)
+
+    def _extract_bracket_range(self, lowest_rate_index, highest_rate_index):
+        bracket_thresholds = {}
+        for i in range(lowest_rate_index, highest_rate_index + 1):
+            rate, (threshold, _, _) = self.applicable_brackets[i]
+            bracket_thresholds[rate] = int(threshold)
+        return bracket_thresholds
 
 @dataclass
 class ScheduleJConfig:
@@ -381,7 +387,7 @@ class ScheduleJCalculation:
                 setattr(self.sch_j, income_line, taxable_income)
                 setattr(self.sch_j, tax_line, total_tax)
 
-    def _calculate_tax_on_all_years(self) -> dict[int, Decimal]:
+    def _calculate_tax_on_all_years(self) -> dict[int, dict[str, Decimal]]:
         """Calculate tax for all years based on current adjusted_years state."""
         tax_on_all_years = {}
         for year, year_obj in self.adjusted_years.items():

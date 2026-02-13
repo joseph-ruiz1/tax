@@ -18,6 +18,7 @@ from calculations.utils.calculation_utils import (
 from tax.models import TaxYearData
 from tax.services import (
     IncomeDistributor,
+    BracketThresholdSolver
 )
 from tax.utils import (
     handle_bracket_thresholds,
