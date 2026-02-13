@@ -108,7 +108,7 @@ class TestAuthViewSet(BaseAPITest):
         assert response.data["authenticated"] is False
 
 
-class TestDataSetViewSet(BaseAPITest):
+class TestOptimizationViewSet(BaseAPITest):
     def test_create_dataset(self, authenticated_client):
         response = authenticated_client.post(
             reverse("tax:optimization-list"),
