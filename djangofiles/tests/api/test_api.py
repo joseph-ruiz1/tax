@@ -144,32 +144,34 @@ class TestDataSetViewSet(BaseAPITest):
         update_inputs(dataset, test_data)
         response = authenticated_client.get(reverse("tax:optimization-detail", kwargs={"pk": dataset.id}))
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["id"] == 1
+        # Ensure we're receiving correct amount of sch_j instances
+        assert len(response.data["outputs"]["results"]) == test_data["max_elected_farm_income"] / 500
 
-    # def test_retrieve_invalid_dataset(self, authenticated_client, test_user_2, create_empty_dataset):
-    #     dataset = create_empty_dataset(test_user_2)
-    #     response = authenticated_client.get(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
-    #     # Keeping 404 error instead of 403 or 401 could be better for security, but perhaps not debugging
-    #     # https://auth0.com/blog/forbidden-unauthorized-http-status-codes/#:~:text=Don%27t%20let%20the%20client%20know
-    #     assert response.status_code == status.HTTP_404_NOT_FOUND
+    def test_retrieve_invalid_dataset(self, authenticated_client, test_user_2, create_empty_dataset):
+        dataset = create_empty_dataset(test_user_2)
+        response = authenticated_client.get(reverse("tax:optimization-detail", kwargs={"pk": dataset.id}))
+        # Keeping 404 error instead of 403 or 401 could be better for security, but perhaps not debugging
+        # https://auth0.com/blog/forbidden-unauthorized-http-status-codes/#:~:text=Don%27t%20let%20the%20client%20know
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["detail"].title() == "No Taxdataset Matches The Given Query."
 
-    # def test_delete_dataset(self, authenticated_client, dataset):
-    #     response = authenticated_client.delete(reverse("tax:dataset-detail", kwargs={"pk": dataset.id}))
-    #     assert response.status_code == status.HTTP_204_NO_CONTENT
+    def test_delete_dataset(self, authenticated_client, dataset):
+        response = authenticated_client.delete(reverse("tax:optimization-detail", kwargs={"pk": dataset.id}))
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    # @pytest.mark.parametrize(
-    #     "scenario",
-    #     [("basic_scenario")],
-    # )
-    # def test_new_entry(self, authenticated_client, dataset, dataset_with_tax_year_pk, scenario):
-    #     test_data = dataset_with_tax_year_pk(scenario)
+    @pytest.mark.parametrize(
+        "scenario",
+        [("basic_scenario")],
+    )
+    def test_new_entry(self, authenticated_client, dataset, dataset_with_tax_year_pk, scenario):
+        test_data = dataset_with_tax_year_pk(scenario)
 
-    #     response = authenticated_client.patch(
-    #         reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
-    #         data=test_data,
-    #         format="json",
-    #     )
-        # assert response.status_code == status.HTTP_200_OK
+        response = authenticated_client.patch(
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
+            data=test_data,
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
 
 class TestTaxEntries(BaseAPITest):
     @pytest.mark.parametrize(
@@ -184,7 +186,7 @@ class TestTaxEntries(BaseAPITest):
         test_data["tax_years"][0]["year"] = invalid_year
 
         response = authenticated_client.patch(
-            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
             data=test_data,
             format="json",
         )
@@ -203,7 +205,7 @@ class TestTaxEntries(BaseAPITest):
         test_data["tax_years"][0]["taxable_income"] = invalid_income
 
         response = authenticated_client.patch(
-            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
             data=test_data,
             format="json",
         )
@@ -213,7 +215,7 @@ class TestTaxEntries(BaseAPITest):
     def test_unsorted_years(self, authenticated_client, dataset, dataset_with_tax_year_pk):
         unsorted_data = dataset_with_tax_year_pk("unsorted_older_years")
         response = authenticated_client.patch(
-            reverse("tax:dataset-new-entry", kwargs={"pk": dataset.id}),
+            reverse("tax:optimization-detail", kwargs={"pk": dataset.id}),
             data=unsorted_data,
             format="json",
         )

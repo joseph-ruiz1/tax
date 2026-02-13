@@ -196,7 +196,7 @@ class OptimizationViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ["delete"]:
             return TaxDataSetDetailSerializer
-        if self.action in ["update", "patch"]:
+        if self.action in ["update", "partial_update"]:
             return CalculationEntrySerializer
         if self.action == "list":
             return TaxDataSetSerializer
@@ -204,9 +204,6 @@ class OptimizationViewSet(viewsets.ModelViewSet):
             return OutputSerializer
         if self.action == "create":
             return CreateCalculationSerializer
-
-    # def get_object(self):
-    #     queryset = self.get_queryset()
 
     def retrieve(self, request, *args, **kwargs):
         # serializer = self.get_serializer(data=request.data)
@@ -231,3 +228,26 @@ class OptimizationViewSet(viewsets.ModelViewSet):
             "success": True,
             "dataset_id": dataset.id,
         }, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        dataset = self.get_object()
+        serializer = self.get_serializer(dataset, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            results = update_calculations(dataset)
+            results_serializer = OutputSerializer(dataset,
+                                                  context={"results": results["optimization"],
+                                                           "bracket_thresholds": results["bracket_thresholds"]})
+
+            return Response({
+                "success": True,
+                "message": "Patch successful",
+                "form": results_serializer.data["inputs"],
+                "outputs": results_serializer.data["outputs"],
+            })
+
+        return Response({
+            "success": False,
+            "errors": serializer.errors,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
